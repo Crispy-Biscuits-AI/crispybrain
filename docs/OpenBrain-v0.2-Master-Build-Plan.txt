@@ -76,6 +76,14 @@ Recommended order:
 
 ## 3. Database Schema Changes
 
+Canonical source of truth for the v0.2 migration contract:
+
+* `scripts/openbrain_v0_2_db_migrate.py`
+
+Deferred from the canonical v0.2 migration contract:
+
+* `memory_relationships`
+
 ### Existing memories table additions
 
 ```sql
@@ -87,7 +95,7 @@ ADD COLUMN IF NOT EXISTS confidence_score NUMERIC DEFAULT 0.5,
 ADD COLUMN IF NOT EXISTS last_accessed_at TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS access_count INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS summarized_into UUID,
-ADD COLUMN IF NOT EXISTS parent_memory_id UUID;
+ADD COLUMN IF NOT EXISTS parent_memory_id BIGINT;
 ```
 
 ### Projects
@@ -104,19 +112,16 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-```
 
-### Memory Relationships
+ALTER TABLE memories
+ADD CONSTRAINT fk_memories_project_id
+FOREIGN KEY (project_id) REFERENCES projects(id)
+ON DELETE SET NULL;
 
-```sql
-CREATE TABLE IF NOT EXISTS memory_relationships (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  from_memory_id BIGINT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
-  to_memory_id BIGINT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
-  relationship_type TEXT NOT NULL,
-  confidence NUMERIC DEFAULT 0.5,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+ALTER TABLE memories
+ADD CONSTRAINT fk_memories_parent_memory_id
+FOREIGN KEY (parent_memory_id) REFERENCES memories(id)
+ON DELETE SET NULL;
 ```
 
 ### Memory Summaries
@@ -124,7 +129,7 @@ CREATE TABLE IF NOT EXISTS memory_relationships (
 ```sql
 CREATE TABLE IF NOT EXISTS memory_summaries (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  project_id UUID REFERENCES projects(id),
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   summary_title TEXT NOT NULL,
   summary_text TEXT NOT NULL,
   source_memory_ids BIGINT[] NOT NULL,
@@ -141,7 +146,7 @@ CREATE TABLE IF NOT EXISTS ingestion_jobs (
   filename TEXT,
   workflow_name TEXT,
   status TEXT NOT NULL,
-  project_id UUID REFERENCES projects(id),
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   started_at TIMESTAMPTZ DEFAULT NOW(),
   completed_at TIMESTAMPTZ,
   chunk_count INTEGER DEFAULT 0,
@@ -172,7 +177,7 @@ CREATE TABLE IF NOT EXISTS retrieval_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   query_text TEXT NOT NULL,
   query_embedding VECTOR(768),
-  project_id UUID REFERENCES projects(id),
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   retrieved_memory_ids BIGINT[],
   top_similarity NUMERIC,
   confidence_score NUMERIC,
@@ -185,7 +190,7 @@ CREATE TABLE IF NOT EXISTS retrieval_history (
 ```sql
 CREATE TABLE IF NOT EXISTS answer_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  retrieval_id UUID REFERENCES retrieval_history(id),
+  retrieval_id UUID REFERENCES retrieval_history(id) ON DELETE SET NULL,
   answer_text TEXT,
   sources JSONB,
   confidence_score NUMERIC,
@@ -199,10 +204,15 @@ CREATE TABLE IF NOT EXISTS answer_history (
 ```sql
 CREATE INDEX IF NOT EXISTS idx_memories_project_id ON memories(project_id);
 CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(memory_type);
+CREATE INDEX IF NOT EXISTS idx_memories_access_count ON memories(access_count);
+CREATE INDEX IF NOT EXISTS idx_memory_summaries_project_id ON memory_summaries(project_id);
 CREATE INDEX IF NOT EXISTS idx_memories_embedding ON memories USING ivfflat (embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS idx_summary_embedding ON memory_summaries USING ivfflat (summary_embedding vector_cosine_ops);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON ingestion_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_jobs_project_id ON ingestion_jobs(project_id);
 CREATE INDEX IF NOT EXISTS idx_failed_retry ON failed_ingestion_jobs(retry_count);
+CREATE INDEX IF NOT EXISTS idx_retrieval_history_project_id ON retrieval_history(project_id);
+CREATE INDEX IF NOT EXISTS idx_answer_history_retrieval_id ON answer_history(retrieval_id);
 ```
 
 ---

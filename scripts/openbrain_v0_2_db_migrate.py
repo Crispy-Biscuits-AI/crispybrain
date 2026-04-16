@@ -4,9 +4,10 @@ OpenBrain v0.2 database backup + migration script
 
 What this script does:
 1. Creates a timestamped PostgreSQL backup using pg_dump
-2. Adds new nullable columns to the existing memories table
-3. Creates new OpenBrain v0.2 tables
-4. Creates recommended indexes
+2. Applies the canonical OpenBrain v0.2 additive schema contract
+3. Adds new nullable columns to the existing memories table
+4. Creates new OpenBrain v0.2 tables
+5. Creates recommended indexes
 
 How to use:
     export PGHOST=localhost
@@ -183,18 +184,6 @@ MIGRATIONS: list[str] = [
     END $$;
     """,
 
-    # Memory relationships
-    """
-    CREATE TABLE IF NOT EXISTS memory_relationships (
-      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      from_memory_id BIGINT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
-      to_memory_id BIGINT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
-      relationship_type TEXT NOT NULL,
-      confidence NUMERIC DEFAULT 0.5,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    """,
-
     # Memory summaries
     """
     CREATE TABLE IF NOT EXISTS memory_summaries (
@@ -277,14 +266,6 @@ MIGRATIONS: list[str] = [
     """
     CREATE INDEX IF NOT EXISTS idx_memories_access_count
     ON memories(access_count);
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_memory_relationships_from_memory
-    ON memory_relationships(from_memory_id);
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_memory_relationships_to_memory
-    ON memory_relationships(to_memory_id);
     """,
     """
     CREATE INDEX IF NOT EXISTS idx_memory_summaries_project_id
@@ -384,13 +365,47 @@ def verify(db: dict[str, str]) -> None:
         WHERE table_name = 'memories' AND column_name = 'project_id'
       ) AS has_project_id,
       EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'memories'
+          AND column_name = 'parent_memory_id'
+          AND data_type = 'bigint'
+      ) AS has_parent_memory_id_bigint,
+      EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_name = 'projects'
       ) AS has_projects_table,
       EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = 'memory_summaries'
+      ) AS has_memory_summaries_table,
+      EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = 'ingestion_jobs'
+      ) AS has_ingestion_jobs_table,
+      EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = 'failed_ingestion_jobs'
+      ) AS has_failed_ingestion_jobs_table,
+      EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = 'retrieval_history'
+      ) AS has_retrieval_history_table,
+      EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_name = 'answer_history'
+      ) AS has_answer_history_table,
+      EXISTS (
         SELECT 1 FROM pg_indexes
         WHERE tablename = 'memories' AND indexname = 'idx_memories_project_id'
-      ) AS has_memories_project_index;
+      ) AS has_memories_project_index,
+      EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE tablename = 'memories' AND indexname = 'idx_memories_embedding'
+      ) AS has_memories_embedding_index,
+      EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE tablename = 'memory_summaries' AND indexname = 'idx_summary_embedding'
+      ) AS has_summary_embedding_index;
     """
 
     print("[3/3] Verifying migration results")
@@ -424,8 +439,16 @@ def verify(db: dict[str, str]) -> None:
 
     print("Verification:")
     print(f"  memories.project_id column: {row[0]}")
-    print(f"  projects table:             {row[1]}")
-    print(f"  idx_memories_project_id:    {row[2]}")
+    print(f"  memories.parent_memory_id BIGINT: {row[1]}")
+    print(f"  projects table:                  {row[2]}")
+    print(f"  memory_summaries table:          {row[3]}")
+    print(f"  ingestion_jobs table:            {row[4]}")
+    print(f"  failed_ingestion_jobs table:     {row[5]}")
+    print(f"  retrieval_history table:         {row[6]}")
+    print(f"  answer_history table:            {row[7]}")
+    print(f"  idx_memories_project_id:         {row[8]}")
+    print(f"  idx_memories_embedding:          {row[9]}")
+    print(f"  idx_summary_embedding:           {row[10]}")
 
     if not all(row):
         raise RuntimeError("Verification failed. One or more expected objects were not found.")
