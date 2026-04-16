@@ -56,21 +56,23 @@
     },
     {
       "parameters": {
-        "source": "database",
-        "workflowId": {
-          "value": "ssU3NaOubEvfb9fc",
-          "mode": "list",
-          "cachedResultName": "openbrain-ingest"
-        },
-        "mode": "each",
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/openbrain-ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
         "options": {
-          "waitForSubWorkflow": true
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
         }
       },
       "id": "d8b94c86-64d4-4f4a-95d0-f8d5c6489e01",
       "name": "Execute openbrain-ingest",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         780,
         0
