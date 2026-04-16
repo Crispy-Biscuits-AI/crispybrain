@@ -8,7 +8,8 @@
           "add"
         ],
         "options": {
-          "recursive": true
+          "maxDepth": 2,
+          "ignoreInitial": true
         }
       },
       "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f101",
@@ -23,7 +24,7 @@
     {
       "parameters": {
         "operation": "read",
-        "fileSelector": "={{ $json.path || $json.filePath || $json.filepath || $json.fullPath || $json.filename || '' }}",
+        "fileSelector": "={{ $json.path }}",
         "options": {
           "mimeType": "text/plain",
           "fileExtension": "txt",
@@ -41,7 +42,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $json ?? {};\nconst buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst content = buffer.toString('utf8');\n\nconst filepath = [\n  input.path,\n  input.filePath,\n  input.filepath,\n  input.fullPath,\n  input.file_name,\n  input.fileName,\n  input.filename\n].find((value) => typeof value === 'string' && value.trim() !== '') || '';\n\nif (!filepath) {\n  throw new Error('Missing filepath from local file trigger payload');\n}\n\nconst filename = filepath.split('/').pop() || filepath;\n\nconst modifiedCandidates = [\n  input.modifiedEpoch,\n  input.mtimeMs,\n  input.modified,\n  input.lastModified,\n  input.mtime,\n  input.updatedAt,\n  input.timestamp\n];\n\nlet modifiedEpoch;\nfor (const candidate of modifiedCandidates) {\n  if (candidate === undefined || candidate === null || candidate === '') {\n    continue;\n  }\n\n  const numeric = Number(candidate);\n  if (Number.isFinite(numeric) && numeric > 0) {\n    modifiedEpoch = numeric > 9999999999 ? Math.floor(numeric / 1000) : Math.floor(numeric);\n    break;\n  }\n\n  const parsed = Date.parse(String(candidate));\n  if (Number.isFinite(parsed) && parsed > 0) {\n    modifiedEpoch = Math.floor(parsed / 1000);\n    break;\n  }\n}\n\nconst normalizedPath = filepath.replace(/\\\\/g, '/');\nconst projectMatch = normalizedPath.match(/\\/inbox\\/([^/]+)\\/[^/]+$/);\nconst derivedProjectSlug = projectMatch ? projectMatch[1] : null;\n\nreturn [{\n  json: {\n    filepath,\n    filename,\n    content,\n    ...(modifiedEpoch !== undefined ? { modifiedEpoch } : {}),\n    ...(derivedProjectSlug ? { project_slug: derivedProjectSlug } : {})\n  }\n}];"
+        "jsCode": "const input = $json ?? {};\nconst buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst content = buffer.toString('utf8');\n\nconst filepath = typeof input.path === 'string' && input.path.trim() !== '' ? input.path.trim() : '';\n\nif (!filepath) {\n  throw new Error('Missing filepath from local file trigger payload');\n}\n\nconst filename = filepath.split('/').pop() || filepath;\n\nconst modifiedCandidates = [\n  input.modifiedEpoch,\n  input.mtimeMs,\n  input.modified,\n  input.lastModified,\n  input.mtime,\n  input.updatedAt,\n  input.timestamp\n];\n\nlet modifiedEpoch;\nfor (const candidate of modifiedCandidates) {\n  if (candidate === undefined || candidate === null || candidate === '') {\n    continue;\n  }\n\n  const numeric = Number(candidate);\n  if (Number.isFinite(numeric) && numeric > 0) {\n    modifiedEpoch = numeric > 9999999999 ? Math.floor(numeric / 1000) : Math.floor(numeric);\n    break;\n  }\n\n  const parsed = Date.parse(String(candidate));\n  if (Number.isFinite(parsed) && parsed > 0) {\n    modifiedEpoch = Math.floor(parsed / 1000);\n    break;\n  }\n}\n\nconst normalizedPath = filepath.replace(/\\\\/g, '/');\nconst projectMatch = normalizedPath.match(/\\/inbox\\/([^/]+)\\/[^/]+$/);\nconst derivedProjectSlug = projectMatch ? projectMatch[1] : null;\n\nreturn [{\n  json: {\n    filepath,\n    filename,\n    content,\n    ...(modifiedEpoch !== undefined ? { modifiedEpoch } : {}),\n    ...(derivedProjectSlug ? { project_slug: derivedProjectSlug } : {})\n  }\n}];"
       },
       "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f103",
       "name": "Normalize File Payload",
@@ -138,7 +139,7 @@
   "staticData": null,
   "tags": [],
   "active": false,
-  "versionId": "4d47d54b-0f1f-45a6-b3ef-9f12c9a85a02",
+  "versionId": "4d47d54b-0f1f-45a6-b3ef-9f12c9a85a03",
   "meta": {
     "templateCredsSetupCompleted": false
   },
