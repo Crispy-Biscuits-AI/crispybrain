@@ -56,18 +56,21 @@
     },
     {
       "parameters": {
+        "source": "database",
         "workflowId": {
-          "__rl": true,
-          "value": "openbrain-ingest",
-          "mode": "id"
+          "value": "ssU3NaOubEvfb9fc",
+          "mode": "list",
+          "cachedResultName": "openbrain-ingest"
         },
         "mode": "each",
-        "options": {}
+        "options": {
+          "waitForSubWorkflow": true
+        }
       },
-      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f104",
+      "id": "d8b94c86-64d4-4f4a-95d0-f8d5c6489e01",
       "name": "Execute openbrain-ingest",
       "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1,
+      "typeVersion": 1.3,
       "position": [
         780,
         0
@@ -140,7 +143,7 @@
   "staticData": null,
   "tags": [],
   "active": false,
-  "versionId": "4d47d54b-0f1f-45a6-b3ef-9f12c9a85a04",
+  "versionId": "4d47d54b-0f1f-45a6-b3ef-9f12c9a85a05",
   "meta": {
     "templateCredsSetupCompleted": false
   },
