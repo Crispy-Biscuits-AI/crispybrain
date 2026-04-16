@@ -1,153 +1,129 @@
 {
+  "name": "openbrain-auto-ingest-watch",
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "seconds",
-              "secondsInterval": 60
-            }
-          ]
+        "path": "/home/node/.n8n-files/openbrain/inbox",
+        "events": [
+          "add"
+        ],
+        "options": {
+          "recursive": true
         }
       },
-      "id": "ebfc1212-3cec-434e-8d02-67faf61bab5f",
-      "name": "Schedule Trigger",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        -1320,
-        80
-      ]
-    },
-    {
-      "parameters": {
-        "command": "find /home/node/.n8n-files/openbrain/inbox -maxdepth 1 -type f -name '*.txt' 2>/dev/null | while read f; do stat -c '%Y|%n' \"$f\"; done | sort || true"
-      },
-      "id": "9acdce17-e689-4695-97a0-b798eb865c44",
-      "name": "List Inbox TXT Files",
-      "type": "n8n-nodes-base.executeCommand",
+      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f101",
+      "name": "Local File Trigger",
+      "type": "n8n-nodes-base.localFileTrigger",
       "typeVersion": 1,
       "position": [
-        -1080,
-        80
+        0,
+        0
       ]
     },
     {
       "parameters": {
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst stdout = ($json.stdout || '').trim();\nconst lines = stdout ? stdout.split('\\n').map(line => line.trim()).filter(Boolean) : [];\nconst processed = staticData.processedFiles || {};\nconst items = [];\n\nfor (const line of lines) {\n  const sep = line.indexOf('|');\n  if (sep === -1) continue;\n  const modifiedRaw = line.slice(0, sep).trim();\n  const filepath = line.slice(sep + 1).trim();\n  if (!filepath) continue;\n\n  const filename = filepath.split('/').pop();\n  const modifiedEpoch = Number(modifiedRaw);\n  const prior = processed[filepath];\n\n  if (prior && Number(prior.modifiedEpoch) === modifiedEpoch) {\n    continue;\n  }\n\n  items.push({ json: { filepath, filename, modifiedEpoch } });\n}\n\nreturn items;"
-      },
-      "id": "80c26562-7183-4cde-89c3-86d267daaadc",
-      "name": "Keep Only New Or Changed TXT Files",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -840,
-        80
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const fs = require('fs');\nconst filepath = $json.filepath;\nif (!filepath) throw new Error('Missing filepath');\nconst content = fs.readFileSync(filepath, 'utf8');\nreturn [{ json: { filepath: $json.filepath, filename: $json.filename, modifiedEpoch: $json.modifiedEpoch, content } }];"
-      },
-      "id": "1af1f087-c910-4e30-a206-4763b4ffc27c",
-      "name": "Read TXT Content",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -600,
-        80
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://localhost:5678/webhook/openbrain-ingest",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ ({ filepath: $json.filepath, filename: $json.filename, modifiedEpoch: $json.modifiedEpoch, content: $json.content }) }}",
+        "operation": "read",
+        "fileSelector": "={{ $json.path || $json.filePath || $json.filepath || $json.fullPath || $json.filename || '' }}",
         "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          },
-          "timeout": 120000
+          "mimeType": "text/plain",
+          "fileExtension": "txt",
+          "putOutputFileInField": "data"
         }
       },
-      "id": "8eb2c51f-e13b-4be8-81e0-0890c8717be1",
-      "name": "Call openbrain-ingest",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f102",
+      "name": "Read File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
       "position": [
-        -360,
-        80
+        260,
+        0
       ]
     },
     {
       "parameters": {
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst processed = staticData.processedFiles || {};\nconst input = $('Read TXT Content').item.json;\nconst child = $json;\n\nprocessed[input.filepath] = {\n  filename: input.filename,\n  modifiedEpoch: input.modifiedEpoch,\n  processedAt: new Date().toISOString(),\n  childResponse: child,\n};\n\nstaticData.processedFiles = processed;\n\nreturn [{\n  json: {\n    ok: true,\n    filepath: input.filepath,\n    filename: input.filename,\n    modifiedEpoch: input.modifiedEpoch,\n    childResponse: child,\n  }\n}];"
+        "jsCode": "const input = $json ?? {};\nconst buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst content = buffer.toString('utf8');\n\nconst filepath = [\n  input.path,\n  input.filePath,\n  input.filepath,\n  input.fullPath,\n  input.file_name,\n  input.fileName,\n  input.filename\n].find((value) => typeof value === 'string' && value.trim() !== '') || '';\n\nif (!filepath) {\n  throw new Error('Missing filepath from local file trigger payload');\n}\n\nconst filename = filepath.split('/').pop() || filepath;\n\nconst modifiedCandidates = [\n  input.modifiedEpoch,\n  input.mtimeMs,\n  input.modified,\n  input.lastModified,\n  input.mtime,\n  input.updatedAt,\n  input.timestamp\n];\n\nlet modifiedEpoch;\nfor (const candidate of modifiedCandidates) {\n  if (candidate === undefined || candidate === null || candidate === '') {\n    continue;\n  }\n\n  const numeric = Number(candidate);\n  if (Number.isFinite(numeric) && numeric > 0) {\n    modifiedEpoch = numeric > 9999999999 ? Math.floor(numeric / 1000) : Math.floor(numeric);\n    break;\n  }\n\n  const parsed = Date.parse(String(candidate));\n  if (Number.isFinite(parsed) && parsed > 0) {\n    modifiedEpoch = Math.floor(parsed / 1000);\n    break;\n  }\n}\n\nconst normalizedPath = filepath.replace(/\\\\/g, '/');\nconst projectMatch = normalizedPath.match(/\\/inbox\\/([^/]+)\\/[^/]+$/);\nconst derivedProjectSlug = projectMatch ? projectMatch[1] : null;\n\nreturn [{\n  json: {\n    filepath,\n    filename,\n    content,\n    ...(modifiedEpoch !== undefined ? { modifiedEpoch } : {}),\n    ...(derivedProjectSlug ? { project_slug: derivedProjectSlug } : {})\n  }\n}];"
       },
-      "id": "450ae8af-222f-46ce-acd4-b1d9a73cc8bd",
-      "name": "Mark Files Processed",
+      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f103",
+      "name": "Normalize File Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -120,
-        80
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "openbrain-ingest",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f104",
+      "name": "Execute openbrain-ingest",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        780,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Normalize File Payload').first().json;\nconst ingestResult = $json ?? {};\n\nreturn [{\n  json: {\n    success: true,\n    filepath: base.filepath,\n    filename: base.filename,\n    derivedProjectSlug: base.project_slug ?? null,\n    ingestResult\n  }\n}];"
+      },
+      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f105",
+      "name": "Return Watch Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
       ]
     }
   ],
   "connections": {
-    "Schedule Trigger": {
+    "Local File Trigger": {
       "main": [
         [
           {
-            "node": "List Inbox TXT Files",
+            "node": "Read File",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "List Inbox TXT Files": {
+    "Read File": {
       "main": [
         [
           {
-            "node": "Keep Only New Or Changed TXT Files",
+            "node": "Normalize File Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Keep Only New Or Changed TXT Files": {
+    "Normalize File Payload": {
       "main": [
         [
           {
-            "node": "Read TXT Content",
+            "node": "Execute openbrain-ingest",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read TXT Content": {
+    "Execute openbrain-ingest": {
       "main": [
         [
           {
-            "node": "Call openbrain-ingest",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call openbrain-ingest": {
-      "main": [
-        [
-          {
-            "node": "Mark Files Processed",
+            "node": "Return Watch Result",
             "type": "main",
             "index": 0
           }
@@ -156,7 +132,15 @@
     }
   },
   "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": false,
+  "versionId": "4d47d54b-0f1f-45a6-b3ef-9f12c9a85a02",
   "meta": {
-    "instanceId": "56b92b9ea61be735ca16935ff625239de8741419435cb59d1644bfb7ca65070f"
-  }
+    "templateCredsSetupCompleted": false
+  },
+  "id": "openbrain-auto-ingest-watch"
 }
