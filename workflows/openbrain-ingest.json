@@ -1,4 +1,5 @@
 {
+  "name": "openbrain-ingest",
   "nodes": [
     {
       "parameters": {
@@ -20,7 +21,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\n\nconst filepath = typeof payload.filepath === 'string' ? payload.filepath.trim() : '';\nconst filename = typeof payload.filename === 'string' && payload.filename.trim()\n  ? payload.filename.trim()\n  : (filepath ? filepath.split('/').pop() : '');\nconst content = typeof payload.content === 'string' ? payload.content : '';\nconst modifiedEpoch = payload.modifiedEpoch !== undefined && payload.modifiedEpoch !== null\n  ? Number(payload.modifiedEpoch)\n  : null;\n\nif (!filepath) {\n  throw new Error('Missing filepath in webhook payload');\n}\n\nif (!filepath.startsWith('/')) {\n  throw new Error(`Expected absolute filepath, got: ${filepath}`);\n}\n\nif (!filename) {\n  throw new Error('Missing filename in webhook payload');\n}\n\nif (!content || !content.trim()) {\n  throw new Error('Missing or empty content in webhook payload');\n}\n\nreturn [{\n  json: {\n    filepath,\n    filename,\n    content,\n    modifiedEpoch,\n    source: 'file_ingest',\n    category: 'project_note',\n    ingestedAt: new Date().toISOString()\n  }\n}];\n"
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\n\nconst filepath = typeof payload.filepath === 'string' ? payload.filepath.trim() : '';\nconst filename = typeof payload.filename === 'string' && payload.filename.trim()\n  ? payload.filename.trim()\n  : (filepath ? filepath.split('/').pop() : '');\nconst content = typeof payload.content === 'string' ? payload.content : '';\nconst modifiedEpoch = payload.modifiedEpoch !== undefined && payload.modifiedEpoch !== null\n  ? Number(payload.modifiedEpoch)\n  : null;\n\nlet projectSlug = null;\nif (payload.project_slug !== undefined && payload.project_slug !== null) {\n  if (typeof payload.project_slug !== 'string') {\n    throw new Error('project_slug must be a string when provided');\n  }\n\n  const trimmed = payload.project_slug.trim();\n  projectSlug = trimmed || null;\n}\n\nif (!filepath) {\n  throw new Error('Missing filepath in webhook payload');\n}\n\nif (!filepath.startsWith('/')) {\n  throw new Error(`Expected absolute filepath, got: ${filepath}`);\n}\n\nif (!filename) {\n  throw new Error('Missing filename in webhook payload');\n}\n\nif (!content || !content.trim()) {\n  throw new Error('Missing or empty content in webhook payload');\n}\n\nreturn [{\n  json: {\n    filepath,\n    filename,\n    content,\n    modifiedEpoch,\n    projectSlug,\n    source: 'file_ingest',\n    category: 'project_note',\n    ingestedAt: new Date().toISOString()\n  }\n}];"
       },
       "id": "ae13317e-1315-41f0-b157-d63a32a70136",
       "name": "Normalize Input",
@@ -33,7 +34,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst data = item.json;\n\nconst chunkSize = 1200;\nconst overlap = 200;\n\nconst normalize = (text) => text.replace(/\\r\\n/g, '\\n').replace(/\\t/g, '  ').trim();\n\nconst text = normalize(data.content || '');\nif (!text) {\n  throw new Error('Content is empty after normalization');\n}\n\nconst chunks = [];\nlet start = 0;\n\nwhile (start < text.length) {\n  let end = Math.min(start + chunkSize, text.length);\n\n  if (end < text.length) {\n    const windowStart = Math.max(start + Math.floor(chunkSize * 0.6), start);\n    const boundarySlice = text.slice(windowStart, end);\n    const breakCandidates = [\n      boundarySlice.lastIndexOf('\\n\\n'),\n      boundarySlice.lastIndexOf('\\n'),\n      boundarySlice.lastIndexOf('. '),\n      boundarySlice.lastIndexOf(' ')\n    ].filter((idx) => idx > 0);\n\n    if (breakCandidates.length > 0) {\n      end = windowStart + Math.max(...breakCandidates) + 1;\n    }\n  }\n\n  const chunkText = text.slice(start, end).trim();\n  if (chunkText) {\n    chunks.push(chunkText);\n  }\n\n  if (end >= text.length) break;\n  start = Math.max(end - overlap, start + 1);\n}\n\nif (chunks.length === 0) {\n  throw new Error('Chunking produced zero chunks');\n}\n\nif (chunks.length > 200) {\n  throw new Error(`Refusing to embed ${chunks.length} chunks in one run`);\n}\n\nreturn [{\n  json: {\n    ...data,\n    totalChunks: chunks.length,\n    chunks: chunks.map((chunkText, index) => ({\n      chunkIndex: index + 1,\n      totalChunks: chunks.length,\n      title: `${data.filename} :: chunk ${String(index + 1).padStart(2, '0')}`,\n      content: chunkText\n    }))\n  }\n}];\n"
+        "jsCode": "const item = $input.first();\nconst data = item.json;\n\nconst chunkSize = 1200;\nconst overlap = 200;\n\nconst normalize = (text) => text.replace(/\\r\\n/g, '\\n').replace(/\\t/g, '  ').trim();\n\nconst text = normalize(data.content || '');\nif (!text) {\n  throw new Error('Content is empty after normalization');\n}\n\nconst chunks = [];\nlet start = 0;\n\nwhile (start < text.length) {\n  let end = Math.min(start + chunkSize, text.length);\n\n  if (end < text.length) {\n    const windowStart = Math.max(start + Math.floor(chunkSize * 0.6), start);\n    const boundarySlice = text.slice(windowStart, end);\n    const breakCandidates = [\n      boundarySlice.lastIndexOf('\\n\\n'),\n      boundarySlice.lastIndexOf('\\n'),\n      boundarySlice.lastIndexOf('. '),\n      boundarySlice.lastIndexOf(' ')\n    ].filter((idx) => idx > 0);\n\n    if (breakCandidates.length > 0) {\n      end = windowStart + Math.max(...breakCandidates) + 1;\n    }\n  }\n\n  const chunkText = text.slice(start, end).trim();\n  if (chunkText) {\n    chunks.push(chunkText);\n  }\n\n  if (end >= text.length) break;\n  start = Math.max(end - overlap, start + 1);\n}\n\nif (chunks.length === 0) {\n  throw new Error('Chunking produced zero chunks');\n}\n\nif (chunks.length > 200) {\n  throw new Error(`Refusing to embed ${chunks.length} chunks in one run`);\n}\n\nreturn [{\n  json: {\n    ...data,\n    totalChunks: chunks.length,\n    chunks: chunks.map((chunkText, index) => ({\n      chunkIndex: index + 1,\n      totalChunks: chunks.length,\n      title: `${data.filename} :: chunk ${String(index + 1).padStart(2, '0')}`,\n      content: chunkText\n    }))\n  }\n}];"
       },
       "id": "7f2b1aac-b39c-4579-bbdf-a152c0303fe3",
       "name": "Chunk Content",
@@ -46,7 +47,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst { chunks, filepath, filename, modifiedEpoch, source, category, ingestedAt, totalChunks } = item.json;\n\nif (!Array.isArray(chunks) || chunks.length === 0) {\n  throw new Error('Missing chunks array');\n}\n\nreturn [{\n  json: {\n    filepath,\n    filename,\n    modifiedEpoch,\n    source,\n    category,\n    ingestedAt,\n    totalChunks,\n    chunks,\n    inputs: chunks.map(chunk => chunk.content)\n  }\n}];\n"
+        "jsCode": "const item = $input.first();\nconst { chunks, filepath, filename, modifiedEpoch, projectSlug, source, category, ingestedAt, totalChunks } = item.json;\n\nif (!Array.isArray(chunks) || chunks.length === 0) {\n  throw new Error('Missing chunks array');\n}\n\nreturn [{\n  json: {\n    filepath,\n    filename,\n    modifiedEpoch,\n    projectSlug,\n    source,\n    category,\n    ingestedAt,\n    totalChunks,\n    chunks,\n    inputs: chunks.map(chunk => chunk.content)\n  }\n}];"
       },
       "id": "fb146680-c4b8-4d9e-a9ed-e136ef425e2f",
       "name": "Build Embedding Batch Request",
@@ -63,7 +64,7 @@
         "url": "http://host.docker.internal:11434/api/embed",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\n  \"model\": \"nomic-embed-text\",\n  \"input\": {{$json.inputs.toJsonString()}}\n}",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"nomic-embed-text\",\n  input: $json.inputs\n}) }}",
         "options": {
           "response": {
             "response": {
@@ -84,7 +85,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const base = $('Build Embedding Batch Request').first().json;\nconst response = $json;\n\nconst embeddings = Array.isArray(response.embeddings)\n  ? response.embeddings\n  : (Array.isArray(response.embedding) ? [response.embedding] : null);\n\nif (!Array.isArray(embeddings) || embeddings.length === 0) {\n  throw new Error('Embedding response missing embeddings[]');\n}\n\nif (embeddings.length !== base.chunks.length) {\n  throw new Error(`Embedding count mismatch: got ${embeddings.length}, expected ${base.chunks.length}`);\n}\n\nconst escapeSql = (value) => String(value ?? '').replace(/'/g, \"''\");\n\nconst values = base.chunks.map((chunk, index) => {\n  const embedding = embeddings[index];\n\n  if (!Array.isArray(embedding) || embedding.length === 0) {\n    throw new Error(`Embedding missing or invalid for chunk ${chunk.chunkIndex}`);\n  }\n\n  const metadata = {\n    filename: base.filename,\n    filepath: base.filepath,\n    modified_epoch: base.modifiedEpoch,\n    ingested_at: base.ingestedAt,\n    chunk_index: chunk.chunkIndex,\n    total_chunks: chunk.totalChunks\n  };\n\n  const title = escapeSql(chunk.title);\n  const content = escapeSql(chunk.content);\n  const source = escapeSql(base.source);\n  const category = escapeSql(base.category);\n  const metadataSql = `'${escapeSql(JSON.stringify(metadata))}'::jsonb`;\n  const embeddingSql = `'[${embedding.join(',')}]'::vector`;\n\n  return `(\n    '${source}',\n    '${category}',\n    '${title}',\n    '${content}',\n    ARRAY['file_ingest','chunked']::text[],\n    ${metadataSql},\n    ${embeddingSql}\n  )`;\n});\n\nconst query = `\nINSERT INTO memories (\n  source,\n  category,\n  title,\n  content,\n  tags,\n  metadata_json,\n  embedding\n)\nVALUES\n${values.join(',\\n')}\nRETURNING id, title, source, category, created_at;\n`;\n\nreturn [{\n  json: {\n    filepath: base.filepath,\n    filename: base.filename,\n    modifiedEpoch: base.modifiedEpoch,\n    totalChunks: base.totalChunks,\n    query\n  }\n}];\n"
+        "jsCode": "const base = $('Build Embedding Batch Request').first().json;\nconst response = $json;\n\nconst embeddings = Array.isArray(response.embeddings)\n  ? response.embeddings\n  : (Array.isArray(response.embedding) ? [response.embedding] : null);\n\nif (!Array.isArray(embeddings) || embeddings.length === 0) {\n  throw new Error('Embedding response missing embeddings[]');\n}\n\nif (embeddings.length !== base.chunks.length) {\n  throw new Error(`Embedding count mismatch: got ${embeddings.length}, expected ${base.chunks.length}`);\n}\n\nconst escapeSql = (value) => String(value ?? '').replace(/'/g, \"''\");\n\nconst values = base.chunks.map((chunk, index) => {\n  const embedding = embeddings[index];\n\n  if (!Array.isArray(embedding) || embedding.length === 0) {\n    throw new Error(`Embedding missing or invalid for chunk ${chunk.chunkIndex}`);\n  }\n\n  const metadata = {\n    filename: base.filename,\n    filepath: base.filepath,\n    modified_epoch: base.modifiedEpoch,\n    ingested_at: base.ingestedAt,\n    project_slug: base.projectSlug,\n    chunk_index: chunk.chunkIndex,\n    total_chunks: chunk.totalChunks\n  };\n\n  const title = escapeSql(chunk.title);\n  const content = escapeSql(chunk.content);\n  const source = escapeSql(base.source);\n  const category = escapeSql(base.category);\n  const metadataSql = `'${escapeSql(JSON.stringify(metadata))}'::jsonb`;\n  const embeddingSql = `'[${embedding.join(',')}]'::vector`;\n\n  return `(\n    '${source}',\n    '${category}',\n    '${title}',\n    '${content}',\n    ARRAY['file_ingest','chunked']::text[],\n    ${metadataSql},\n    ${embeddingSql}\n  )`;\n});\n\nconst query = `\nINSERT INTO memories (\n  source,\n  category,\n  title,\n  content,\n  tags,\n  metadata_json,\n  embedding\n)\nVALUES\n${values.join(',\\n')}\nRETURNING id, title, source, category, created_at;\n`;\n\nreturn [{\n  json: {\n    filepath: base.filepath,\n    filename: base.filename,\n    modifiedEpoch: base.modifiedEpoch,\n    projectSlug: base.projectSlug,\n    totalChunks: base.totalChunks,\n    query\n  }\n}];"
       },
       "id": "807441bd-b827-4206-b1f9-73aca8586b08",
       "name": "Prepare Insert Query",
@@ -118,7 +119,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const inserted = $input.all();\nconst base = $('Prepare Insert Query').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    filepath: base.filepath,\n    filename: base.filename,\n    modifiedEpoch: base.modifiedEpoch,\n    insertedCount: inserted.length,\n    totalChunks: base.totalChunks\n  }\n}];\n"
+        "jsCode": "const inserted = $input.all();\nconst base = $('Prepare Insert Query').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    filepath: base.filepath,\n    filename: base.filename,\n    modifiedEpoch: base.modifiedEpoch,\n    projectSlug: base.projectSlug,\n    insertedCount: inserted.length,\n    totalChunks: base.totalChunks,\n    insertedRows: inserted.map((item) => ({\n      id: item.json.id,\n      title: item.json.title,\n      source: item.json.source,\n      category: item.json.category,\n      created_at: item.json.created_at\n    }))\n  }\n}];"
       },
       "id": "c924a315-63d4-4719-b61a-4120e5f53c54",
       "name": "Return Success Payload",
@@ -210,7 +211,13 @@
     }
   },
   "pinData": {},
+  "settings": {},
+  "staticData": null,
+  "tags": [],
+  "active": false,
+  "versionId": "00000000-0000-0000-0000-000000000002",
   "meta": {
-    "instanceId": "56b92b9ea61be735ca16935ff625239de8741419435cb59d1644bfb7ca65070f"
-  }
+    "templateCredsSetupCompleted": false
+  },
+  "id": "openbrain-ingest"
 }
