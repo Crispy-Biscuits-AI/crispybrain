@@ -1,0 +1,93 @@
+{
+  "name": "openbrain-project-bootstrap",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-project-bootstrap",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "id": "0f5d7be2-9de7-4c2c-9a1e-9d3f2b3b0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "openbrain-project-bootstrap"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst body = item?.json?.body && typeof item.json.body === 'object' ? item.json.body : {};\nconst root = item?.json ?? {};\n\nconst rawSlug = body.project_slug ?? body.slug ?? root.project_slug ?? root.slug;\nconst rawName = body.project_name ?? body.name ?? root.project_name ?? root.name;\n\nif (typeof rawSlug !== 'string' || rawSlug.trim() === '') {\n  throw new Error('Missing or invalid project_slug');\n}\n\nconst project_slug = rawSlug.trim();\nconst project_name = typeof rawName === 'string' && rawName.trim() !== ''\n  ? rawName.trim()\n  : project_slug;\n\nreturn [{\n  json: {\n    project_slug,\n    project_name\n  }\n}];"
+      },
+      "id": "0f5d7be2-9de7-4c2c-9a1e-9d3f2b3b0002",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH input AS (\n  SELECT\n    $1::text AS project_slug,\n    $2::text AS project_name\n),\ninserted AS (\n  INSERT INTO projects (slug, name)\n  SELECT i.project_slug, i.project_name\n  FROM input i\n  ON CONFLICT (slug) DO NOTHING\n  RETURNING id, slug, name\n),\nselected AS (\n  SELECT p.id, p.slug, p.name\n  FROM projects p\n  JOIN input i ON p.slug = i.project_slug\n  WHERE NOT EXISTS (SELECT 1 FROM inserted)\n)\nSELECT\n  id::text AS project_id,\n  slug,\n  name,\n  CASE\n    WHEN source_row = 'inserted' THEN 'created'\n    ELSE 'existing'\n  END AS status\nFROM (\n  SELECT id, slug, name, 'inserted'::text AS source_row FROM inserted\n  UNION ALL\n  SELECT id, slug, name, 'selected'::text AS source_row FROM selected\n) resolved\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [$json.project_slug, $json.project_name] }}"
+        }
+      },
+      "id": "0f5d7be2-9de7-4c2c-9a1e-9d3f2b3b0003",
+      "name": "Find Or Create Project",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "__SET_POSTGRES_CREDENTIAL__",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Find Or Create Project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {},
+  "staticData": null,
+  "tags": [],
+  "active": false,
+  "versionId": "00000000-0000-0000-0000-000000000001",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "openbrain-project-bootstrap"
+}
