@@ -1,0 +1,162 @@
+{
+  "name": "openbrain-answer-with-validation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-answer-with-validation",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "id": "a4b2d6f1-9c01-4c61-9ad9-1c0a2f9b8e11",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "openbrain-answer-with-validation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst body = item?.json?.body ?? {};\nconst root = item?.json ?? {};\nconst value = typeof body.query !== 'undefined' ? body.query : root.query;\n\nif (typeof value !== 'string' || value.trim().length === 0) {\n  return [{ json: { ok: false, error: 'Missing or invalid query' } }];\n}\n\nreturn [{ json: { query: value.trim() } }];"
+      },
+      "id": "c7e91340-3d4a-4fd0-b38c-2f0a4b12d2f1",
+      "name": "Validate Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9d8f4c5e-8a7b-4bc8-bddb-d2dd685b2d7c",
+              "leftValue": "={{ $json.query }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f1d4b3e2-7a64-4f8f-8ad1-0d55be0e7a2c",
+      "name": "Has Valid Query?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/openbrain-answer-from-memory",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"query\": $json.query } }}",
+        "options": {}
+      },
+      "id": "2bb8e1b4-cf93-4f8b-a2ea-70e734724277",
+      "name": "Call openbrain-answer-from-memory",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b0f0a4f1-42ac-4d1b-9f3b-890620dbd741",
+              "name": "ok",
+              "value": "={{ false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "b4f3be58-0e2d-4f95-9f53-95505f6fe6f4",
+              "name": "error",
+              "value": "Missing or invalid query",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7d9f70b6-8a8f-4f47-9a33-78667dcf9c0f",
+      "name": "Return Validation Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        760,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Query": {
+      "main": [
+        [
+          {
+            "node": "Has Valid Query?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Valid Query?": {
+      "main": [
+        [
+          {
+            "node": "Call openbrain-answer-from-memory",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "3"
+}

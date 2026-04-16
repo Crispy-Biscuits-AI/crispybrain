@@ -1,0 +1,183 @@
+{
+  "name": "openbrain-file-chunk-ingest-minimal",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "file_path",
+              "value": "/data/openbrain/inbox/2026-04-14-openbrain-minimal-test.txt",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "title",
+              "value": "2026-04-14-openbrain-minimal-test",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "category",
+              "value": "project_note",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "source",
+              "value": "file_ingest",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "chunk_size",
+              "value": 1200,
+              "type": "number"
+            },
+            {
+              "id": "a6",
+              "name": "chunk_overlap",
+              "value": 200,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-config-1",
+      "name": "Set Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "={{ $json.file_path }}",
+        "options": {
+          "mimeType": "text/plain",
+          "fileExtension": "txt",
+          "putOutputFileInField": "data"
+        }
+      },
+      "id": "read-file-1",
+      "name": "Read File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const config = $('Set Config').first().json;\nconst filePath = config.file_path;\nconst baseTitle = config.title;\nconst category = config.category;\nconst source = config.source;\nconst chunkSize = Number(config.chunk_size || 1200);\nconst chunkOverlap = Number(config.chunk_overlap || 200);\n\nconst buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst text = buffer.toString('utf8').replace(/\\r\\n/g, '\\n').trim();\n\nif (!text) {\n  return [];\n}\n\nconst items = [];\nlet chunkIndex = 1;\nlet start = 0;\n\nwhile (start < text.length) {\n  const end = Math.min(start + chunkSize, text.length);\n  const chunkText = text.slice(start, end).trim();\n\n  if (chunkText) {\n    items.push({\n      json: {\n        source,\n        category,\n        title: `${baseTitle} :: chunk ${String(chunkIndex).padStart(2, '0')}`,\n        content: chunkText,\n        tags: ['openbrain', 'file_ingest'],\n        metadata_json: {\n          file_path: filePath,\n          chunk_index: chunkIndex,\n          chunk_start: start,\n          chunk_end: end,\n          chunk_size: chunkSize,\n          chunk_overlap: chunkOverlap,\n          total_chars: text.length\n        }\n      }\n    });\n  }\n\n  if (end >= text.length) {\n    break;\n  }\n\n  start = end - chunkOverlap;\n  chunkIndex += 1;\n}\n\nreturn items;\n"
+      },
+      "id": "chunk-text-1",
+      "name": "Chunk Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO memories (source, category, title, content, tags, metadata_json) VALUES ($1, $2, $3, $4, $5::text[], $6::jsonb) RETURNING id, title;",
+        "options": {
+          "queryBatching": "independently",
+          "queryReplacement": "={{ [$json.source, $json.category, $json.title, $json.content, $json.tags, JSON.stringify($json.metadata_json)] }}"
+        }
+      },
+      "id": "postgres-insert-1",
+      "name": "Insert Chunk",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1190,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "OpenBrain Postgres"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Config": {
+      "main": [
+        [
+          {
+            "node": "Read File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read File": {
+      "main": [
+        [
+          {
+            "node": "Chunk Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk Text": {
+      "main": [
+        [
+          {
+            "node": "Insert Chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "763aa478-0a90-4d34-844a-6c1ad3ca5e7e",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "openbrain-file-chunk-ingest-minimal",
+  "tags": []
+}

@@ -1,0 +1,118 @@
+{
+  "name": "openbrain-search-by-embedding",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-search-by-embedding",
+        "responseMode": "lastNode",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "id": "b1d9f1a0-3a9a-4c69-a0c1-1f2b6d8f0001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "openbrain-search-by-embedding"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": \"nomic-embed-text\",\n  \"input\": $json.body?.query ?? $json.query,\n  \"truncate\": true\n} }}",
+        "options": {}
+      },
+      "id": "c2e8a2b1-4ba1-4a70-b1d2-2a3c7e9f0002",
+      "name": "Generate Query Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookItem = $('Webhook').first().json;\nconst queryText = webhookItem.body?.query ?? webhookItem.query;\n\nif (!queryText || typeof queryText !== 'string') {\n  throw new Error('Request body must include a string field named query.');\n}\n\nconst embeddings = $json.embeddings;\nif (!Array.isArray(embeddings) || !Array.isArray(embeddings[0])) {\n  throw new Error('Ollama response did not contain embeddings[0].');\n}\n\nconst vector = embeddings[0];\nconst vectorLiteral = `[${vector.join(',')}]`;\n\nreturn [{\n  json: {\n    query: queryText,\n    vector_literal: vectorLiteral\n  }\n}];"
+      },
+      "id": "d3f7b3c2-5cb2-4b81-c2e3-3b4d8f0a0003",
+      "name": "Prepare Vector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `SELECT id, title, category, source, content, 1 - (embedding <=> '${$json.vector_literal}'::vector) AS similarity\nFROM memories\nWHERE embedding IS NOT NULL\nORDER BY embedding <=> '${$json.vector_literal}'::vector\nLIMIT 5;` }}",
+        "options": {}
+      },
+      "id": "e4g6c4d3-6dc3-4c92-d3f4-4c5e9a1b0004",
+      "name": "Search Memories",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "YOUR_POSTGRES_CREDENTIAL_NAME"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Generate Query Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Query Embedding": {
+      "main": [
+        [
+          {
+            "node": "Prepare Vector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Vector": {
+      "main": [
+        [
+          {
+            "node": "Search Memories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "active": false,
+  "versionId": "11111111-2222-3333-4444-555555555555",
+  "tags": []
+}

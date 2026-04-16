@@ -1,0 +1,169 @@
+{
+  "name": "openbrain-insert-embedding",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "2a4d4cfe-6fd0-48b7-ae57-7e9e4f4b1001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/home/node/.n8n-files/openbrain/inbox/2026-04-14-openbrain-multi-chunk-test.txt",
+        "options": {
+          "putOutputFileInField": "data"
+        }
+      },
+      "id": "2a4d4cfe-6fd0-48b7-ae57-7e9e4f4b1002",
+      "name": "Read this text file from disk",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const item = $input.first();\nconst binaryField = item.binary?.data;\nif (!binaryField?.data) {\n  throw new Error('Expected binary data in field \"data\" from the file read node.');\n}\n\nconst text = Buffer.from(binaryField.data, 'base64').toString('utf8');\nconst normalized = text.replace(/\\r\\n/g, '\\n').trim();\nconst chunkSize = 1200;\nconst overlap = 200;\nconst step = Math.max(1, chunkSize - overlap);\nconst filename = binaryField.fileName || 'unknown.txt';\n\nconst chunks = [];\nfor (let start = 0; start < normalized.length; start += step) {\n  const chunk = normalized.slice(start, start + chunkSize).trim();\n  if (!chunk) continue;\n  chunks.push(chunk);\n  if (start + chunkSize >= normalized.length) break;\n}\n\nreturn chunks.map((chunk, index) => ({\n  json: {\n    filename,\n    content: chunk,\n    chunk_index: index + 1,\n    total_chunks: chunks.length\n  }\n}));"
+      },
+      "id": "2a4d4cfe-6fd0-48b7-ae57-7e9e4f4b1003",
+      "name": "Split the contents into one or more chunks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const filename = $json.filename;\nconst titlePrefix = filename.replace(/\\.[^/.]+$/, '');\nconst ingestTimestamp = new Date().toISOString();\n\nreturn {\n  json: {\n    source: 'file_ingest',\n    category: 'project_note',\n    title: `${titlePrefix} :: chunk ${String($json.chunk_index).padStart(2, '0')}`,\n    content: $json.content,\n    tags: [],\n    filename,\n    chunk_index: $json.chunk_index,\n    total_chunks: $json.total_chunks,\n    ingested_at: ingestTimestamp,\n    metadata_json: {\n      filename,\n      chunk_index: $json.chunk_index,\n      total_chunks: $json.total_chunks,\n      ingested_at: ingestTimestamp\n    }\n  }\n};"
+      },
+      "id": "2a4d4cfe-6fd0-48b7-ae57-7e9e4f4b1004",
+      "name": "Prepare Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"nomic-embed-text\",\n  \"input\": $json.content\n}",
+        "options": {}
+      },
+      "id": "2a4d4cfe-6fd0-48b7-ae57-7e9e4f4b1005",
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO memories (source, category, title, content, tags, metadata_json, embedding)\nVALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::vector);",
+        "options": {
+          "queryReplacement": "={{ [$('Prepare Metadata').item.json.source, $('Prepare Metadata').item.json.category, $('Prepare Metadata').item.json.title, $('Prepare Metadata').item.json.content, $('Prepare Metadata').item.json.tags, JSON.stringify($('Prepare Metadata').item.json.metadata_json), JSON.stringify($json.embeddings[0])] }}"
+        }
+      },
+      "id": "2a4d4cfe-6fd0-48b7-ae57-7e9e4f4b1006",
+      "name": "Insert Into Memories",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1500,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "YOUR_POSTGRES_CREDENTIAL_NAME"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read this text file from disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read this text file from disk": {
+      "main": [
+        [
+          {
+            "node": "Split the contents into one or more chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split the contents into one or more chunks": {
+      "main": [
+        [
+          {
+            "node": "Prepare Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Metadata": {
+      "main": [
+        [
+          {
+            "node": "Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Insert Into Memories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7c0e9d86-5874-4c1a-9d7f-2517cb5f9c5a",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "openbrain-insert-embedding"
+}

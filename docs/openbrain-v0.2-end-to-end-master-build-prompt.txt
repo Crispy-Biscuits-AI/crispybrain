@@ -1,0 +1,271 @@
+PROMPT-OpenBrain v0.2 End-to-End Master Build Prompt
+
+Role:
+You are my AI engineering mentor, n8n workflow architect, implementation reviewer, and version-aware debugging partner for OpenBrain.
+
+Your task is to design and generate the entire OpenBrain v0.2 system end-to-end in one pass.
+
+The system must be fully consistent with the existing OpenBrain v0.1 workflows and architecture already completed.
+
+You must not redesign the system from scratch.
+You must extend the existing working foundation.
+
+---
+
+# Existing OpenBrain v0.1 Baseline
+
+The following workflows already exist and work:
+
+Completed:
+
+* openbrain-ingest
+* openbrain-file-chunk-ingest-minimal
+* openbrain-insert-with-chunk-metadata
+* openbrain-insert-embedding
+* openbrain-search-by-embedding
+* openbrain-generate
+* openbrain-build-context
+* openbrain-answer-from-memory
+* openbrain-validation-and-errors
+* openbrain-answer-with-validation
+* openbrain-auto-ingest-watch
+
+Superseded / Legacy:
+
+* openbrain-search
+* openbrain-insert
+
+Current maturity estimate:
+
+* Infrastructure: 90%
+* Memory ingestion: 100%
+* Embedding pipeline: 100%
+* Semantic retrieval: 90%
+* Answer generation: 80%
+* Unified assistant: 40%
+* Automation + scaling: 10%
+
+The current stack is:
+
+* n8n version 2.15.1
+* Self-hosted in Docker Desktop
+* Ollama local
+* Postgres local
+* pgvector enabled
+* Workflows stored in an n8n project folder named “OpenBrain v0.1”
+
+The current memory table already exists and includes:
+
+* id
+* source
+* category
+* title
+* content
+* tags
+* metadata_json
+* embedding
+* created_at
+
+The current ingest pipeline already supports:
+
+* text file ingestion
+* chunk splitting
+* chunk metadata
+* embedding generation using Ollama + nomic-embed-text
+* insert into Postgres with pgvector
+* semantic search by embedding
+* clean context block creation
+* answer generation
+* input validation
+* automatic file watching
+
+---
+
+# Objective
+
+Design OpenBrain v0.2 as a complete next-generation system built on top of v0.1.
+
+The system should support:
+
+1. Project-based long-term memory
+2. Multiple memory categories
+3. Rich metadata tracking
+4. Automatic memory consolidation
+5. Summaries of old conversations and notes
+6. Retrieval prioritization
+7. Confidence scoring
+8. Source attribution in answers
+9. Workflow-level validation and recovery
+10. Unified assistant entrypoint workflow
+11. Scheduled maintenance workflows
+12. Better debugging visibility
+13. Future expansion toward multi-agent orchestration
+
+---
+
+# Required v0.2 Features
+
+Generate the complete design and implementation plan for:
+
+## Database Enhancements
+
+Add any new tables or columns needed for:
+
+* projects
+* memory relationships
+* memory summaries
+* ingestion jobs
+* failed jobs
+* retrieval history
+* answer history
+* confidence metrics
+
+Include:
+
+* full CREATE TABLE SQL
+* indexes
+* pgvector usage
+* foreign keys
+* recommended migration order
+
+---
+
+## Workflow Set
+
+Create all new workflows needed for OpenBrain v0.2.
+
+At minimum include:
+
+* openbrain-project-memory
+* openbrain-build-context-v2
+* openbrain-answer-with-sources
+* openbrain-memory-summary
+* openbrain-memory-maintenance
+* openbrain-ingest-job-tracker
+* openbrain-retry-failed-ingest
+* openbrain-unified-assistant
+* openbrain-debug-trace
+* openbrain-memory-ranking
+* openbrain-project-bootstrap
+
+For each workflow provide:
+
+1. Goal
+2. Required nodes
+3. Exact node-by-node plan
+4. Likely failure points
+5. Version-sensitive assumptions for n8n 2.15.1
+6. Complete workflow JSON export
+7. Test procedure
+8. Expected output
+9. Smallest next debugging step if it fails
+
+All workflow JSON must:
+
+* Use valid node names
+* Use explicit IDs
+* Use complete connections
+* Avoid deprecated node formats when possible
+* Use realistic field names
+* Reference fields that actually exist
+* Avoid invented expressions
+
+---
+
+# Required Architecture Rules
+
+You must preserve the current OpenBrain architecture philosophy:
+
+* Small, testable workflows
+* One responsibility per workflow
+* Workflows connected by Execute Workflow nodes where appropriate
+* No giant monolithic workflow unless specifically required
+* Prefer explicit validation and observability
+* Prefer safe fallback behavior over silent failure
+* Every workflow should return structured JSON
+* Every failure should produce a useful error message
+
+---
+
+# Required Unified Assistant Behavior
+
+The new OpenBrain v0.2 assistant must:
+
+* Accept a user query
+* Optionally identify a project
+* Retrieve the most relevant memories
+* Prefer project-specific memories when available
+* Include ranked confidence
+* Include source references
+* Build a clean prompt context
+* Generate an answer
+* Return:
+
+  * answer
+  * sources
+  * confidence
+  * project used
+  * number of memories retrieved
+  * timing information
+
+The assistant must support future expansion toward:
+
+* memory editing
+* memory deletion
+* multi-agent routing
+* local voice input
+* persistent conversation history
+
+---
+
+# Output Format Required
+
+You must respond in this exact order:
+
+1. Overall v0.2 architecture summary
+2. Migration plan from v0.1 to v0.2
+3. Database schema changes
+4. Workflow dependency graph
+5. Detailed workflow-by-workflow breakdown
+6. Failure and risk analysis
+7. Recommended build order
+8. Full SQL migrations
+9. Full workflow JSON exports
+10. Final end-to-end testing plan
+
+---
+
+# Important Constraints
+
+* Do not skip any workflow.
+* Do not summarize with placeholders.
+* Do not say “implementation omitted”.
+* Do not assume later work.
+* Produce the actual workflow JSON.
+* If any node field is uncertain due to n8n version differences, explicitly state what is uncertain.
+* Prefer the smallest working version of each workflow first.
+* Make the result detailed enough that I can implement OpenBrain v0.2 entirely from the response.
+
+---
+
+# Existing OpenBrain Design Direction
+
+The design must remain aligned with the following already-established direction:
+
+* OpenBrain is a self-hosted personal memory and research assistant
+* Uses Ollama locally
+* Uses pgvector in Postgres
+* Uses n8n as the orchestration layer
+* Uses project-oriented memory
+* Emphasizes reproducibility, debugging, and version-awareness
+* Built incrementally and carefully to avoid mission creep
+
+Before proposing any feature, determine whether it is:
+
+* essential for v0.2
+* optional for later
+* mission creep
+
+Explicitly label those categories.
+
+The final result should be a realistic, production-minded OpenBrain v0.2 plan that can be implemented immediately in the current local environment.

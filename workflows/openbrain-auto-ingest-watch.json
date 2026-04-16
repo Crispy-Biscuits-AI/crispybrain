@@ -1,0 +1,162 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 60
+            }
+          ]
+        }
+      },
+      "id": "ebfc1212-3cec-434e-8d02-67faf61bab5f",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1320,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "command": "find /home/node/.n8n-files/openbrain/inbox -maxdepth 1 -type f -name '*.txt' 2>/dev/null | while read f; do stat -c '%Y|%n' \"$f\"; done | sort || true"
+      },
+      "id": "9acdce17-e689-4695-97a0-b798eb865c44",
+      "name": "List Inbox TXT Files",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -1080,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst stdout = ($json.stdout || '').trim();\nconst lines = stdout ? stdout.split('\\n').map(line => line.trim()).filter(Boolean) : [];\nconst processed = staticData.processedFiles || {};\nconst items = [];\n\nfor (const line of lines) {\n  const sep = line.indexOf('|');\n  if (sep === -1) continue;\n  const modifiedRaw = line.slice(0, sep).trim();\n  const filepath = line.slice(sep + 1).trim();\n  if (!filepath) continue;\n\n  const filename = filepath.split('/').pop();\n  const modifiedEpoch = Number(modifiedRaw);\n  const prior = processed[filepath];\n\n  if (prior && Number(prior.modifiedEpoch) === modifiedEpoch) {\n    continue;\n  }\n\n  items.push({ json: { filepath, filename, modifiedEpoch } });\n}\n\nreturn items;"
+      },
+      "id": "80c26562-7183-4cde-89c3-86d267daaadc",
+      "name": "Keep Only New Or Changed TXT Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst filepath = $json.filepath;\nif (!filepath) throw new Error('Missing filepath');\nconst content = fs.readFileSync(filepath, 'utf8');\nreturn [{ json: { filepath: $json.filepath, filename: $json.filename, modifiedEpoch: $json.modifiedEpoch, content } }];"
+      },
+      "id": "1af1f087-c910-4e30-a206-4763b4ffc27c",
+      "name": "Read TXT Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/openbrain-ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({ filepath: $json.filepath, filename: $json.filename, modifiedEpoch: $json.modifiedEpoch, content: $json.content }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "8eb2c51f-e13b-4be8-81e0-0890c8717be1",
+      "name": "Call openbrain-ingest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -360,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst processed = staticData.processedFiles || {};\nconst input = $('Read TXT Content').item.json;\nconst child = $json;\n\nprocessed[input.filepath] = {\n  filename: input.filename,\n  modifiedEpoch: input.modifiedEpoch,\n  processedAt: new Date().toISOString(),\n  childResponse: child,\n};\n\nstaticData.processedFiles = processed;\n\nreturn [{\n  json: {\n    ok: true,\n    filepath: input.filepath,\n    filename: input.filename,\n    modifiedEpoch: input.modifiedEpoch,\n    childResponse: child,\n  }\n}];"
+      },
+      "id": "450ae8af-222f-46ce-acd4-b1d9a73cc8bd",
+      "name": "Mark Files Processed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        80
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "List Inbox TXT Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Inbox TXT Files": {
+      "main": [
+        [
+          {
+            "node": "Keep Only New Or Changed TXT Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep Only New Or Changed TXT Files": {
+      "main": [
+        [
+          {
+            "node": "Read TXT Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read TXT Content": {
+      "main": [
+        [
+          {
+            "node": "Call openbrain-ingest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call openbrain-ingest": {
+      "main": [
+        [
+          {
+            "node": "Mark Files Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "56b92b9ea61be735ca16935ff625239de8741419435cb59d1644bfb7ca65070f"
+  }
+}

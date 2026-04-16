@@ -1,0 +1,190 @@
+{
+  "name": "openbrain-insert-embedding",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b7d1be18-1230-4c0b-b4a8-5e0b00d80001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/home/node/.n8n-files/openbrain/inbox/2026-04-14-openbrain-multi-chunk-test.txt",
+        "options": {
+          "fileName": "2026-04-14-openbrain-multi-chunk-test.txt",
+          "mimeType": "text/plain"
+        }
+      },
+      "id": "b7d1be18-1230-4c0b-b4a8-5e0b00d80002",
+      "name": "Read this text file from disk",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item;\nconst binary = item.binary?.data;\nif (!binary?.data) {\n  throw new Error('Expected binary.data from Read this text file from disk');\n}\n\nconst content = Buffer.from(binary.data, 'base64').toString('utf8');\nreturn [{\n  json: {\n    filename: binary.fileName || 'input.txt',\n    content\n  }\n}];"
+      },
+      "id": "b7d1be18-1230-4c0b-b4a8-5e0b00d80003",
+      "name": "Extract text content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nconst content = item.content || '';\nconst filename = item.filename || 'input.txt';\n\nconst maxChunkLength = 1200;\nconst normalized = content.replace(/\r\n/g, '\n').trim();\nif (!normalized) {\n  throw new Error('Input content is empty');\n}\n\nconst paragraphs = normalized.split(/\n\s*\n/);\nconst chunks = [];\nlet current = '';\n\nfor (const paragraph of paragraphs) {\n  const candidate = current ? `${current}\n\n${paragraph}` : paragraph;\n  if (candidate.length <= maxChunkLength) {\n    current = candidate;\n  } else {\n    if (current) chunks.push(current);\n    if (paragraph.length <= maxChunkLength) {\n      current = paragraph;\n    } else {\n      for (let i = 0; i < paragraph.length; i += maxChunkLength) {\n        chunks.push(paragraph.slice(i, i + maxChunkLength));\n      }\n      current = '';\n    }\n  }\n}\nif (current) chunks.push(current);\n\nreturn chunks.map((chunk, index) => ({\n  json: {\n    filename,\n    content: chunk.trim(),\n    chunk_index: index + 1,\n    total_chunks: chunks.length\n  }\n}));"
+      },
+      "id": "b7d1be18-1230-4c0b-b4a8-5e0b00d80004",
+      "name": "Split the contents into one or more chunks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nconst filename = item.filename;\nconst titlePrefix = filename.replace(/\.txt$/i, '');\nconst chunkIndex = item.chunk_index;\nconst totalChunks = item.total_chunks;\nconst ingestedAt = new Date().toISOString();\n\nreturn [{\n  json: {\n    source: 'file_ingest',\n    category: 'project_note',\n    title: `${titlePrefix} :: chunk ${String(chunkIndex).padStart(2, '0')}` ,\n    content: item.content,\n    tags: ['openbrain','file_ingest'],\n    filename,\n    chunk_index: chunkIndex,\n    total_chunks: totalChunks,\n    ingested_at: ingestedAt,\n    metadata_json: {\n      filename,\n      chunk_index: chunkIndex,\n      total_chunks: totalChunks,\n      ingested_at: ingestedAt\n    }\n  }\n}];"
+      },
+      "id": "b7d1be18-1230-4c0b-b4a8-5e0b00d80005",
+      "name": "Prepare Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"nomic-embed-text\",\n  \"input\": $json.content\n}",
+        "options": {}
+      },
+      "id": "b7d1be18-1230-4c0b-b4a8-5e0b00d80006",
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO memories (source, category, title, content, tags, metadata_json, embedding) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::vector);",
+        "options": {
+          "queryReplacement": "={{ [$('Prepare Metadata').item.json.source, $('Prepare Metadata').item.json.category, $('Prepare Metadata').item.json.title, $('Prepare Metadata').item.json.content, '{' + $('Prepare Metadata').item.json.tags.map(tag => '\"' + tag.replace(/\"/g, '\\\"') + '\"').join(',') + '}', JSON.stringify($('Prepare Metadata').item.json.metadata_json), '[' + $json.embeddings[0].join(',') + ']'] }}"
+        }
+      },
+      "id": "b7d1be18-1230-4c0b-b4a8-5e0b00d80007",
+      "name": "Insert Into Memories",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1620,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_YOUR_POSTGRES_CREDENTIAL_NAME"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read this text file from disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read this text file from disk": {
+      "main": [
+        [
+          {
+            "node": "Extract text content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract text content": {
+      "main": [
+        [
+          {
+            "node": "Split the contents into one or more chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split the contents into one or more chunks": {
+      "main": [
+        [
+          {
+            "node": "Prepare Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Metadata": {
+      "main": [
+        [
+          {
+            "node": "Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Insert Into Memories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "c2cfe89a-d212-4b15-b3fb-6a8e6f679999",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "openbrain-insert-embedding-full"
+}

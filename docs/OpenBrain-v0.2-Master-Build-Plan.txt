@@ -1,0 +1,589 @@
+# OpenBrain v0.2 Master Build Plan
+
+## 1. Overall v0.2 Architecture Summary
+
+OpenBrain v0.2 extends the existing v0.1 workflow set rather than replacing it.
+
+Existing v0.1 workflows remain unchanged:
+
+* openbrain-ingest
+* openbrain-file-chunk-ingest-minimal
+* openbrain-insert-with-chunk-metadata
+* openbrain-insert-embedding
+* openbrain-search-by-embedding
+* openbrain-generate
+* openbrain-build-context
+* openbrain-answer-from-memory
+* openbrain-validation-and-errors
+* openbrain-answer-with-validation
+* openbrain-auto-ingest-watch
+
+v0.2 adds:
+
+* project-aware memory
+* retrieval ranking
+* answer source attribution
+* ingest job tracking
+* maintenance and summarization
+* failed-job retry
+* unified assistant entrypoint
+* debug trace visibility
+
+### Essential for v0.2
+
+* projects table
+* project-aware retrieval
+* memory summaries
+* retrieval confidence
+* answer sources
+* ingest job tracking
+* failed job retry
+* unified assistant
+
+### Optional Later
+
+* editable memories
+* memory deletion workflow
+* voice input
+* multi-agent routing
+* cross-project graph relationships
+
+### Mission Creep (Not v0.2)
+
+* autonomous agent planning
+* distributed vector databases
+* long-running conversational memory daemon
+* cloud synchronization
+
+---
+
+## 2. Migration Plan from v0.1 to v0.2
+
+Recommended order:
+
+1. Backup current database.
+2. Add new database tables and indexes.
+3. Add new nullable columns to existing memories table.
+4. Create project bootstrap workflow.
+5. Create ingest job tracker.
+6. Add project-aware memory insertion.
+7. Add ranking and source-aware answer generation.
+8. Add maintenance + summarization.
+9. Add unified assistant.
+10. Add retry + debug workflows.
+
+---
+
+## 3. Database Schema Changes
+
+### Existing memories table additions
+
+```sql
+ALTER TABLE memories
+ADD COLUMN IF NOT EXISTS project_id UUID,
+ADD COLUMN IF NOT EXISTS memory_type TEXT DEFAULT 'raw_memory',
+ADD COLUMN IF NOT EXISTS importance_score NUMERIC DEFAULT 0.5,
+ADD COLUMN IF NOT EXISTS confidence_score NUMERIC DEFAULT 0.5,
+ADD COLUMN IF NOT EXISTS last_accessed_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS access_count INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS summarized_into UUID,
+ADD COLUMN IF NOT EXISTS parent_memory_id UUID;
+```
+
+### Projects
+
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS projects (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  slug TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Memory Relationships
+
+```sql
+CREATE TABLE IF NOT EXISTS memory_relationships (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  from_memory_id BIGINT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+  to_memory_id BIGINT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+  relationship_type TEXT NOT NULL,
+  confidence NUMERIC DEFAULT 0.5,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Memory Summaries
+
+```sql
+CREATE TABLE IF NOT EXISTS memory_summaries (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID REFERENCES projects(id),
+  summary_title TEXT NOT NULL,
+  summary_text TEXT NOT NULL,
+  source_memory_ids BIGINT[] NOT NULL,
+  summary_embedding VECTOR(768),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Ingestion Jobs
+
+```sql
+CREATE TABLE IF NOT EXISTS ingestion_jobs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  filename TEXT,
+  workflow_name TEXT,
+  status TEXT NOT NULL,
+  project_id UUID REFERENCES projects(id),
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  chunk_count INTEGER DEFAULT 0,
+  inserted_count INTEGER DEFAULT 0,
+  error_message TEXT,
+  metadata_json JSONB DEFAULT '{}'::jsonb
+);
+```
+
+### Failed Jobs
+
+```sql
+CREATE TABLE IF NOT EXISTS failed_ingestion_jobs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ingestion_job_id UUID REFERENCES ingestion_jobs(id) ON DELETE CASCADE,
+  retry_count INTEGER DEFAULT 0,
+  last_retry_at TIMESTAMPTZ,
+  failure_stage TEXT,
+  failure_payload JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Retrieval History
+
+```sql
+CREATE TABLE IF NOT EXISTS retrieval_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  query_text TEXT NOT NULL,
+  query_embedding VECTOR(768),
+  project_id UUID REFERENCES projects(id),
+  retrieved_memory_ids BIGINT[],
+  top_similarity NUMERIC,
+  confidence_score NUMERIC,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Answer History
+
+```sql
+CREATE TABLE IF NOT EXISTS answer_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  retrieval_id UUID REFERENCES retrieval_history(id),
+  answer_text TEXT,
+  sources JSONB,
+  confidence_score NUMERIC,
+  timing_ms INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Indexes
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_memories_project_id ON memories(project_id);
+CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(memory_type);
+CREATE INDEX IF NOT EXISTS idx_memories_embedding ON memories USING ivfflat (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_summary_embedding ON memory_summaries USING ivfflat (summary_embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON ingestion_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_failed_retry ON failed_ingestion_jobs(retry_count);
+```
+
+---
+
+## 4. Workflow Dependency Graph
+
+```text
+openbrain-project-bootstrap
+        ↓
+openbrain-ingest-job-tracker
+        ↓
+openbrain-ingest
+        ↓
+openbrain-project-memory
+        ↓
+openbrain-memory-ranking
+        ↓
+openbrain-build-context-v2
+        ↓
+openbrain-answer-with-sources
+        ↓
+openbrain-unified-assistant
+
+openbrain-memory-summary
+        ↓
+openbrain-memory-maintenance
+
+openbrain-retry-failed-ingest
+        ↓
+openbrain-ingest-job-tracker
+
+openbrain-debug-trace can wrap every workflow
+```
+
+---
+
+## 5. Workflow-by-Workflow Breakdown
+
+# openbrain-project-bootstrap
+
+Goal:
+Create or retrieve a project record by slug.
+
+Required Nodes:
+
+* Manual Trigger or Webhook
+* Set
+* Postgres Select
+* IF
+* Postgres Insert
+* Respond
+
+Node Plan:
+
+1. Accept project_slug, project_name.
+2. Query projects by slug.
+3. If exists, return existing.
+4. Else insert new project.
+5. Return project_id.
+
+Likely Failure Points:
+
+* Missing slug
+* Duplicate unique constraint
+
+Version-Sensitive Assumptions:
+
+* n8n 2.15.1 Postgres node uses executeQuery operation.
+
+Example output:
+
+```json
+{
+  "project_id": "uuid",
+  "slug": "openbrain",
+  "status": "created"
+}
+```
+
+---
+
+# openbrain-project-memory
+
+Goal:
+Attach memories to a project during ingest.
+
+Required Nodes:
+
+* Execute Workflow(openbrain-project-bootstrap)
+* Set
+* Postgres Update
+
+Plan:
+
+1. Receive inserted memory row id.
+2. Resolve project_id.
+3. Update memories.project_id.
+
+---
+
+# openbrain-memory-ranking
+
+Goal:
+Re-rank retrieved memories.
+
+Ranking Formula:
+
+confidence =
+
+* 60% similarity
+* 20% project match
+* 10% importance_score
+* 10% recency
+
+Example expression:
+
+```javascript
+const similarity = Number($json.similarity || 0);
+const projectBonus = $json.project_match ? 0.2 : 0;
+const importance = Number($json.importance_score || 0.5) * 0.1;
+const recency = 0.1;
+
+return [{
+  json: {
+    ...$json,
+    ranked_confidence: similarity * 0.6 + projectBonus + importance + recency
+  }
+}];
+```
+
+---
+
+# openbrain-build-context-v2
+
+Goal:
+Create a clean context block with citations.
+
+Output example:
+
+```text
+[Memory 1 | Confidence 0.82 | Source: openbrain-seed-memories.txt]
+Use Ollama with nomic-embed-text and pgvector.
+
+[Memory 2 | Confidence 0.78 | Source: project note]
+OpenBrain should support project-based memory.
+```
+
+---
+
+# openbrain-answer-with-sources
+
+Goal:
+Generate answer and include sources.
+
+Expected JSON:
+
+```json
+{
+  "answer": "...",
+  "sources": [
+    {
+      "title": "OpenBrain architecture idea",
+      "memory_id": 14,
+      "confidence": 0.81
+    }
+  ],
+  "confidence": 0.79
+}
+```
+
+---
+
+# openbrain-memory-summary
+
+Goal:
+Periodically summarize older memories into compressed summaries.
+
+Rule:
+
+* Summarize memories older than 30 days
+* Minimum 10 memories per summary
+* Store result in memory_summaries
+
+---
+
+# openbrain-memory-maintenance
+
+Goal:
+Scheduled cleanup.
+
+Tasks:
+
+* archive stale jobs
+* summarize old memories
+* detect orphaned memories
+* recompute missing confidence
+
+Suggested Trigger:
+
+* Cron every Sunday at 03:00
+
+---
+
+# openbrain-ingest-job-tracker
+
+Goal:
+Track every ingest attempt.
+
+Returned JSON:
+
+```json
+{
+  "job_id": "uuid",
+  "status": "running"
+}
+```
+
+---
+
+# openbrain-retry-failed-ingest
+
+Goal:
+Retry failed ingestion_jobs where retry_count < 3.
+
+Retry Strategy:
+
+* Every 15 minutes
+* Increment retry_count
+* Re-run openbrain-ingest via Execute Workflow node
+
+---
+
+# openbrain-debug-trace
+
+Goal:
+Capture execution visibility.
+
+Tracked fields:
+
+* workflow_name
+* node_name
+* payload_size
+* elapsed_ms
+* error_text
+
+Store in JSON file or debug_logs table later.
+
+---
+
+# openbrain-unified-assistant
+
+Goal:
+Single entrypoint.
+
+Input:
+
+```json
+{
+  "query": "How am I planning to build OpenBrain?",
+  "project_slug": "openbrain"
+}
+```
+
+Output:
+
+```json
+{
+  "answer": "You are building OpenBrain incrementally using Ollama, pgvector, and n8n.",
+  "sources": [
+    "OpenBrain embedding plan",
+    "OpenBrain architecture idea"
+  ],
+  "confidence": 0.82,
+  "project_used": "openbrain",
+  "memory_count": 5,
+  "timing_ms": 1234
+}
+```
+
+---
+
+## 6. Failure and Risk Analysis
+
+| Area               | Likely Failure     | Smallest Debug Step                           |
+| ------------------ | ------------------ | --------------------------------------------- |
+| Project bootstrap  | Missing slug       | Inspect incoming JSON in first Set node       |
+| Retrieval ranking  | similarity missing | Inspect Search By Embedding output            |
+| Source attribution | Missing title      | Verify memories.title not null                |
+| Summary workflow   | Ollama timeout     | Test summary generation with one memory first |
+| Retry workflow     | Infinite loop      | Confirm retry_count < 3 filter                |
+| Unified assistant  | Empty answer       | Inspect context block before generate node    |
+
+---
+
+## 7. Recommended Build Order
+
+1. Database migration
+2. openbrain-project-bootstrap
+3. openbrain-project-memory
+4. openbrain-memory-ranking
+5. openbrain-build-context-v2
+6. openbrain-answer-with-sources
+7. openbrain-unified-assistant
+8. openbrain-ingest-job-tracker
+9. openbrain-retry-failed-ingest
+10. openbrain-memory-summary
+11. openbrain-memory-maintenance
+12. openbrain-debug-trace
+
+---
+
+## 8. Minimal JSON Export Pattern
+
+Because n8n 2.15.1 node schema differs slightly by patch level, all new workflows should follow this minimal export structure:
+
+```json
+{
+  "name": "openbrain-project-bootstrap",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0,0]
+    },
+    {
+      "id": "2",
+      "name": "Find Project",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [250,0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node":"Find Project","type":"main","index":0}]]
+    }
+  }
+}
+```
+
+Use this exact structure when exporting each workflow from your running n8n instance after manual creation.
+
+---
+
+## 9. End-to-End Testing Plan
+
+Test Sequence:
+
+1. Create project:
+
+```json
+{
+  "project_slug": "openbrain",
+  "project_name": "OpenBrain"
+}
+```
+
+2. Ingest memory into that project.
+
+3. Query unified assistant:
+
+```json
+{
+  "query": "How am I planing to build OpenBrain?",
+  "project_slug": "openbrain"
+}
+```
+
+Expected:
+
+* Project-specific memories returned first
+* Sources included
+* Confidence > 0.70
+* retrieval_history row created
+* answer_history row created
+
+If failure occurs:
+
+1. Inspect openbrain-build-context-v2 output.
+2. Confirm memory ids are present.
+3. Confirm answer workflow received non-empty context.
+4. Confirm Ollama returned text.

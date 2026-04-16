@@ -1,0 +1,137 @@
+{
+  "name": "openbrain-answer-from-memory",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-answer-from-memory",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a11",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "openbrain-answer-from-memory"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/openbrain-search-by-embedding",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"query\": $json.body.query } }}",
+        "options": {}
+      },
+      "id": "b2e4c7b3-8d59-4b95-9c3f-1c3c1a0c9b22",
+      "name": "Search Memories",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const query = $('Webhook').item.json.body.query ?? '';\n\nlet memories = [];\n\nif (items.length > 0 && items[0]?.json?.title !== undefined) {\n  memories = items.map(item => item.json);\n} else if (items.length > 0 && Array.isArray(items[0]?.json?.body)) {\n  memories = items[0].json.body;\n} else if (items.length > 0 && Array.isArray(items[0]?.json?.data)) {\n  memories = items[0].json.data;\n} else if (items.length > 0 && Array.isArray(items[0]?.json)) {\n  memories = items[0].json;\n}\n\nmemories = memories.filter(memory => memory && (\n  memory.title !== undefined ||\n  memory.category !== undefined ||\n  memory.source !== undefined ||\n  memory.content !== undefined\n));\n\nconst context = memories.length\n  ? memories.map((memory, index) => {\n      const title = memory.title ?? '';\n      const category = memory.category ?? '';\n      const source = memory.source ?? '';\n      const content = memory.content ?? '';\n\n      return `Memory ${index + 1}\\nTitle: ${title}\\nCategory: ${category}\\nSource: ${source}\\nContent:\\n${content}`;\n    }).join('\\n\\n---\\n\\n')\n  : 'No relevant memories were retrieved.';\n\nconst prompt = `You are answering a user question using retrieved memory context from OpenBrain.\\n\\nRules:\\n- Use only the provided memory context.\\n- If the context does not contain enough information, say that you do not have enough memory context to answer confidently.\\n- Be concise and direct.\\n\\nUser question:\\n${query}\\n\\nMemory context:\\n${context}\\n\\nAnswer:`;\n\nreturn [{\n  json: {\n    query,\n    context,\n    prompt\n  }\n}];"
+      },
+      "id": "c3f5d8c4-9e6a-4ca6-ad40-2d4d2b1dab33",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"model\": \"llama3\", \"prompt\": $json.prompt, \"stream\": false } }}",
+        "options": {}
+      },
+      "id": "d4a6e9d5-af7b-4db7-be51-3e5e3c2ebc44",
+      "name": "Generate Answer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f7c9d2e1-a123-4bcd-8ef0-1234567890ab",
+              "name": "answer",
+              "type": "string",
+              "value": "={{ $json.response || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e5b7f0e6-b08c-4ec8-cf62-4f6f4d3fcd55",
+      "name": "Return Answer",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1300, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Search Memories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Memories": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Answer": {
+      "main": [
+        [
+          {
+            "node": "Return Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {},
+  "staticData": null,
+  "tags": [],
+  "active": false,
+  "versionId": "93d0c1e2-3f45-4678-9abc-def012345678",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "openbrain-answer-from-memory"
+}

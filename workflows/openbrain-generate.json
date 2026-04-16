@@ -1,0 +1,254 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-generate",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "79f1f838-82dc-40a1-9e08-e555b9358499",
+      "name": "openbrain-search",
+      "webhookId": "ab9bd97b-551c-47b7-9029-bfbbdda7a16f"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1f13f412-e776-496f-96b9-d635bd263535",
+              "name": "query",
+              "value": "={{$json.body.query}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "04d8fb74-26f1-4118-aa08-b75a16b5fd27",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "nomic-embed-text"
+            },
+            {
+              "name": "input",
+              "value": "={{$json.query}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "66f1497a-7004-460b-a152-4e2a056c33be",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $('Edit Fields').first().json.query;\nconst embedding = $json.embeddings?.[0];\n\nif (!embedding) {\n  throw new Error('No embedding returned from Ollama');\n}\n\nif (embedding.length !== 768) {\n  throw new Error(`Expected 768 dimensions, got ${embedding.length}`);\n}\n\nreturn [\n  {\n    json: {\n      query,\n      query_embedding_vector: `[${embedding.join(',')}]`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "7629cd72-540f-4138-baed-cd8080d842b0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  id,\n  source,\n  category,\n  title,\n  content,\n  metadata_json,\n  1 - (embedding <=> $1::vector) AS similarity\nFROM memories\nWHERE embedding IS NOT NULL\nORDER BY embedding <=> $1::vector\nLIMIT 5;",
+        "options": {
+          "queryReplacement": "={{$json.query_embedding_vector}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        0
+      ],
+      "id": "a2201d8e-f888-4d73-992a-929e8e990f03",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "j60Gpt1oeRVTUCH2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const question = $('Edit Fields').first().json.query;\n\nif (!items || items.length === 0) {\n  return [\n    {\n      json: {\n        prompt: `You are an assistant helping answer questions from the user's OpenBrain memory database.\n\nQuestion:\n${question}\n\nNo relevant memories were found. Explain that there is not yet enough stored information to answer.`\n      }\n    }\n  ];\n}\n\nconst memoryText = items.map(item => {\n  return `Title: ${item.json.title}\nCategory: ${item.json.category}\nContent: ${item.json.content}`;\n}).join('\\n\\n---\\n\\n');\n\nreturn [\n  {\n    json: {\n      prompt: `You are an assistant helping answer questions from the user's OpenBrain memory database.\n\nUse only the memory entries below.\n\nQuestion:\n${question}\n\nMemory Entries:\n${memoryText}\n\nAnswer briefly and factually. If the memories are incomplete, say what is missing.`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "4f9047df-a56c-40bb-bb58-25960ae4a471",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"llama3\",\n  prompt: $json.prompt,\n  stream: false\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "394821b9-a33d-4249-a415-cc6b06537fc4",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      answer: $json.response\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "1ad91135-65a8-4f11-92a3-d31a746d7a9d",
+      "name": "Code in JavaScript2"
+    }
+  ],
+  "connections": {
+    "openbrain-search": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "openbrain-search": [
+      {
+        "headers": {
+          "host": "localhost:5678",
+          "user-agent": "curl/8.7.1",
+          "accept": "*/*",
+          "content-type": "application/json",
+          "content-length": "45"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "query": "OpenBrain embedding plan"
+        },
+        "webhookUrl": "http://localhost:5678/webhook/openbrain-generate",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "instanceId": "56b92b9ea61be735ca16935ff625239de8741419435cb59d1644bfb7ca65070f"
+  }
+}

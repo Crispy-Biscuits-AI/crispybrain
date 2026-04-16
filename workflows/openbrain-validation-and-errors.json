@@ -1,0 +1,56 @@
+{
+  "name": "openbrain-validation-and-errors",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-validation-and-errors",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "id": "b1e1e0f3-0eaa-4c59-9f0b-6a8b6dd9f101",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "openbrain-validation-and-errors"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? {};\nconst query = body.query;\n\nif (typeof query !== 'string' || query.trim() === '') {\n  return [\n    {\n      json: {\n        ok: false,\n        error: 'Missing or invalid query'\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ok: true,\n      message: 'Validation passed',\n      query: query.trim()\n    }\n  }\n];"
+      },
+      "id": "8cfc7ad9-4eb2-43e7-86ef-ea9ce68f2202",
+      "name": "Validate Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "2d7fb9a8-7ff7-4d57-b9a9-b2ee6937f9a1",
+  "meta": {
+    "instanceId": "openbrain-local"
+  },
+  "pinData": {}
+}

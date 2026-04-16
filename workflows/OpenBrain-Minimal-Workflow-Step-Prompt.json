@@ -1,0 +1,158 @@
+# OpenBrain Minimal Workflow Step Prompt
+
+Role:
+You are my AI engineering mentor, n8n workflow architect, and implementation reviewer for my self-hosted OpenBrain stack.
+
+Environment:
+
+* n8n running in Docker Desktop
+* Ollama running locally
+* Postgres + pgvector running locally
+* Version-sensitive n8n environment where node names, parameters, and workflow JSON structure may differ by release
+
+Your job:
+Create or repair exactly one small workflow step.
+
+Current environment details:
+
+* n8n version: 2.15.1
+* Docker Desktop
+* Ollama local
+* Postgres + pgvector local
+
+Current state:
+
+The OpenBrain ingest pipeline already works end-to-end:
+
+text file -> n8n -> chunking -> metadata preparation -> embedding generation -> Postgres memories row
+
+Confirmed working behavior:
+
+* The workflow reads a text file from disk successfully
+* The file content is split into chunks
+* Metadata is prepared before insert
+* One embedding is generated per chunk using Ollama
+* The embedding vector is inserted into the `embedding` column in Postgres
+* Metadata fields for filename, chunk index, total chunks, and ingest timestamp are stored correctly
+* The `memories` table now contains content plus embedding vectors for each chunk
+
+This is the confirmed stopping point before adding:
+
+* automatic file watching
+* answer generation
+* multi-step orchestration
+
+Task:
+Create or repair exactly one small next step.
+
+Desired next step:
+
+Create one new workflow named:
+
+`openbrain-search-by-embedding`
+
+That workflow must:
+
+1. Accept a user query from a Webhook node
+2. Generate one embedding for the query using Ollama running locally
+3. Perform a pgvector similarity search against the existing `memories` table
+4. Return only the top matching rows
+5. Produce a clean response object that contains only the fields needed later for answer generation
+
+The returned response should look approximately like this:
+
+```json
+{
+  "query": "How am I planning to build OpenBrain?",
+  "matches": [
+    {
+      "title": "OpenBrain embedding plan",
+      "content": "Use Ollama with nomic-embed-text and pgvector.",
+      "similarity": 0.523
+    },
+    {
+      "title": "OpenBrain architecture idea",
+      "content": "I want OpenBrain to ingest my notes automatically into memories.",
+      "similarity": 0.501
+    }
+  ],
+  "context_block": "[1] OpenBrain embedding plan\nUse Ollama with nomic-embed-text and pgvector.\n\n[2] OpenBrain architecture idea\nI want OpenBrain to ingest my notes automatically into memories."
+}
+```
+
+The workflow must not yet generate a final answer.
+
+It should only prepare a clean context block for a later generation workflow.
+
+Required node behavior:
+
+* Webhook node receives JSON like:
+
+```json
+{
+  "query": "How am I planning to build OpenBrain?"
+}
+```
+
+* One embedding-generation node creates the query embedding using Ollama
+* One Postgres query node performs similarity search using the generated vector
+* One formatting node creates:
+
+  * `matches`
+  * `context_block`
+* One Respond to Webhook node returns the result
+
+Before generating workflow JSON:
+
+* State the exact expected JSON response shape returned by the configured Ollama embedding endpoint
+* State the exact SQL query that will be used for pgvector similarity search
+* Verify that the SQL references the correct vector field type and distance operator for the existing `memories.embedding` column
+
+The SQL should remain minimal and should return only:
+
+* title
+* content
+* similarity
+
+Rules:
+
+* Do not redesign the system
+* Keep changes minimal
+* Create exactly one new workflow
+* Do not modify the existing ingest workflow
+* Keep the workflow small enough to test in one execution
+* Assume version differences in n8n may matter
+* Never assume node names, field names, or JSON structure without checking whether they are version-sensitive
+* Use explicit field names and realistic expressions
+* Avoid placeholders such as `undefined`, `$json.data`, or fake example values unless clearly marked
+* Explain likely failure points before giving JSON
+* If uncertain about a node field or version-specific behavior, say exactly what is uncertain
+* Do not invent unsupported node fields
+* Stop after the smallest working search workflow
+* Do not expand into later answer-generation phases
+
+Required response format:
+
+1. Goal of the workflow
+2. Required nodes
+3. Node-by-node plan
+4. Risks and assumptions
+5. Likely failure points
+6. Version-sensitive assumptions
+7. Verified Ollama embedding response shape
+8. Exact pgvector SQL query
+9. Minimal working JSON
+10. Exact test input
+11. Expected output
+12. What to inspect in n8n execution logs
+13. Most likely reason the workflow could fail
+14. Smallest next debugging step
+15. Pause before expanding the workflow further
+
+Additional behavior requirements:
+
+* If the Ollama embedding response shape cannot be verified safely, stop and require a sample execution response before generating workflow JSON
+* If the SQL operator is uncertain for the current pgvector version, state that uncertainty before generating JSON
+* Expressions must reference only fields actually produced by upstream nodes
+* The first solution must work with the smallest possible number of nodes
+* Prefer repair or extension of existing proven patterns over introducing new node types unnecessarily

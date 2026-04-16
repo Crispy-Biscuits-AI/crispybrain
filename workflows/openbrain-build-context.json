@@ -1,0 +1,60 @@
+{
+  "name": "openbrain-build-context",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-build-context",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "id": "c1f2a3b4-5d6e-47f8-9012-abcdef123456",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "openbrain-build-context"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const first = items[0] ?? { json: {} };\n\nconst body = first.json.body;\n\nlet memories = [];\n\nif (Array.isArray(body)) {\n  memories = body;\n} else if (Array.isArray(first.json.results)) {\n  memories = first.json.results;\n} else if (items.length > 0) {\n  memories = items.map(item => item.json);\n}\n\nconst context = memories.map((memory, index) => {\n  const title = memory.title ?? '';\n  const category = memory.category ?? '';\n  const source = memory.source ?? '';\n  const content = memory.content ?? '';\n\n  return `Memory ${index + 1}\nTitle: ${title}\nCategory: ${category}\nSource: ${source}\nContent:\n${content}`;\n}).join('\\n\\n---\\n\\n');\n\nreturn [\n  {\n    json: {\n      context\n    }\n  }\n];"
+      },
+      "id": "d7e8f901-2345-4abc-89de-f0123456789a",
+      "name": "Build Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {},
+  "staticData": null,
+  "tags": [],
+  "active": false,
+  "versionId": "8a9b0c1d-2e3f-4a5b-8c9d-0e1f2a3b4c5d",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "openbrain-build-context"
+}
