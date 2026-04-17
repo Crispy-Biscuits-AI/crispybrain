@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-OpenBrain v0.2 database backup + migration script
+CrispyBrain v0.2 database backup + migration script
 
 What this script does:
 1. Creates a timestamped PostgreSQL backup using pg_dump
-2. Applies the canonical OpenBrain v0.2 additive schema contract
+2. Applies the canonical CrispyBrain v0.2 additive schema contract
 3. Adds new nullable columns to the existing memories table
-4. Creates new OpenBrain v0.2 tables
+4. Creates new CrispyBrain v0.2 tables
 5. Creates recommended indexes
 
 How to use:

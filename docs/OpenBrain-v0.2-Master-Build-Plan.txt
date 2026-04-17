@@ -1,22 +1,22 @@
-# OpenBrain v0.2 Master Build Plan
+# CrispyBrain v0.2 Master Build Plan
 
 ## 1. Overall v0.2 Architecture Summary
 
-OpenBrain v0.2 extends the existing v0.1 workflow set rather than replacing it.
+CrispyBrain v0.2 extends the existing v0.1 workflow set rather than replacing it.
 
 Existing v0.1 workflows remain unchanged:
 
-* openbrain-ingest
-* openbrain-file-chunk-ingest-minimal
-* openbrain-insert-with-chunk-metadata
-* openbrain-insert-embedding
-* openbrain-search-by-embedding
-* openbrain-generate
-* openbrain-build-context
-* openbrain-answer-from-memory
-* openbrain-validation-and-errors
-* openbrain-answer-with-validation
-* openbrain-auto-ingest-watch
+* ingest
+* file-chunk-ingest-minimal
+* insert-with-chunk-metadata
+* insert-embedding
+* search-by-embedding
+* generate
+* build-context
+* answer-from-memory
+* validation-and-errors
+* answer-with-validation
+* auto-ingest-watch
 
 v0.2 adds:
 
@@ -220,17 +220,17 @@ CREATE INDEX IF NOT EXISTS idx_answer_history_retrieval_id ON answer_history(ret
 ## 4. Workflow Dependency Graph
 
 ```text
-openbrain-project-bootstrap
+project-bootstrap
         ↓
-openbrain-ingest-job-tracker
+ingest-job-tracker
         ↓
-openbrain-ingest
+ingest
         ↓
-openbrain-project-memory
+project-memory
         ↓
 openbrain-memory-ranking
         ↓
-openbrain-build-context-v2
+build-context-v2
         ↓
 openbrain-answer-with-sources
         ↓
@@ -242,7 +242,7 @@ openbrain-memory-maintenance
 
 openbrain-retry-failed-ingest
         ↓
-openbrain-ingest-job-tracker
+ingest-job-tracker
 
 openbrain-debug-trace can wrap every workflow
 ```
@@ -251,7 +251,7 @@ openbrain-debug-trace can wrap every workflow
 
 ## 5. Workflow-by-Workflow Breakdown
 
-# openbrain-project-bootstrap
+# project-bootstrap
 
 Goal:
 Create or retrieve a project record by slug.
@@ -294,14 +294,14 @@ Example output:
 
 ---
 
-# openbrain-project-memory
+# project-memory
 
 Goal:
 Attach memories to a project during ingest.
 
 Required Nodes:
 
-* Execute Workflow(openbrain-project-bootstrap)
+* Execute Workflow(project-bootstrap)
 * Set
 * Postgres Update
 
@@ -345,7 +345,7 @@ return [{
 
 ---
 
-# openbrain-build-context-v2
+# build-context-v2
 
 Goal:
 Create a clean context block with citations.
@@ -357,7 +357,7 @@ Output example:
 Use Ollama with nomic-embed-text and pgvector.
 
 [Memory 2 | Confidence 0.78 | Source: project note]
-OpenBrain should support project-based memory.
+CrispyBrain should support project-based memory.
 ```
 
 ---
@@ -374,7 +374,7 @@ Expected JSON:
   "answer": "...",
   "sources": [
     {
-      "title": "OpenBrain architecture idea",
+      "title": "CrispyBrain architecture idea",
       "memory_id": 14,
       "confidence": 0.81
     }
@@ -416,7 +416,7 @@ Suggested Trigger:
 
 ---
 
-# openbrain-ingest-job-tracker
+# ingest-job-tracker
 
 Goal:
 Track every ingest attempt.
@@ -441,7 +441,7 @@ Retry Strategy:
 
 * Every 15 minutes
 * Increment retry_count
-* Re-run openbrain-ingest via Execute Workflow node
+* Re-run ingest via Execute Workflow node
 
 ---
 
@@ -471,7 +471,7 @@ Input:
 
 ```json
 {
-  "query": "How am I planning to build OpenBrain?",
+  "query": "How am I planning to build CrispyBrain?",
   "project_slug": "openbrain"
 }
 ```
@@ -480,10 +480,10 @@ Output:
 
 ```json
 {
-  "answer": "You are building OpenBrain incrementally using Ollama, pgvector, and n8n.",
+  "answer": "You are building CrispyBrain incrementally using Ollama, pgvector, and n8n.",
   "sources": [
-    "OpenBrain embedding plan",
-    "OpenBrain architecture idea"
+    "CrispyBrain embedding plan",
+    "CrispyBrain architecture idea"
   ],
   "confidence": 0.82,
   "project_used": "openbrain",
@@ -510,13 +510,13 @@ Output:
 ## 7. Recommended Build Order
 
 1. Database migration
-2. openbrain-project-bootstrap
-3. openbrain-project-memory
+2. project-bootstrap
+3. project-memory
 4. openbrain-memory-ranking
-5. openbrain-build-context-v2
+5. build-context-v2
 6. openbrain-answer-with-sources
 7. openbrain-unified-assistant
-8. openbrain-ingest-job-tracker
+8. ingest-job-tracker
 9. openbrain-retry-failed-ingest
 10. openbrain-memory-summary
 11. openbrain-memory-maintenance
@@ -530,7 +530,7 @@ Because n8n 2.15.1 node schema differs slightly by patch level, all new workflow
 
 ```json
 {
-  "name": "openbrain-project-bootstrap",
+  "name": "project-bootstrap",
   "nodes": [
     {
       "id": "1",
@@ -568,7 +568,7 @@ Test Sequence:
 ```json
 {
   "project_slug": "openbrain",
-  "project_name": "OpenBrain"
+  "project_name": "CrispyBrain"
 }
 ```
 
@@ -578,7 +578,7 @@ Test Sequence:
 
 ```json
 {
-  "query": "How am I planing to build OpenBrain?",
+  "query": "How am I planing to build CrispyBrain?",
   "project_slug": "openbrain"
 }
 ```
@@ -593,7 +593,7 @@ Expected:
 
 If failure occurs:
 
-1. Inspect openbrain-build-context-v2 output.
+1. Inspect build-context-v2 output.
 2. Confirm memory ids are present.
 3. Confirm answer workflow received non-empty context.
 4. Confirm Ollama returned text.

@@ -1,39 +1,39 @@
-PROMPT-OpenBrain v0.2 End-to-End Master Build Prompt
+PROMPT-CrispyBrain v0.2 End-to-End Master Build Prompt
 
 Role:
-You are my AI engineering mentor, n8n workflow architect, implementation reviewer, and version-aware debugging partner for OpenBrain.
+You are my AI engineering mentor, n8n workflow architect, implementation reviewer, and version-aware debugging partner for CrispyBrain.
 
-Your task is to design and generate the entire OpenBrain v0.2 system end-to-end in one pass.
+Your task is to design and generate the entire CrispyBrain v0.2 system end-to-end in one pass.
 
-The system must be fully consistent with the existing OpenBrain v0.1 workflows and architecture already completed.
+The system must be fully consistent with the existing CrispyBrain v0.1 workflows and architecture already completed.
 
 You must not redesign the system from scratch.
 You must extend the existing working foundation.
 
 ---
 
-# Existing OpenBrain v0.1 Baseline
+# Existing CrispyBrain v0.1 Baseline
 
 The following workflows already exist and work:
 
 Completed:
 
-* openbrain-ingest
-* openbrain-file-chunk-ingest-minimal
-* openbrain-insert-with-chunk-metadata
-* openbrain-insert-embedding
-* openbrain-search-by-embedding
-* openbrain-generate
-* openbrain-build-context
-* openbrain-answer-from-memory
-* openbrain-validation-and-errors
-* openbrain-answer-with-validation
-* openbrain-auto-ingest-watch
+* ingest
+* file-chunk-ingest-minimal
+* insert-with-chunk-metadata
+* insert-embedding
+* search-by-embedding
+* generate
+* build-context
+* answer-from-memory
+* validation-and-errors
+* answer-with-validation
+* auto-ingest-watch
 
 Superseded / Legacy:
 
-* openbrain-search
-* openbrain-insert
+* search
+* insert
 
 Current maturity estimate:
 
@@ -52,7 +52,7 @@ The current stack is:
 * Ollama local
 * Postgres local
 * pgvector enabled
-* Workflows stored in an n8n project folder named “OpenBrain v0.1”
+* Workflows stored in an n8n project folder named “CrispyBrain v0.1”
 
 The current memory table already exists and includes:
 
@@ -83,7 +83,7 @@ The current ingest pipeline already supports:
 
 # Objective
 
-Design OpenBrain v0.2 as a complete next-generation system built on top of v0.1.
+Design CrispyBrain v0.2 as a complete next-generation system built on top of v0.1.
 
 The system should support:
 
@@ -132,21 +132,21 @@ Include:
 
 ## Workflow Set
 
-Create all new workflows needed for OpenBrain v0.2.
+Create all new workflows needed for CrispyBrain v0.2.
 
 At minimum include:
 
-* openbrain-project-memory
-* openbrain-build-context-v2
+* project-memory
+* build-context-v2
 * openbrain-answer-with-sources
 * openbrain-memory-summary
 * openbrain-memory-maintenance
-* openbrain-ingest-job-tracker
+* ingest-job-tracker
 * openbrain-retry-failed-ingest
 * openbrain-unified-assistant
 * openbrain-debug-trace
 * openbrain-memory-ranking
-* openbrain-project-bootstrap
+* project-bootstrap
 
 For each workflow provide:
 
@@ -174,7 +174,7 @@ All workflow JSON must:
 
 # Required Architecture Rules
 
-You must preserve the current OpenBrain architecture philosophy:
+You must preserve the current CrispyBrain architecture philosophy:
 
 * Small, testable workflows
 * One responsibility per workflow
@@ -189,7 +189,7 @@ You must preserve the current OpenBrain architecture philosophy:
 
 # Required Unified Assistant Behavior
 
-The new OpenBrain v0.2 assistant must:
+The new CrispyBrain v0.2 assistant must:
 
 * Accept a user query
 * Optionally identify a project
@@ -244,15 +244,15 @@ You must respond in this exact order:
 * Produce the actual workflow JSON.
 * If any node field is uncertain due to n8n version differences, explicitly state what is uncertain.
 * Prefer the smallest working version of each workflow first.
-* Make the result detailed enough that I can implement OpenBrain v0.2 entirely from the response.
+* Make the result detailed enough that I can implement CrispyBrain v0.2 entirely from the response.
 
 ---
 
-# Existing OpenBrain Design Direction
+# Existing CrispyBrain Design Direction
 
 The design must remain aligned with the following already-established direction:
 
-* OpenBrain is a self-hosted personal memory and research assistant
+* CrispyBrain is a self-hosted personal memory and research assistant
 * Uses Ollama locally
 * Uses pgvector in Postgres
 * Uses n8n as the orchestration layer
@@ -268,4 +268,4 @@ Before proposing any feature, determine whether it is:
 
 Explicitly label those categories.
 
-The final result should be a realistic, production-minded OpenBrain v0.2 plan that can be implemented immediately in the current local environment.
+The final result should be a realistic, production-minded CrispyBrain v0.2 plan that can be implemented immediately in the current local environment.

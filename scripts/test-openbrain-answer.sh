@@ -9,18 +9,18 @@ DB_CONTAINER_NAME="ai-postgres"
 CLI_USER="node"
 COOKIE_NAME="n8n-auth"
 REST_BASE_URL="http://localhost:5678/rest"
-BUILD_WORKFLOW_PATH="${REPO_ROOT}/workflows/openbrain-build-context.json"
-ANSWER_WORKFLOW_PATH="${REPO_ROOT}/workflows/openbrain-answer-from-memory.json"
-BUILD_CONTAINER_PATH="/tmp/openbrain-build-context.json"
-ANSWER_CONTAINER_PATH="/tmp/openbrain-answer-from-memory.json"
-BUILD_WORKFLOW_NAME="openbrain-build-context"
-ANSWER_WORKFLOW_NAME="openbrain-answer-from-memory"
-BUILD_WORKFLOW_ID="openbrain-build-context"
-ANSWER_WORKFLOW_ID="openbrain-answer-from-memory"
+BUILD_WORKFLOW_PATH="${REPO_ROOT}/workflows/build-context.json"
+ANSWER_WORKFLOW_PATH="${REPO_ROOT}/workflows/answer-from-memory.json"
+BUILD_CONTAINER_PATH="/tmp/build-context.json"
+ANSWER_CONTAINER_PATH="/tmp/answer-from-memory.json"
+BUILD_WORKFLOW_NAME="build-context"
+ANSWER_WORKFLOW_NAME="answer-from-memory"
+BUILD_WORKFLOW_ID="build-context"
+ANSWER_WORKFLOW_ID="answer-from-memory"
 BUILD_DESTINATION_NODE="Respond Build Context"
 ANSWER_DESTINATION_NODE="Respond Answer From Memory"
-BUILD_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/openbrain-build-context"
-ANSWER_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/openbrain-answer-from-memory"
+BUILD_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/build-context"
+ANSWER_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/answer-from-memory"
 QUERY_TEXT="What am I planning to build?"
 
 LAST_HTTP_STATUS=""
@@ -153,7 +153,7 @@ AUTH_COOKIE="$(mint_auth_cookie)"
 [[ -n "${AUTH_COOKIE}" ]] || fail "Could not mint a local n8n auth cookie"
 
 BUILD_PAYLOAD="$(cat <<'EOF'
-{"memories":[{"id":1,"title":"OpenBrain plan","content":"I am planning to build OpenBrain incrementally using n8n, Ollama, and Postgres."},{"id":2,"title":"Next step","content":"The next planned workflow is openbrain-build-context."}]}
+{"memories":[{"id":1,"title":"CrispyBrain plan","content":"I am planning to build CrispyBrain incrementally using n8n, Ollama, and Postgres."},{"id":2,"title":"Next step","content":"The next planned workflow is build-context."}]}
 EOF
 )"
 

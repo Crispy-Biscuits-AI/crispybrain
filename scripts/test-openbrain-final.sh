@@ -5,32 +5,32 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# shellcheck source=/Users/elric/repos/openbrain/scripts/openbrain-test-harness.sh
-source "${SCRIPT_DIR}/openbrain-test-harness.sh"
+# shellcheck source=/Users/elric/repos/crispybrain/scripts/crispybrain-test-harness.sh
+source "${SCRIPT_DIR}/crispybrain-test-harness.sh"
 
-WORKFLOW_VALIDATION_PATH="${REPO_ROOT}/workflows/openbrain-validation-and-errors.json"
-WORKFLOW_PROJECT_MEMORY_PATH="${REPO_ROOT}/workflows/openbrain-project-memory.json"
-WORKFLOW_AUTO_INGEST_PATH="${REPO_ROOT}/workflows/openbrain-auto-ingest-watch.json"
+WORKFLOW_VALIDATION_PATH="${REPO_ROOT}/workflows/validation-and-errors.json"
+WORKFLOW_PROJECT_MEMORY_PATH="${REPO_ROOT}/workflows/project-memory.json"
+WORKFLOW_AUTO_INGEST_PATH="${REPO_ROOT}/workflows/auto-ingest-watch.json"
 
-CONTAINER_VALIDATION_PATH="/tmp/openbrain-validation-and-errors.json"
-CONTAINER_PROJECT_MEMORY_PATH="/tmp/openbrain-project-memory.json"
-CONTAINER_AUTO_INGEST_PATH="/tmp/openbrain-auto-ingest-watch.json"
+CONTAINER_VALIDATION_PATH="/tmp/validation-and-errors.json"
+CONTAINER_PROJECT_MEMORY_PATH="/tmp/project-memory.json"
+CONTAINER_AUTO_INGEST_PATH="/tmp/auto-ingest-watch.json"
 
-VALIDATION_WORKFLOW_NAME="openbrain-validation-and-errors"
-PROJECT_MEMORY_WORKFLOW_NAME="openbrain-project-memory"
-AUTO_INGEST_WORKFLOW_NAME="openbrain-auto-ingest-watch"
+VALIDATION_WORKFLOW_NAME="validation-and-errors"
+PROJECT_MEMORY_WORKFLOW_NAME="project-memory"
+AUTO_INGEST_WORKFLOW_NAME="auto-ingest-watch"
 
-VALIDATION_WORKFLOW_ID="openbrain-validation-and-errors"
-PROJECT_MEMORY_WORKFLOW_ID="openbrain-project-memory"
-AUTO_INGEST_WORKFLOW_ID="openbrain-auto-ingest-watch"
+VALIDATION_WORKFLOW_ID="validation-and-errors"
+PROJECT_MEMORY_WORKFLOW_ID="project-memory"
+AUTO_INGEST_WORKFLOW_ID="auto-ingest-watch"
 
 VALIDATION_DESTINATION_NODE="Respond Validation Result"
 PROJECT_MEMORY_DESTINATION_NODE="Respond Project Memory Result"
 AUTO_INGEST_DESTINATION_NODE="Respond Auto Ingest Result"
 
-VALIDATION_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/openbrain-validation-and-errors"
-PROJECT_MEMORY_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/openbrain-project-memory"
-AUTO_INGEST_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/openbrain-auto-ingest-watch"
+VALIDATION_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/validation-and-errors"
+PROJECT_MEMORY_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/project-memory"
+AUTO_INGEST_WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/auto-ingest-watch"
 
 openbrain_harness_require_command jq
 openbrain_harness_require_command curl
@@ -78,7 +78,7 @@ openbrain_harness_assert_json_equals "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" '.err
 
 openbrain_harness_register_listener "${PROJECT_MEMORY_WORKFLOW_ID}" "${PROJECT_MEMORY_DESTINATION_NODE}" "${AUTH_COOKIE}"
 openbrain_harness_log "Executing ${PROJECT_MEMORY_WORKFLOW_NAME}"
-openbrain_harness_post_json "${PROJECT_MEMORY_WEBHOOK_TEST_URL}" '{"query":"How am I planning to build OpenBrain?","project_slug":"alpha"}'
+openbrain_harness_post_json "${PROJECT_MEMORY_WEBHOOK_TEST_URL}" '{"query":"How am I planning to build CrispyBrain?","project_slug":"alpha"}'
 openbrain_harness_log "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}"
 [[ "${OPENBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || openbrain_harness_fail "Unexpected HTTP status from ${PROJECT_MEMORY_WORKFLOW_NAME}: ${OPENBRAIN_HARNESS_LAST_HTTP_STATUS}"
 openbrain_harness_assert_json_equals "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" '.ok' 'true'
@@ -94,7 +94,7 @@ openbrain_harness_assert_json_equals "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" '.ok'
 openbrain_harness_assert_json_equals "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" '.filepath' '/tmp/example.txt'
 openbrain_harness_assert_json_equals "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" '.filename' 'example.txt'
 openbrain_harness_assert_json_equals "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" '.project_slug' 'alpha'
-openbrain_harness_assert_json_equals "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" '.next_workflow' 'openbrain-ingest'
+openbrain_harness_assert_json_equals "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" '.next_workflow' 'ingest'
 
 openbrain_harness_log "Checking n8n execution records"
 openbrain_harness_assert_execution_success "${VALIDATION_WORKFLOW_ID}"

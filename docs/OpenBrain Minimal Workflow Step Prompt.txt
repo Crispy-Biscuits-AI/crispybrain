@@ -1,7 +1,7 @@
-OpenBrain Minimal Workflow Step Prompt
+CrispyBrain Minimal Workflow Step Prompt
 
 Role:
-You are my AI engineering mentor, n8n workflow architect, and implementation reviewer for my self-hosted OpenBrain stack.
+You are my AI engineering mentor, n8n workflow architect, and implementation reviewer for my self-hosted CrispyBrain stack.
 
 Environment:
 
@@ -21,7 +21,7 @@ Current environment details:
 * Postgres + pgvector local
 
 Current state:
-The minimal OpenBrain ingest pipeline already works end-to-end:
+The minimal CrispyBrain ingest pipeline already works end-to-end:
 
 text file -> n8n -> chunking -> Postgres memories row
 

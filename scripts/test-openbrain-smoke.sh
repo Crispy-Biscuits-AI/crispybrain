@@ -4,18 +4,18 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-WORKFLOW_PATH="${REPO_ROOT}/workflows/openbrain-smoke-test.json"
+WORKFLOW_PATH="${REPO_ROOT}/workflows/smoke-test.json"
 CONTAINER_NAME="ai-n8n"
 DB_CONTAINER_NAME="ai-postgres"
-CONTAINER_WORKFLOW_PATH="/tmp/openbrain-smoke-test.json"
-WORKFLOW_NAME="openbrain-smoke-test"
-WORKFLOW_ID="openbrain-smoke-test"
+CONTAINER_WORKFLOW_PATH="/tmp/smoke-test.json"
+WORKFLOW_NAME="smoke-test"
+WORKFLOW_ID="smoke-test"
 WORKFLOW_NODE_NAME="Smoke Test Payload"
 CLI_USER="node"
 REST_BASE_URL="http://localhost:5678/rest"
-WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/openbrain-smoke-test"
+WEBHOOK_TEST_URL="http://localhost:5678/webhook-test/smoke-test"
 COOKIE_NAME="n8n-auth"
-TEMP_COOKIE_FILE="/tmp/openbrain-smoke-test.cookie"
+TEMP_COOKIE_FILE="/tmp/smoke-test.cookie"
 EXECUTION_QUERY="SELECT id::text || '|' || status || '|' || COALESCE(to_char(\"startedAt\", 'YYYY-MM-DD\"T\"HH24:MI:SSOF'), '') FROM execution_entity WHERE \"workflowId\" = '${WORKFLOW_ID}' ORDER BY \"startedAt\" DESC LIMIT 1;"
 
 print_log() {
@@ -95,8 +95,8 @@ print_log "${response_body}"
 if ! grep -Fq '"status":"ok"' <<<"${response_body}"; then
   fail "Webhook response did not contain status=ok"
 fi
-if ! grep -Fq '"source":"openbrain-smoke-test"' <<<"${response_body}"; then
-  fail "Webhook response did not contain source=openbrain-smoke-test"
+if ! grep -Fq '"source":"smoke-test"' <<<"${response_body}"; then
+  fail "Webhook response did not contain source=smoke-test"
 fi
 
 print_log "Checking n8n execution records"
