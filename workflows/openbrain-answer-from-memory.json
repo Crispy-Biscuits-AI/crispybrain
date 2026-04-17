@@ -5,378 +5,64 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "openbrain-answer-from-memory",
-        "responseMode": "lastNode",
-        "responseData": "firstEntryJson",
+        "responseMode": "responseNode",
         "options": {}
       },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a11",
-      "name": "Webhook",
+      "id": "webhook-openbrain-answer-from-memory",
+      "name": "Answer From Memory Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "typeVersion": 2.1,
       "position": [
-        0,
-        0
+        260,
+        300
       ],
       "webhookId": "openbrain-answer-from-memory"
     },
     {
       "parameters": {
-        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\n\nconst rawQuery = payload.query;\nif (typeof rawQuery !== 'string' || rawQuery.trim() === '') {\n  throw new Error('Request body must include a string field named query.');\n}\n\nlet projectSlug = null;\nif (payload.project_slug !== undefined && payload.project_slug !== null) {\n  if (typeof payload.project_slug !== 'string') {\n    throw new Error('project_slug must be a string when provided');\n  }\n\n  const trimmed = payload.project_slug.trim();\n  projectSlug = trimmed || null;\n}\n\nreturn [{\n  json: {\n    query: rawQuery.trim(),\n    projectSlug\n  }\n}];"
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst query = typeof payload.query === 'string' ? payload.query : '';\nconst context = typeof payload.context === 'string' ? payload.context : '';\n\nif (query.trim() === '' || context.trim() === '') {\n  return [{\n    json: {\n      ok: false,\n      error: 'Missing query or context'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    answer: 'Placeholder answer based on provided memory context.',\n    query,\n    context_length: context.length\n  }\n}];"
       },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a12",
-      "name": "Normalize Input",
+      "id": "code-validate-and-build-answer",
+      "name": "Validate And Build Answer",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        260,
-        0
+        560,
+        300
       ]
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT\n  CASE\n    WHEN $1::text IS NULL OR btrim($1::text) = '' THEN true\n    WHEN EXISTS (SELECT 1 FROM projects WHERE slug = $1::text) THEN true\n    ELSE false\n  END AS project_slug_valid,\n  CASE\n    WHEN $1::text IS NULL OR btrim($1::text) = '' THEN NULL\n    ELSE (SELECT slug FROM projects WHERE slug = $1::text LIMIT 1)\n  END AS project_slug,\n  CASE\n    WHEN $1::text IS NULL OR btrim($1::text) = '' THEN 'project_slug not provided'\n    WHEN EXISTS (SELECT 1 FROM projects WHERE slug = $1::text) THEN 'project_slug validated'\n    ELSE 'project_slug not found'\n  END AS validation_message;",
-        "options": {
-          "queryReplacement": "={{ [$json.projectSlug] }}"
-        }
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a13",
-      "name": "Validate Project Slug",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        520,
-        0
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "__SET_POSTGRES_CREDENTIAL__",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const base = $('Normalize Input').first().json;\nconst rows = $input.all().map(item => item.json ?? {});\n\nif (!base.projectSlug) {\n  return [{ json: base }];\n}\n\nconst firstRow = rows[0] ?? {};\n\nconst isValid =\n  firstRow.project_slug_valid === true ||\n  firstRow.project_slug === base.projectSlug;\n\nif (!isValid) {\n  throw new Error(`Unknown project_slug: ${base.projectSlug}`);\n}\n\nreturn [{ json: base }];"
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a14",
-      "name": "Enforce Project Validation Code",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        780,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://host.docker.internal:11434/api/embed",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: \"nomic-embed-text\",\n  input: $json.query,\n  truncate: true\n}) }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        }
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a15",
-      "name": "Generate Query Embedding",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1040,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const base = $('Enforce Project Validation Code').first().json;\nconst embeddings = $json.embeddings;\n\nif (!Array.isArray(embeddings) || !Array.isArray(embeddings[0])) {\n  throw new Error('Ollama response did not contain embeddings[0].');\n}\n\nconst vector = embeddings[0];\nconst vectorLiteral = `[${vector.join(',')}]`;\n\nreturn [{\n  json: {\n    query: base.query,\n    projectSlug: base.projectSlug,\n    vector_literal: vectorLiteral\n  }\n}];"
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a16",
-      "name": "Prepare Vector",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1300,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT\n  id,\n  title,\n  category,\n  source,\n  content,\n  metadata_json,\n  1 - (embedding <=> $1::vector) AS similarity\nFROM memories\nWHERE embedding IS NOT NULL\n  AND ($2::text IS NULL OR metadata_json->>'project_slug' = $2::text)\nORDER BY embedding <=> $1::vector\nLIMIT 5;",
-        "options": {
-          "queryReplacement": "={{ [$json.vector_literal, $json.projectSlug] }}"
-        }
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a17",
-      "name": "Search Memories",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        1560,
-        0
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "__SET_POSTGRES_CREDENTIAL__",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const base = $('Enforce Project Validation Code').first().json;\nconst rows = $input.all().map(item => item.json ?? {});\n\nconst relevanceThreshold = 0.50;\n\nconst memories = rows\n  .map((row) => {\n    const metadata = row.metadata_json && typeof row.metadata_json === 'object' ? row.metadata_json : {};\n    const memoryProjectSlug = typeof metadata.project_slug === 'string' && metadata.project_slug.trim() !== ''\n      ? metadata.project_slug.trim()\n      : null;\n    const similarity = Number(row.similarity);\n\n    return {\n      id: row.id,\n      title: row.title ?? '',\n      category: row.category ?? '',\n      source: row.source ?? '',\n      content: row.content ?? '',\n      similarity,\n      projectSlug: memoryProjectSlug,\n      metadata_json: metadata\n    };\n  })\n  .filter((memory) => Number.isFinite(memory.similarity) && memory.similarity >= relevanceThreshold);\n\nconst contextBlock = memories.length\n  ? memories.map((memory, index) => {\n      const lines = [\n        `Memory ${index + 1}`,\n        `Title: ${memory.title}`,\n        `Category: ${memory.category}`,\n        `Source: ${memory.source}`\n      ];\n\n      if (memory.projectSlug) {\n        lines.push(`Project: ${memory.projectSlug}`);\n      }\n\n      lines.push('Content:');\n      lines.push(memory.content);\n\n      return lines.join('\\n');\n    }).join('\\n\\n')\n  : '';\n\nconst prompt = memories.length\n  ? [\n      'You are answering a user question using only the supplied OpenBrain memory context.',\n      'Do not fabricate facts.',\n      'If the memory context is insufficient, say so clearly.',\n      'Keep the answer focused and concise.',\n      '',\n      `User question:\\n${base.query}`,\n      '',\n      `Memory context:\\n${contextBlock}`,\n      '',\n      'Answer:'\n    ].join('\\n')\n  : '';\n\nreturn [{\n  json: {\n    query: base.query,\n    projectSlug: base.projectSlug,\n    memoryCount: memories.length,\n    contextBlock,\n    memories,\n    prompt,\n    noRelevantMemory: memories.length === 0\n  }\n}];"
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a18",
-      "name": "Build Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1820,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = $input.first().json;\n\nif (Number(item.memoryCount ?? 0) <= 0) {\n  return [{\n    json: {\n      query: item.query,\n      projectSlug: item.projectSlug ?? null,\n      memoryCount: 0,\n      contextBlock: '',\n      answer: 'No relevant memory context was found for this question.',\n      memories: [],\n      skipGeneration: true\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...item,\n    skipGeneration: false\n  }\n}];"
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a24",
-      "name": "Decide Generation Path",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2080,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a25",
-                    "leftValue": "={{ String($json.skipGeneration) }}",
-                    "rightValue": "true",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a26",
-                    "leftValue": "={{ String($json.skipGeneration) }}",
-                    "rightValue": "false",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              }
-            }
-          ]
-        },
+        "respondWith": "firstIncomingItem",
         "options": {}
       },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a27",
-      "name": "Route Generation Path",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.2,
+      "id": "respond-answer-from-memory",
+      "name": "Respond Answer From Memory",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
       "position": [
-        2340,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://host.docker.internal:11434/api/generate",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: \"llama3\",\n  prompt: $json.prompt,\n  stream: false\n}) }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        }
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a19",
-      "name": "Generate Answer",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2600,
-        -120
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const input = $input.first().json;\n\nif (input.skipGeneration === true) {\n  return [{\n    json: {\n      query: input.query,\n      projectSlug: input.projectSlug ?? null,\n      memoryCount: 0,\n      contextBlock: '',\n      answer: input.answer,\n      memories: Array.isArray(input.memories) ? input.memories : []\n    }\n  }];\n}\n\nconst base = $('Decide Generation Path').first().json;\nlet answer = typeof input.response === 'string' ? input.response.trim() : '';\n\nif (!answer) {\n  answer = 'I do not have enough memory context to answer confidently.';\n}\n\nreturn [{\n  json: {\n    query: base.query,\n    projectSlug: base.projectSlug,\n    memoryCount: base.memoryCount,\n    contextBlock: base.contextBlock,\n    answer,\n    memories: base.memories\n  }\n}];"
-      },
-      "id": "a1d3f6a2-7f48-4a84-8f2e-0b2b0f9b8a20",
-      "name": "Return Final Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2860,
-        0
+        860,
+        300
       ]
     }
   ],
   "connections": {
-    "Webhook": {
+    "Answer From Memory Webhook": {
       "main": [
         [
           {
-            "node": "Normalize Input",
+            "node": "Validate And Build Answer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize Input": {
+    "Validate And Build Answer": {
       "main": [
         [
           {
-            "node": "Validate Project Slug",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Validate Project Slug": {
-      "main": [
-        [
-          {
-            "node": "Enforce Project Validation Code",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enforce Project Validation Code": {
-      "main": [
-        [
-          {
-            "node": "Generate Query Embedding",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Generate Query Embedding": {
-      "main": [
-        [
-          {
-            "node": "Prepare Vector",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Vector": {
-      "main": [
-        [
-          {
-            "node": "Search Memories",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Search Memories": {
-      "main": [
-        [
-          {
-            "node": "Build Prompt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Prompt": {
-      "main": [
-        [
-          {
-            "node": "Decide Generation Path",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Decide Generation Path": {
-      "main": [
-        [
-          {
-            "node": "Route Generation Path",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route Generation Path": {
-      "main": [
-        [
-          {
-            "node": "Return Final Response",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Generate Answer",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Generate Answer": {
-      "main": [
-        [
-          {
-            "node": "Return Final Response",
+            "node": "Respond Answer From Memory",
             "type": "main",
             "index": 0
           }
@@ -385,13 +71,15 @@
     }
   },
   "pinData": {},
-  "settings": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
   "staticData": null,
   "tags": [],
-  "active": false,
-  "versionId": "93d0c1e2-3f45-4678-9abc-def012345684",
+  "versionId": "fe692e06-16dc-4144-84d8-391a06e2da3a",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true
   },
   "id": "openbrain-answer-from-memory"
 }
