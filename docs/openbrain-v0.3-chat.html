@@ -290,17 +290,31 @@
     const SESSION_STORAGE_KEY = 'openbrain-v0.3-session-id';
     const ENDPOINT_STORAGE_KEY = 'openbrain-v0.3-endpoint';
     const PROJECT_STORAGE_KEY = 'openbrain-v0.3-project-slug';
+    const DEFAULT_ENDPOINT = 'http://localhost:5678/webhook/openbrain-assistant';
+    const LEGACY_INCOMPLETE_ENDPOINT = 'http://localhost:5678/webhook';
 
     const createSessionId = () => `openbrain-ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const normalizeEndpointValue = (value) => {
+      const trimmed = typeof value === 'string' ? value.trim() : '';
+      if (!trimmed || trimmed === LEGACY_INCOMPLETE_ENDPOINT) {
+        return DEFAULT_ENDPOINT;
+      }
+      return trimmed;
+    };
 
     const loadState = () => {
-      endpointInput.value = localStorage.getItem(ENDPOINT_STORAGE_KEY) || endpointInput.value;
+      const storedEndpoint = localStorage.getItem(ENDPOINT_STORAGE_KEY);
+      const normalizedEndpoint = normalizeEndpointValue(storedEndpoint || endpointInput.value);
+      endpointInput.value = normalizedEndpoint;
       projectSlugInput.value = localStorage.getItem(PROJECT_STORAGE_KEY) || '';
       sessionIdInput.value = localStorage.getItem(SESSION_STORAGE_KEY) || createSessionId();
+      if (storedEndpoint !== normalizedEndpoint) {
+        localStorage.setItem(ENDPOINT_STORAGE_KEY, normalizedEndpoint);
+      }
     };
 
     const saveState = () => {
-      localStorage.setItem(ENDPOINT_STORAGE_KEY, endpointInput.value.trim());
+      localStorage.setItem(ENDPOINT_STORAGE_KEY, normalizeEndpointValue(endpointInput.value));
       localStorage.setItem(PROJECT_STORAGE_KEY, projectSlugInput.value.trim());
       localStorage.setItem(SESSION_STORAGE_KEY, sessionIdInput.value.trim());
     };

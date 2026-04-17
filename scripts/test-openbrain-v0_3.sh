@@ -11,11 +11,67 @@ IMPORT_SCRIPT="${SCRIPT_DIR}/import-openbrain-v0_3.sh"
 WORKFLOW_ID="openbrain-assistant"
 WEBHOOK_URL="http://localhost:5678/webhook/openbrain-assistant"
 SESSION_TEST_ID="openbrain-v0-3-session-test"
+UI_PATH="${SCRIPT_DIR}/../docs/openbrain-v0.3-chat.html"
+DOC_PATH="${SCRIPT_DIR}/../docs/openbrain-v0.3.md"
+README_PATH="${SCRIPT_DIR}/../README.md"
+LEGACY_WEBHOOK_URL="http://localhost:5678/webhook"
 
 openbrain_harness_require_command jq
 openbrain_harness_require_command curl
+openbrain_harness_require_command node
 
 [[ -x "${IMPORT_SCRIPT}" ]] || openbrain_harness_fail "Import script is missing or not executable: ${IMPORT_SCRIPT}"
+[[ -f "${UI_PATH}" ]] || openbrain_harness_fail "UI file is missing: ${UI_PATH}"
+[[ -f "${DOC_PATH}" ]] || openbrain_harness_fail "v0.3 docs file is missing: ${DOC_PATH}"
+[[ -f "${README_PATH}" ]] || openbrain_harness_fail "README is missing: ${README_PATH}"
+
+openbrain_harness_log "Test 0: WebUI and docs endpoint contract"
+node - <<'EOF'
+const fs = require('fs');
+const path = require('path');
+
+const repoRoot = process.cwd();
+const expectedEndpoint = 'http://localhost:5678/webhook/openbrain-assistant';
+const legacyEndpoint = 'http://localhost:5678/webhook';
+const ui = fs.readFileSync(path.join(repoRoot, 'docs/openbrain-v0.3-chat.html'), 'utf8');
+const docs = fs.readFileSync(path.join(repoRoot, 'docs/openbrain-v0.3.md'), 'utf8');
+const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
+
+const requiredSnippets = [
+  [ui, `const DEFAULT_ENDPOINT = '${expectedEndpoint}';`, 'UI default endpoint constant'],
+  [ui, `const LEGACY_INCOMPLETE_ENDPOINT = '${legacyEndpoint}';`, 'UI legacy endpoint constant'],
+  [ui, 'const normalizeEndpointValue = (value) => {', 'UI endpoint normalization helper'],
+  [docs, expectedEndpoint, 'v0.3 docs endpoint'],
+  [readme, expectedEndpoint, 'README endpoint'],
+];
+
+for (const [content, needle, label] of requiredSnippets) {
+  if (!content.includes(needle)) {
+    console.error(`Missing ${label}: ${needle}`);
+    process.exit(1);
+  }
+}
+
+const normalizeEndpointValue = (value) => {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (!trimmed || trimmed === legacyEndpoint) {
+    return expectedEndpoint;
+  }
+  return trimmed;
+};
+
+if (normalizeEndpointValue(legacyEndpoint) !== expectedEndpoint) {
+  console.error('Legacy incomplete endpoint did not normalize to the assistant endpoint');
+  process.exit(1);
+}
+
+if (normalizeEndpointValue('http://example.com/custom') !== 'http://example.com/custom') {
+  console.error('Custom endpoint would not be preserved');
+  process.exit(1);
+}
+
+console.log('UI endpoint contract OK');
+EOF
 
 "${IMPORT_SCRIPT}"
 
