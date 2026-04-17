@@ -1,10 +1,16 @@
-# CrispyBrain <img src="assets/biscuit-emoji.png" width="22" valign="middle">
-
 <p align="center">
-  <img src="assets/a_digital_emoji_emoji_features_a_single_tea_biscui.png" alt="CrispyBrain tea biscuit" width="140">
+  <img src="assets/a_digital_emoji_emoji_features_a_single_tea_biscui.png" alt="CrispyBrain tea biscuit" width="110">
 </p>
 
-CrispyBrain is the next evolution of OpenBrain, focused on memory, retrieval, orchestration, and practical local AI workflows.
+<h1 align="center">CrispyBrain</h1>
+
+<p align="center">
+  Local AI memory, retrieval, and orchestration system
+</p>
+
+<p align="center">
+  <b>CrispyBrain v0.4</b> · Forked from OpenBrain · Self-hosted · n8n-powered
+</p>
 
 CrispyBrain v0.4 is the independently branded fork that carries the project forward, while OpenBrain v0.1 through v0.3 remain preserved in `/Users/elric/repos/openbrain` for historical continuity.
 
