@@ -81,5 +81,8 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
+  "parentFolder": {
+    "id": "ShEzYm3G7TPHWSp2"
+  },
   "id": "openbrain-build-context"
 }
