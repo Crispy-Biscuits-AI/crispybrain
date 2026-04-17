@@ -83,12 +83,6 @@ The test verifies:
 - [MIGRATION.md](/Users/elric/repos/crispybrain/docs/MIGRATION.md)
 - [crispybrain-webhook-template.md](/Users/elric/repos/crispybrain/docs/crispybrain-webhook-template.md)
 
-## CrispyBrain Biscuit
-
-<p align="center">
-  <img src="assets/a_digital_emoji_emoji_features_a_single_tea_biscui.png" alt="CrispyBrain tea biscuit" width="180">
-</p>
-
 ## Deferred
 
 - Renaming the existing database table names and SQL schema objects
