@@ -3,134 +3,90 @@
   "nodes": [
     {
       "parameters": {
-        "triggerOn": "folder",
-        "path": "/home/node/.n8n-files/openbrain/inbox",
-        "events": [
-          "add"
-        ],
-        "options": {
-          "depth": 2,
-          "ignoreInitial": true
-        }
+        "httpMethod": "POST",
+        "path": "openbrain-auto-ingest-watch",
+        "responseMode": "responseNode",
+        "options": {}
       },
-      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f101",
-      "name": "Local File Trigger",
-      "type": "n8n-nodes-base.localFileTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "read",
-        "fileSelector": "={{ $json.path }}",
-        "options": {
-          "mimeType": "text/plain",
-          "fileExtension": "txt",
-          "putOutputFileInField": "data"
-        }
-      },
-      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f102",
-      "name": "Read File",
-      "type": "n8n-nodes-base.readWriteFile",
-      "typeVersion": 1,
+      "id": "webhook-openbrain-auto-ingest-watch",
+      "name": "Auto Ingest Watch Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
       "position": [
         260,
-        0
-      ]
+        300
+      ],
+      "webhookId": "openbrain-auto-ingest-watch"
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst json = item.json ?? {};\nconst binary = item.binary ?? {};\n\nconst triggerJson = $('Local File Trigger').first().json ?? {};\n\nconst filepath =\n  json.path ??\n  json.filePath ??\n  json.filepath ??\n  json.file?.path ??\n  json.data?.path ??\n  triggerJson.path ??\n  triggerJson.filePath ??\n  triggerJson.filepath ??\n  triggerJson.file?.path ??\n  triggerJson.data?.path ??\n  null;\n\nif (!filepath || typeof filepath !== 'string') {\n  throw new Error(\n    `Missing filepath from local file trigger payload. Current keys: ${Object.keys(json).join(', ')} | Trigger keys: ${Object.keys(triggerJson).join(', ')}`\n  );\n}\n\nconst filename =\n  json.fileName ??\n  json.filename ??\n  triggerJson.fileName ??\n  triggerJson.filename ??\n  filepath.split('/').pop();\n\nconst binaryKey = Object.keys(binary)[0];\nconst binaryEntry = binaryKey ? binary[binaryKey] : null;\n\nlet content = '';\n\nif (binaryEntry?.data && typeof binaryEntry.data === 'string') {\n  const buffer = Buffer.from(binaryEntry.data, 'base64');\n  content = buffer.toString('utf8');\n}\n\ncontent = content.replace(/^\\uFEFF/, '');\n\nif (!content || !content.trim()) {\n  throw new Error('Missing or empty file content after reading from disk');\n}\n\nconst modifiedEpoch =\n  json.modifiedAt ??\n  json.mtime ??\n  json.lastModified ??\n  triggerJson.modifiedAt ??\n  triggerJson.mtime ??\n  triggerJson.lastModified ??\n  null;\n\nlet projectSlug;\nconst match = filepath.match(/\\/inbox\\/([^/]+)\\/[^/]+$/);\n\nif (match) {\n  projectSlug = match[1];\n}\n\nconst output = {\n  filepath,\n  filename,\n  content,\n  modifiedEpoch\n};\n\nif (projectSlug) {\n  output.project_slug = projectSlug;\n}\n\nreturn [{ json: output }];"
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst filepath = typeof payload.filepath === 'string' ? payload.filepath.trim() : '';\nconst filename = typeof payload.filename === 'string' ? payload.filename.trim() : '';\nconst projectSlug = typeof payload.project_slug === 'string' ? payload.project_slug.trim() : '';\n\nif (filepath === '' || filename === '' || projectSlug === '') {\n  return [{\n    json: {\n      is_valid: false,\n      error: 'Missing or invalid filepath, filename, or project_slug'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    is_valid: true,\n    filepath,\n    filename,\n    project_slug: projectSlug\n  }\n}];"
       },
-      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f103",
-      "name": "Normalize File Payload",
+      "id": "code-validate-auto-ingest-request",
+      "name": "Validate Watch Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        520,
-        0
+        560,
+        300
       ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "http://localhost:5678/webhook/openbrain-ingest",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        }
+        "jsCode": "if ($json.is_valid !== true) {\n  return [{\n    json: {\n      ok: false,\n      error: $json.error\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    filepath: $json.filepath,\n    filename: $json.filename,\n    project_slug: $json.project_slug,\n    next_workflow: 'openbrain-ingest'\n  }\n}];"
       },
-      "id": "d8b94c86-64d4-4f4a-95d0-f8d5c6489e01",
-      "name": "Execute openbrain-ingest",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        780,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const base = $('Normalize File Payload').first().json;\nconst ingestResult = $json ?? {};\n\nreturn [{\n  json: {\n    success: true,\n    filepath: base.filepath,\n    filename: base.filename,\n    derivedProjectSlug: base.project_slug ?? null,\n    ingestResult\n  }\n}];"
-      },
-      "id": "c4a1a6de-84a7-4db3-a3dd-2d1a8164f105",
-      "name": "Return Watch Result",
+      "id": "code-build-auto-ingest-response",
+      "name": "Build Handoff Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1040,
-        0
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "respond-auto-ingest-watch",
+      "name": "Respond Auto Ingest Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1160,
+        300
       ]
     }
   ],
   "connections": {
-    "Local File Trigger": {
+    "Auto Ingest Watch Webhook": {
       "main": [
         [
           {
-            "node": "Read File",
+            "node": "Validate Watch Request",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read File": {
+    "Validate Watch Request": {
       "main": [
         [
           {
-            "node": "Normalize File Payload",
+            "node": "Build Handoff Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize File Payload": {
+    "Build Handoff Payload": {
       "main": [
         [
           {
-            "node": "Execute openbrain-ingest",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Execute openbrain-ingest": {
-      "main": [
-        [
-          {
-            "node": "Return Watch Result",
+            "node": "Respond Auto Ingest Result",
             "type": "main",
             "index": 0
           }
@@ -139,15 +95,15 @@
     }
   },
   "pinData": {},
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
   "staticData": null,
   "tags": [],
-  "active": false,
-  "versionId": "4d47d54b-0f1f-45a6-b3ef-9f12c9a85a05",
+  "versionId": "40de1208-1315-428b-b137-68f6b84ee2f6",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true
   },
   "id": "openbrain-auto-ingest-watch"
 }

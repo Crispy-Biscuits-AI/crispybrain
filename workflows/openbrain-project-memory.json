@@ -1,0 +1,109 @@
+{
+  "name": "openbrain-project-memory",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-project-memory",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-openbrain-project-memory",
+      "name": "Project Memory Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "openbrain-project-memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst projectSlug = typeof payload.project_slug === 'string' ? payload.project_slug.trim() : '';\n\nif (projectSlug === '') {\n  return [{\n    json: {\n      is_valid: false,\n      error: 'Missing or invalid project_slug'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    is_valid: true,\n    project_slug: projectSlug\n  }\n}];"
+      },
+      "id": "code-validate-project-memory-request",
+      "name": "Validate Project Memory Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.is_valid !== true) {\n  return [{\n    json: {\n      ok: false,\n      error: $json.error\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    project_slug: $json.project_slug,\n    memory_filter: {\n      project_slug: $json.project_slug\n    }\n  }\n}];"
+      },
+      "id": "code-build-project-memory-response",
+      "name": "Build Project Memory Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "respond-project-memory",
+      "name": "Respond Project Memory Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1160,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Project Memory Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Project Memory Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Project Memory Request": {
+      "main": [
+        [
+          {
+            "node": "Build Project Memory Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Project Memory Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Project Memory Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "versionId": "9ab6c449-58ec-4ca9-89e4-2d0c57c856d0",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "openbrain-project-memory"
+}

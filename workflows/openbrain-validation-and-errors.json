@@ -5,40 +5,88 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "openbrain-validation-and-errors",
-        "responseMode": "lastNode",
-        "responseData": "firstEntryJson",
+        "responseMode": "responseNode",
         "options": {}
       },
-      "id": "b1e1e0f3-0eaa-4c59-9f0b-6a8b6dd9f101",
-      "name": "Webhook",
+      "id": "webhook-openbrain-validation-and-errors",
+      "name": "Validation Webhook",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "typeVersion": 2.1,
       "position": [
-        0,
-        0
+        260,
+        300
       ],
       "webhookId": "openbrain-validation-and-errors"
     },
     {
       "parameters": {
-        "jsCode": "const body = $json.body ?? {};\nconst query = body.query;\n\nif (typeof query !== 'string' || query.trim() === '') {\n  return [\n    {\n      json: {\n        ok: false,\n        error: 'Missing or invalid query'\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ok: true,\n      message: 'Validation passed',\n      query: query.trim()\n    }\n  }\n];"
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst rawQuery = payload.query;\nconst rawProjectSlug = payload.project_slug;\n\nif (typeof rawQuery !== 'string' || rawQuery.trim() === '') {\n  return [{\n    json: {\n      is_valid: false,\n      error: 'Missing or invalid query'\n    }\n  }];\n}\n\nif (rawProjectSlug !== undefined && typeof rawProjectSlug !== 'string') {\n  return [{\n    json: {\n      is_valid: false,\n      error: 'Invalid project_slug'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    is_valid: true,\n    query: rawQuery.trim(),\n    project_slug: typeof rawProjectSlug === 'string' ? rawProjectSlug.trim() : ''\n  }\n}];"
       },
-      "id": "8cfc7ad9-4eb2-43e7-86ef-ea9ce68f2202",
-      "name": "Validate Query",
+      "id": "code-validate-validation-request",
+      "name": "Validate Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        260,
-        0
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.is_valid !== true) {\n  return [{\n    json: {\n      ok: false,\n      error: $json.error\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    message: 'Validation passed',\n    query: $json.query,\n    project_slug: $json.project_slug\n  }\n}];"
+      },
+      "id": "code-build-validation-response",
+      "name": "Build Validation Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "respond-validation-and-errors",
+      "name": "Respond Validation Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1160,
+        300
       ]
     }
   ],
   "connections": {
-    "Webhook": {
+    "Validation Webhook": {
       "main": [
         [
           {
-            "node": "Validate Query",
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request": {
+      "main": [
+        [
+          {
+            "node": "Build Validation Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Validation Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Validation Result",
             "type": "main",
             "index": 0
           }
@@ -46,11 +94,16 @@
       ]
     }
   },
+  "pinData": {},
   "active": false,
-  "settings": {},
-  "versionId": "2d7fb9a8-7ff7-4d57-b9a9-b2ee6937f9a1",
-  "meta": {
-    "instanceId": "openbrain-local"
+  "settings": {
+    "executionOrder": "v1"
   },
-  "pinData": {}
+  "staticData": null,
+  "tags": [],
+  "versionId": "6540836d-11ca-451a-a2d5-6d8ff6ed93df",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "openbrain-validation-and-errors"
 }
