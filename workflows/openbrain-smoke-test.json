@@ -2,15 +2,22 @@
   "name": "openbrain-smoke-test",
   "nodes": [
     {
-      "parameters": {},
-      "id": "manual-trigger-openbrain-smoke-test",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-smoke-test",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "id": "webhook-openbrain-smoke-test",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
       "position": [
         260,
         300
-      ]
+      ],
+      "webhookId": "openbrain-smoke-test"
     },
     {
       "parameters": {
@@ -43,41 +50,17 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        500,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "return $input.all();"
-      },
-      "id": "return-openbrain-smoke-test-payload",
-      "name": "Return Payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        760,
+        520,
         300
       ]
     }
   ],
   "connections": {
-    "Manual Trigger": {
+    "Webhook": {
       "main": [
         [
           {
             "node": "Smoke Test Payload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Smoke Test Payload": {
-      "main": [
-        [
-          {
-            "node": "Return Payload",
             "type": "main",
             "index": 0
           }
@@ -90,7 +73,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "31f0cb89-9018-4d37-8c05-c7ad9f44ef46",
+  "versionId": "76d922cc-e0df-4f25-a18a-c03435efdc22",
   "meta": {
     "templateCredsSetupCompleted": true
   },
