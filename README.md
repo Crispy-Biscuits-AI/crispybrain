@@ -1,4 +1,4 @@
-# CrispyBrain
+# CrispyBrain <img src="assets/biscuit-emoji.png" width="22" valign="middle">
 
 <p align="center">
   <img src="assets/a_digital_emoji_emoji_features_a_single_tea_biscui.png" alt="CrispyBrain tea biscuit" width="140">
@@ -12,7 +12,7 @@ The original OpenBrain concept introduced by Nate Jones inspired the early archi
 
 - Reference: [Nate Jones OpenBrain video](https://www.youtube.com/watch?v=2JiMmye2ezg&utm_source=chatgpt.com)
 
-## What v0.4 Changes
+## What v0.4 Changes <img src="assets/biscuit-emoji.png" width="18" valign="middle">
 
 - Rebrands the working system from OpenBrain to CrispyBrain
 - Simplifies workflow names by dropping the `openbrain-` prefix
@@ -76,7 +76,7 @@ The test verifies:
 5. the assistant webhook still passes a live smoke request
 6. session continuity and invalid-input handling still work
 
-## Docs
+## Docs <img src="assets/biscuit-emoji.png" width="18" valign="middle">
 
 - [crispybrain-v0.4.md](/Users/elric/repos/crispybrain/docs/crispybrain-v0.4.md)
 - [HISTORY.md](/Users/elric/repos/crispybrain/docs/HISTORY.md)
@@ -95,3 +95,7 @@ The test verifies:
 - Authentication and access control
 - Streaming responses
 - Deep cleanup of older duplicate experimental workflows already present in n8n
+
+<p align="center">
+  <img src="assets/biscuit-emoji.png" alt="CrispyBrain biscuit emoji" width="18">
+</p>
