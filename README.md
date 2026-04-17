@@ -1,8 +1,14 @@
 # CrispyBrain
 
-CrispyBrain v0.4 is the independently branded fork of OpenBrain. OpenBrain v0.1 through v0.3 remain preserved in `/Users/elric/repos/openbrain`; CrispyBrain begins in this repo and moves forward with simplified workflow names, a shorter assistant webhook, and a polarized local UI.
+<p align="center">
+  <img src="assets/a_digital_emoji_emoji_features_a_single_tea_biscui.png" alt="CrispyBrain tea biscuit" width="140">
+</p>
 
-The original OpenBrain concept introduced by Nate Jones inspired the early architecture. This fork preserves that lineage while taking the system in a new direction.
+CrispyBrain is the next evolution of OpenBrain, focused on memory, retrieval, orchestration, and practical local AI workflows.
+
+CrispyBrain v0.4 is the independently branded fork that carries the project forward, while OpenBrain v0.1 through v0.3 remain preserved in `/Users/elric/repos/openbrain` for historical continuity.
+
+The original OpenBrain concept introduced by Nate Jones inspired the early architecture. This fork preserves that lineage while giving the working system its own crisp identity.
 
 - Reference: [Nate Jones OpenBrain video](https://www.youtube.com/watch?v=2JiMmye2ezg&utm_source=chatgpt.com)
 
@@ -76,6 +82,12 @@ The test verifies:
 - [HISTORY.md](/Users/elric/repos/crispybrain/docs/HISTORY.md)
 - [MIGRATION.md](/Users/elric/repos/crispybrain/docs/MIGRATION.md)
 - [crispybrain-webhook-template.md](/Users/elric/repos/crispybrain/docs/crispybrain-webhook-template.md)
+
+## CrispyBrain Biscuit
+
+<p align="center">
+  <img src="assets/a_digital_emoji_emoji_features_a_single_tea_biscui.png" alt="CrispyBrain tea biscuit" width="180">
+</p>
 
 ## Deferred
 
