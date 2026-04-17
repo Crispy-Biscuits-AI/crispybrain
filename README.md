@@ -4,7 +4,7 @@ OpenBrain is a self-hosted, project-aware memory and retrieval system built with
 
 The goal of OpenBrain is to incrementally build a durable memory layer for AI workflows while validating each small step before expanding the system.
 
-Current OpenBrain v0.2 capabilities include:
+Current OpenBrain capabilities include:
 
 * File and manual note ingestion
 * Project-aware memory storage
@@ -13,6 +13,8 @@ Current OpenBrain v0.2 capabilities include:
 * Context block construction from retrieved memories
 * Answer generation from retrieved memory
 * Project-scoped retrieval using `project_slug`
+* A local assistant entrypoint with session continuity in v0.3
+* A static local chat UI in `docs/openbrain-v0.3-chat.html`
 
 ---
 
@@ -50,11 +52,11 @@ Generate Answer From Memory
 
 Current stack:
 
-* n8n 2.15.1
-* Ollama
-* Postgres 16
+* n8n 2.16.1
+* Ollama 0.18.0
+* Postgres 16.13
 * pgvector
-* Docker Desktop
+* Docker Desktop 4.69.0
 
 ---
 
@@ -87,6 +89,32 @@ Current stack:
 ---
 
 # Workflow Overview
+
+## v0.3 Assistant
+
+### `openbrain-assistant`
+
+Primary local chat entrypoint for v0.3.
+
+Accepts:
+
+```json
+{
+  "message": "What is OpenBrain?",
+  "project_slug": "alpha",
+  "session_id": "openbrain-v0-3-session-test",
+  "top_k": 4
+}
+```
+
+Responsibilities:
+
+* validate chat inputs and return machine-readable JSON errors
+* load recent session turns from `openbrain_chat_turns`
+* run project-first retrieval with general-memory fallback
+* generate a local Ollama answer
+* store both user and assistant turns for later continuity
+* return source snippets and retrieval metadata for debugging and UI display
 
 ## Ingest Workflows
 
@@ -220,26 +248,35 @@ volumes:
   - /Users/elric/repos/ai-lab/openbrain/inbox:/home/node/.n8n-files/openbrain/inbox
 ```
 
-## 3. Import workflows into n8n
+## 3. Import the v0.3 assistant
 
-Import all JSON files from the `workflows/` directory.
+Run:
 
-Recommended import order:
+```bash
+./scripts/import-openbrain-v0_3.sh
+```
 
-1. openbrain-insert-embedding
-2. openbrain-insert-with-chunk-metadata
-3. openbrain-file-chunk-ingest-minimal
-4. openbrain-ingest
-5. openbrain-search-by-embedding
-6. openbrain-build-context
-7. openbrain-answer-from-memory
-8. openbrain-project-bootstrap
-9. openbrain-validation-and-errors
-10. openbrain-auto-ingest-watch
+This applies the additive v0.3 SQL, imports `workflows/openbrain-assistant.json`, verifies the workflow lands in `Personal -> OpenBrain v0.3`, and activates the assistant webhook.
 
 ---
 
 # Example Usage
+
+Assistant chat:
+
+```bash
+curl -X POST "http://localhost:5678/webhook/openbrain-assistant" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "How am I planning to build OpenBrain?",
+    "project_slug": "alpha",
+    "session_id": "readme-example-session"
+  }'
+```
+
+Static local UI:
+
+* [docs/openbrain-v0.3-chat.html](/Users/elric/repos/openbrain/docs/openbrain-v0.3-chat.html)
 
 Manual ingest:
 
@@ -291,6 +328,28 @@ curl -X POST "http://localhost:5678/webhook/openbrain-search-by-embedding" \
 
 ---
 
+# v0.3 Validation
+
+Run:
+
+```bash
+./scripts/test-openbrain-v0_3.sh
+```
+
+The test covers:
+
+1. plain chat request
+2. request with `project_slug`
+3. multi-turn session continuity
+4. invalid input
+5. empty retrieval
+
+Focused v0.3 documentation:
+
+* [docs/openbrain-v0.3.md](/Users/elric/repos/openbrain/docs/openbrain-v0.3.md)
+
+---
+
 # Development Workflow
 
 Recommended git discipline:
@@ -313,4 +372,3 @@ feat(openbrain): add project-aware auto-ingest watcher
 Private internal project for Crispy Biscuits AI.
 
 OpenBrain is under active development and intentionally optimized for iterative, validated experimentation rather than broad public release.
-

@@ -40,6 +40,19 @@ openbrain_harness_copy_workflow() {
   fi
 }
 
+openbrain_harness_copy_to_container() {
+  local source_path="$1"
+  local container_name="$2"
+  local container_path="$3"
+  local label="$4"
+  openbrain_harness_log "Copying ${label} into ${container_name}:${container_path}"
+  local output
+  output="$(docker cp "${source_path}" "${container_name}:${container_path}" 2>&1)"
+  if [[ -n "${output}" ]]; then
+    openbrain_harness_log "${output}"
+  fi
+}
+
 openbrain_harness_import_workflow() {
   local container_path="$1"
   local workflow_name="$2"
@@ -95,6 +108,21 @@ openbrain_harness_post_json() {
   OPENBRAIN_HARNESS_LAST_HTTP_BODY="$(printf '%s\n' "${raw}" | sed '$d')"
 }
 
+openbrain_harness_get_json() {
+  local url="$1"
+  local -a headers=()
+  if (( $# > 1 )); then
+    headers=("${@:2}")
+  fi
+  local raw
+  raw="$(curl -sS "${url}" "${headers[@]}" -w $'\nHTTP_STATUS:%{http_code}' 2>&1)" || {
+    openbrain_harness_log "${raw}"
+    openbrain_harness_fail "HTTP GET failed for ${url}"
+  }
+  OPENBRAIN_HARNESS_LAST_HTTP_STATUS="$(printf '%s\n' "${raw}" | tail -n 1 | sed 's/^HTTP_STATUS://')"
+  OPENBRAIN_HARNESS_LAST_HTTP_BODY="$(printf '%s\n' "${raw}" | sed '$d')"
+}
+
 openbrain_harness_register_listener() {
   local workflow_id="$1"
   local destination_node="$2"
@@ -107,6 +135,38 @@ openbrain_harness_register_listener() {
   openbrain_harness_log "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}"
   [[ "${OPENBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || openbrain_harness_fail "Unexpected HTTP status while registering ${workflow_id}: ${OPENBRAIN_HARNESS_LAST_HTTP_STATUS}"
   grep -Fq '"waitingForWebhook":true' <<<"${OPENBRAIN_HARNESS_LAST_HTTP_BODY}" || openbrain_harness_fail "n8n did not register webhook-test listener for ${workflow_id}"
+}
+
+openbrain_harness_activate_workflow() {
+  local workflow_id="$1"
+  local auth_cookie="$2"
+  local payload="${3-}"
+  if [[ -z "${payload}" ]]; then
+    payload='{}'
+  fi
+  openbrain_harness_log "Activating ${workflow_id}"
+  openbrain_harness_post_json \
+    "${OPENBRAIN_HARNESS_REST_BASE_URL}/workflows/${workflow_id}/activate" \
+    "${payload}" \
+    -H "Cookie: ${OPENBRAIN_HARNESS_COOKIE_NAME}=${auth_cookie}"
+  openbrain_harness_log "${OPENBRAIN_HARNESS_LAST_HTTP_BODY}"
+  [[ "${OPENBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || openbrain_harness_fail "Unexpected HTTP status while activating ${workflow_id}: ${OPENBRAIN_HARNESS_LAST_HTTP_STATUS}"
+}
+
+openbrain_harness_db_query() {
+  local sql="$1"
+  docker exec "${OPENBRAIN_HARNESS_DB_CONTAINER}" psql -U n8n -d n8n -t -A -c "${sql}"
+}
+
+openbrain_harness_apply_sql_file() {
+  local source_path="$1"
+  local container_path="$2"
+  local label="$3"
+  openbrain_harness_copy_to_container "${source_path}" "${OPENBRAIN_HARNESS_DB_CONTAINER}" "${container_path}" "${label}"
+  openbrain_harness_log "Applying ${label}"
+  local output
+  output="$(docker exec "${OPENBRAIN_HARNESS_DB_CONTAINER}" psql -U n8n -d n8n -v ON_ERROR_STOP=1 -f "${container_path}" 2>&1)"
+  openbrain_harness_log "${output}"
 }
 
 openbrain_harness_latest_execution_record() {
@@ -148,19 +208,56 @@ openbrain_harness_assert_json_number_gt() {
   (( actual > minimum )) || openbrain_harness_fail "Expected ${jq_expression} > ${minimum}, got ${actual}"
 }
 
+openbrain_harness_assert_json_number_gte() {
+  local json_body="$1"
+  local jq_expression="$2"
+  local minimum="$3"
+  local actual
+  actual="$(openbrain_harness_json_get "${json_body}" "${jq_expression}")"
+  [[ "${actual}" =~ ^[0-9]+$ ]] || openbrain_harness_fail "Expected numeric JSON value for ${jq_expression}, got '${actual}'"
+  (( actual >= minimum )) || openbrain_harness_fail "Expected ${jq_expression} >= ${minimum}, got ${actual}"
+}
+
+openbrain_harness_assert_json_string_contains() {
+  local json_body="$1"
+  local jq_expression="$2"
+  local expected_fragment="$3"
+  local actual
+  actual="$(openbrain_harness_json_get "${json_body}" "${jq_expression}")"
+  grep -Fq "${expected_fragment}" <<<"${actual}" || openbrain_harness_fail "Expected ${jq_expression} to contain '${expected_fragment}', got '${actual}'"
+}
+
+openbrain_harness_assert_workflow_in_folder() {
+  local workflow_id="$1"
+  local folder_id="$2"
+  local actual_folder_id
+  actual_folder_id="$(openbrain_harness_db_query "SELECT COALESCE(\"parentFolderId\", '') FROM workflow_entity WHERE id = '${workflow_id}' LIMIT 1;")"
+  actual_folder_id="$(printf '%s' "${actual_folder_id}" | tr -d '[:space:]')"
+  [[ -n "${actual_folder_id}" ]] || openbrain_harness_fail "Workflow ${workflow_id} was not found in workflow_entity"
+  [[ "${actual_folder_id}" == "${folder_id}" ]] || openbrain_harness_fail "Workflow ${workflow_id} is in folder '${actual_folder_id}', expected '${folder_id}'"
+}
+
 openbrain_harness_usage() {
   cat <<'EOF'
 Reusable OpenBrain n8n test harness.
 
 Source this file from a workflow-specific test script and call:
   openbrain_harness_copy_workflow
+  openbrain_harness_copy_to_container
   openbrain_harness_import_workflow
   openbrain_harness_list_workflows
   openbrain_harness_mint_auth_cookie
+  openbrain_harness_activate_workflow
   openbrain_harness_register_listener
   openbrain_harness_post_json
+  openbrain_harness_get_json
+  openbrain_harness_db_query
+  openbrain_harness_apply_sql_file
   openbrain_harness_assert_json_equals
   openbrain_harness_assert_json_number_gt
+  openbrain_harness_assert_json_number_gte
+  openbrain_harness_assert_json_string_contains
+  openbrain_harness_assert_workflow_in_folder
   openbrain_harness_assert_execution_success
 EOF
 }

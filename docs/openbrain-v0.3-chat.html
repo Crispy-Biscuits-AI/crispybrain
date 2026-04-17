@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenBrain v0.3 Chat</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --panel: rgba(255, 252, 247, 0.92);
+      --ink: #1f2a2e;
+      --muted: #6b757b;
+      --line: rgba(31, 42, 46, 0.12);
+      --accent: #0d6b6b;
+      --user: #1f2a2e;
+      --assistant: #ffffff;
+      --error: #8b1e3f;
+      --shadow: 0 18px 40px rgba(28, 34, 38, 0.08);
+      --radius: 18px;
+      --font-display: "Avenir Next", "Segoe UI", sans-serif;
+      --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-body);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(13, 107, 107, 0.14), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(201, 130, 78, 0.12), transparent 28%),
+        linear-gradient(180deg, #faf7f0 0%, #f3ede2 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: min(1100px, 100%);
+      min-height: 82vh;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      padding: 24px;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(13, 107, 107, 0.08), rgba(255, 255, 255, 0.6));
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+
+    .brand p,
+    .hint,
+    .status {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .panel {
+      padding: 16px;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--line);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(31, 42, 46, 0.14);
+      padding: 12px 14px;
+      font: inherit;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.62;
+      cursor: wait;
+    }
+
+    .chat {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-width: 0;
+    }
+
+    .chat-header {
+      padding: 22px 24px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .chat-header h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+    }
+
+    .messages {
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .message {
+      max-width: 78%;
+      padding: 14px 16px;
+      border-radius: 18px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      border: 1px solid var(--line);
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--user);
+      color: white;
+      border-top-right-radius: 6px;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background: var(--assistant);
+      border-top-left-radius: 6px;
+    }
+
+    .message.error {
+      align-self: center;
+      background: rgba(139, 30, 63, 0.08);
+      color: var(--error);
+      max-width: 86%;
+    }
+
+    .meta {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(31, 42, 46, 0.12);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .composer {
+      padding: 16px 24px 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .composer-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .loading {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .message { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar">
+      <section class="brand">
+        <h1>OpenBrain v0.3</h1>
+        <p>Local project-aware assistant with session continuity.</p>
+      </section>
+
+      <section class="panel">
+        <div class="field">
+          <label for="endpoint">Webhook endpoint</label>
+          <input id="endpoint" value="http://localhost:5678/webhook/openbrain-assistant">
+        </div>
+        <div class="field">
+          <label for="sessionId">Session ID</label>
+          <input id="sessionId" placeholder="Generated automatically">
+        </div>
+        <div class="field">
+          <label for="projectSlug">Project slug</label>
+          <input id="projectSlug" placeholder="Optional, for example alpha">
+        </div>
+        <button id="resetSession" type="button">Reset Session</button>
+      </section>
+
+      <section class="panel">
+        <p class="hint">This page keeps the current session ID in browser storage so repeated turns stay inside the same OpenBrain conversation.</p>
+      </section>
+
+      <section class="panel">
+        <p id="status" class="status">Ready.</p>
+      </section>
+    </aside>
+
+    <section class="chat">
+      <header class="chat-header">
+        <h2>Conversation</h2>
+        <p class="hint">Responses include retrieval details and source snippets when available.</p>
+      </header>
+
+      <section id="messages" class="messages"></section>
+
+      <footer class="composer">
+        <div class="composer-row">
+          <textarea id="message" placeholder="Ask OpenBrain about your stored memory..."></textarea>
+        </div>
+        <div class="composer-row">
+          <button id="send" type="button">Send</button>
+          <span id="loading" class="loading" hidden>Thinking...</span>
+        </div>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    const endpointInput = document.getElementById('endpoint');
+    const sessionIdInput = document.getElementById('sessionId');
+    const projectSlugInput = document.getElementById('projectSlug');
+    const messageInput = document.getElementById('message');
+    const messagesEl = document.getElementById('messages');
+    const sendButton = document.getElementById('send');
+    const loadingEl = document.getElementById('loading');
+    const statusEl = document.getElementById('status');
+    const resetSessionButton = document.getElementById('resetSession');
+
+    const SESSION_STORAGE_KEY = 'openbrain-v0.3-session-id';
+    const ENDPOINT_STORAGE_KEY = 'openbrain-v0.3-endpoint';
+    const PROJECT_STORAGE_KEY = 'openbrain-v0.3-project-slug';
+
+    const createSessionId = () => `openbrain-ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const loadState = () => {
+      endpointInput.value = localStorage.getItem(ENDPOINT_STORAGE_KEY) || endpointInput.value;
+      projectSlugInput.value = localStorage.getItem(PROJECT_STORAGE_KEY) || '';
+      sessionIdInput.value = localStorage.getItem(SESSION_STORAGE_KEY) || createSessionId();
+    };
+
+    const saveState = () => {
+      localStorage.setItem(ENDPOINT_STORAGE_KEY, endpointInput.value.trim());
+      localStorage.setItem(PROJECT_STORAGE_KEY, projectSlugInput.value.trim());
+      localStorage.setItem(SESSION_STORAGE_KEY, sessionIdInput.value.trim());
+    };
+
+    const appendMessage = (role, text, meta) => {
+      const article = document.createElement('article');
+      article.className = `message ${role}`;
+      article.textContent = text;
+      if (meta) {
+        const metaEl = document.createElement('div');
+        metaEl.className = 'meta';
+        metaEl.textContent = meta;
+        article.appendChild(metaEl);
+      }
+      messagesEl.appendChild(article);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    };
+
+    const setLoading = (loading) => {
+      sendButton.disabled = loading;
+      loadingEl.hidden = !loading;
+      statusEl.textContent = loading ? 'Waiting for OpenBrain...' : 'Ready.';
+    };
+
+    const resetSession = () => {
+      sessionIdInput.value = createSessionId();
+      saveState();
+      statusEl.textContent = 'Started a fresh session.';
+    };
+
+    const formatMeta = (response) => {
+      const parts = [];
+      if (response.session_id) parts.push(`session=${response.session_id}`);
+      if (response.project_slug) parts.push(`project=${response.project_slug}`);
+      if (response.retrieval) {
+        parts.push(`memories=${response.retrieval.memory_count}`);
+        parts.push(`strategy=${response.retrieval.strategy}`);
+      }
+      if (Array.isArray(response.sources) && response.sources.length > 0) {
+        parts.push(`sources=${response.sources.slice(0, 3).map((source) => source.title).join(' | ')}`);
+      }
+      return parts.join(' • ');
+    };
+
+    const sendMessage = async () => {
+      const message = messageInput.value.trim();
+      if (!message) {
+        appendMessage('error', 'Enter a message before sending.');
+        return;
+      }
+
+      if (!sessionIdInput.value.trim()) {
+        sessionIdInput.value = createSessionId();
+      }
+
+      saveState();
+      appendMessage('user', message, `session=${sessionIdInput.value.trim()}`);
+      messageInput.value = '';
+      setLoading(true);
+
+      try {
+        const response = await fetch(endpointInput.value.trim(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            session_id: sessionIdInput.value.trim(),
+            project_slug: projectSlugInput.value.trim() || undefined
+          })
+        });
+
+        const body = await response.json();
+        if (body.session_id) {
+          sessionIdInput.value = body.session_id;
+          saveState();
+        }
+
+        if (!response.ok || body.ok === false) {
+          const errorMessage = body?.error?.message || body?.error || `Request failed with HTTP ${response.status}`;
+          appendMessage('error', errorMessage);
+          statusEl.textContent = 'OpenBrain returned an error.';
+          return;
+        }
+
+        appendMessage('assistant', body.answer || '(No answer returned)', formatMeta(body));
+        statusEl.textContent = 'Response received.';
+      } catch (error) {
+        appendMessage('error', `Network error: ${error.message}`);
+        statusEl.textContent = 'Could not reach the assistant endpoint.';
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    sendButton.addEventListener('click', sendMessage);
+    resetSessionButton.addEventListener('click', resetSession);
+    messageInput.addEventListener('keydown', (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        sendMessage();
+      }
+    });
+    endpointInput.addEventListener('change', saveState);
+    projectSlugInput.addEventListener('change', saveState);
+    sessionIdInput.addEventListener('change', saveState);
+
+    loadState();
+    appendMessage('assistant', 'OpenBrain v0.3 is ready. Start with a question, optionally scoped to a project_slug.', `session=${sessionIdInput.value}`);
+  </script>
+</body>
+</html>

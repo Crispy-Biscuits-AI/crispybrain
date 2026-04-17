@@ -1,0 +1,598 @@
+{
+  "name": "openbrain-assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openbrain-assistant",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-openbrain-assistant",
+      "name": "Assistant Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "openbrain-assistant"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst rawQuery = typeof payload.message === 'string' ? payload.message : payload.query;\nconst rawProjectSlug = payload.project_slug;\nconst rawSessionId = payload.session_id;\nconst rawTopK = payload.top_k;\n\nconst buildError = (code, message) => [{\n  json: {\n    ok: false,\n    error: { code, message },\n    query: null,\n    session_id: null,\n    project_slug: null,\n    top_k: null,\n    retrieval: {\n      strategy: 'project-first-fallback-general',\n      project_match_count: 0,\n      general_match_count: 0,\n      memory_count: 0,\n      strongest_similarity: null,\n      similarity_threshold: 0.72,\n      empty: true\n    },\n    sources: [],\n    context_preview: '',\n    session: {\n      turn_count_before: 0,\n      history_used: false,\n      stored: false\n    }\n  }\n}];\n\nif (typeof rawQuery !== 'string' || rawQuery.trim() === '') {\n  return buildError('INVALID_INPUT', 'Missing or invalid query/message');\n}\n\nif (rawProjectSlug !== undefined && rawProjectSlug !== null && typeof rawProjectSlug !== 'string') {\n  return buildError('INVALID_PROJECT_SLUG', 'project_slug must be a string when provided');\n}\n\nif (rawSessionId !== undefined && rawSessionId !== null && typeof rawSessionId !== 'string') {\n  return buildError('INVALID_SESSION_ID', 'session_id must be a string when provided');\n}\n\nif (rawTopK !== undefined && rawTopK !== null && (!Number.isInteger(rawTopK) || rawTopK < 1 || rawTopK > 8)) {\n  return buildError('INVALID_TOP_K', 'top_k must be an integer between 1 and 8');\n}\n\nconst query = rawQuery.trim();\nconst projectSlug = typeof rawProjectSlug === 'string' ? rawProjectSlug.trim() : '';\nconst sessionId = typeof rawSessionId === 'string' && rawSessionId.trim() !== ''\n  ? rawSessionId.trim()\n  : `openbrain-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;\nconst topK = Number.isInteger(rawTopK) ? rawTopK : 5;\n\nreturn [{\n  json: {\n    request_ok: true,\n    query,\n    session_id: sessionId,\n    project_slug: projectSlug || null,\n    top_k: topK,\n    retrieval_strategy: 'project-first-fallback-general',\n    requested_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "code-normalize-assistant-request",
+      "name": "Normalize Assistant Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "condition-request-ok",
+              "leftValue": "={{ $json.request_ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-request-is-valid",
+      "name": "Request Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(\n  jsonb_agg(row_to_json(turns) ORDER BY turns.created_at),\n  '[]'::jsonb\n) AS session_turns\nFROM (\n  SELECT role, message_text, project_slug, created_at, metadata_json\n  FROM (\n    SELECT role, message_text, project_slug, created_at, metadata_json\n    FROM openbrain_chat_turns\n    WHERE session_id = $1::text\n    ORDER BY created_at DESC\n    LIMIT 6\n  ) recent\n  ORDER BY created_at ASC\n) turns;",
+        "options": {
+          "queryReplacement": "={{ [$json.session_id] }}"
+        }
+      },
+      "id": "postgres-load-session-turns",
+      "name": "Load Session Turns",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1160,
+        160
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "j60Gpt1oeRVTUCH2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'nomic-embed-text', input: $('Normalize Assistant Request').first().json.query, truncate: true }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "http-generate-query-embedding",
+      "name": "Generate Query Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1460,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Normalize Assistant Request').first().json;\nconst sessionTurns = $('Load Session Turns').first().json.session_turns ?? [];\nconst statusCode = $json.statusCode ?? 0;\nconst body = $json.body ?? {};\nconst embeddings = body.embeddings;\n\nif (statusCode < 200 || statusCode >= 300 || !Array.isArray(embeddings) || !Array.isArray(embeddings[0])) {\n  return [{\n    json: {\n      ...request,\n      session_turns: Array.isArray(sessionTurns) ? sessionTurns : [],\n      embedding_ok: false,\n      error: {\n        code: 'OLLAMA_EMBEDDING_FAILED',\n        message: 'Ollama embedding request failed',\n        status: statusCode || null,\n        details: body.error ?? null\n      }\n    }\n  }];\n}\n\nconst vector = embeddings[0];\nreturn [{\n  json: {\n    ...request,\n    session_turns: Array.isArray(sessionTurns) ? sessionTurns : [],\n    embedding_ok: true,\n    vector_literal: `[${vector.join(',')}]`\n  }\n}];"
+      },
+      "id": "code-prepare-retrieval-input",
+      "name": "Prepare Retrieval Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "condition-embedding-ready",
+              "leftValue": "={{ $json.embedding_ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-embedding-ready",
+      "name": "Embedding Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2060,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ok: false,\n    error: $json.error,\n    query: $json.query,\n    session_id: $json.session_id,\n    project_slug: $json.project_slug ?? null,\n    top_k: $json.top_k,\n    retrieval: {\n      strategy: $json.retrieval_strategy,\n      project_match_count: 0,\n      general_match_count: 0,\n      memory_count: 0,\n      strongest_similarity: null,\n      similarity_threshold: 0.72,\n      empty: true\n    },\n    sources: [],\n    context_preview: '',\n    session: {\n      turn_count_before: Array.isArray($json.session_turns) ? $json.session_turns.length : 0,\n      history_used: Array.isArray($json.session_turns) ? $json.session_turns.length > 0 : false,\n      stored: false\n    }\n  }\n}];"
+      },
+      "id": "code-build-embedding-failure-response",
+      "name": "Build Embedding Failure Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2360,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  COALESCE((\n    SELECT jsonb_agg(row_to_json(project_rows) ORDER BY project_rows.distance)\n    FROM (\n      SELECT\n        id,\n        title,\n        source,\n        category,\n        content,\n        metadata_json,\n        COALESCE(NULLIF(metadata_json->>'project_slug', ''), NULL) AS project_slug,\n        ROUND((1 - (embedding <=> $1::vector))::numeric, 6) AS similarity,\n        (embedding <=> $1::vector) AS distance\n      FROM memories\n      WHERE embedding IS NOT NULL\n        AND $2::text IS NOT NULL\n        AND NULLIF(COALESCE(metadata_json->>'project_slug', ''), '') = $2::text\n      ORDER BY distance\n      LIMIT $3::int\n    ) project_rows\n  ), '[]'::jsonb) AS project_memories,\n  COALESCE((\n    SELECT jsonb_agg(row_to_json(general_rows) ORDER BY general_rows.distance)\n    FROM (\n      SELECT\n        id,\n        title,\n        source,\n        category,\n        content,\n        metadata_json,\n        COALESCE(NULLIF(metadata_json->>'project_slug', ''), NULL) AS project_slug,\n        ROUND((1 - (embedding <=> $1::vector))::numeric, 6) AS similarity,\n        (embedding <=> $1::vector) AS distance\n      FROM memories\n      WHERE embedding IS NOT NULL\n        AND COALESCE(NULLIF(metadata_json->>'project_slug', ''), '') = ''\n      ORDER BY distance\n      LIMIT $3::int\n    ) general_rows\n  ), '[]'::jsonb) AS general_memories,\n  COALESCE((\n    SELECT jsonb_agg(row_to_json(all_rows) ORDER BY all_rows.distance)\n    FROM (\n      SELECT\n        id,\n        title,\n        source,\n        category,\n        content,\n        metadata_json,\n        COALESCE(NULLIF(metadata_json->>'project_slug', ''), NULL) AS project_slug,\n        ROUND((1 - (embedding <=> $1::vector))::numeric, 6) AS similarity,\n        (embedding <=> $1::vector) AS distance\n      FROM memories\n      WHERE embedding IS NOT NULL\n      ORDER BY distance\n      LIMIT $3::int\n    ) all_rows\n  ), '[]'::jsonb) AS all_memories;",
+        "options": {
+          "queryReplacement": "={{ [$json.vector_literal, $json.project_slug, $json.top_k] }}"
+        }
+      },
+      "id": "postgres-retrieve-candidate-memories",
+      "name": "Retrieve Candidate Memories",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2360,
+        20
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "j60Gpt1oeRVTUCH2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Prepare Retrieval Input').first().json;\nconst projectMemories = Array.isArray($json.project_memories) ? $json.project_memories : [];\nconst generalMemories = Array.isArray($json.general_memories) ? $json.general_memories : [];\nconst allMemories = Array.isArray($json.all_memories) ? $json.all_memories : [];\nconst topK = base.top_k;\nconst selected = [];\nconst seen = new Set();\nconst addMemory = (memory) => {\n  if (!memory || seen.has(memory.id) || selected.length >= topK) {\n    return;\n  }\n  seen.add(memory.id);\n  selected.push(memory);\n};\n\nif (base.project_slug) {\n  for (const memory of projectMemories) addMemory(memory);\n  for (const memory of generalMemories) addMemory(memory);\n} else {\n  for (const memory of allMemories) addMemory(memory);\n}\n\nconst similarityThreshold = 0.72;\nconst stopTerms = new Set(['what', 'when', 'where', 'which', 'who', 'how', 'this', 'that', 'with', 'from', 'into', 'your', 'about']);\nconst queryTerms = Array.from(new Set(((base.query || '').toLowerCase().match(/[a-z0-9]{4,}/g) ?? []).filter((term) => !stopTerms.has(term))));\nconst scoredSelected = selected\n  .map((memory) => {\n    const haystack = `${memory.title ?? ''}\\n${memory.content ?? ''}`.toLowerCase();\n    const lexicalOverlap = queryTerms.filter((term) => haystack.includes(term)).length;\n    const similarity = typeof memory.similarity === 'number' ? memory.similarity : 0;\n    return {\n      ...memory,\n      lexical_overlap: lexicalOverlap,\n      passes_relevance: similarity >= similarityThreshold || lexicalOverlap >= 1,\n    };\n  })\n  .sort((left, right) => {\n    if (base.project_slug) {\n      const leftProject = left.project_slug === base.project_slug ? 1 : 0;\n      const rightProject = right.project_slug === base.project_slug ? 1 : 0;\n      if (rightProject !== leftProject) {\n        return rightProject - leftProject;\n      }\n    }\n    if (right.lexical_overlap !== left.lexical_overlap) {\n      return right.lexical_overlap - left.lexical_overlap;\n    }\n    return (right.similarity ?? 0) - (left.similarity ?? 0);\n  });\nconst strongMemories = scoredSelected.filter((memory) => memory.passes_relevance).slice(0, topK);\nconst sessionTurns = Array.isArray(base.session_turns) ? base.session_turns : [];\nconst sessionHistory = sessionTurns\n  .map((turn) => `${turn.role === 'assistant' ? 'Assistant' : 'User'}: ${turn.message_text}`)\n  .join('\\n');\nconst context = strongMemories\n  .map((memory, index) => `Memory ${index + 1}: ${memory.title}\\n${memory.content}`)\n  .join('\\n\\n');\nconst promptParts = [\n  'You are OpenBrain, a local project-aware memory assistant.',\n  'Answer using the retrieved memory context only. If the memory is incomplete, say so plainly.',\n  base.project_slug ? `Requested project_slug: ${base.project_slug}` : null,\n  sessionHistory ? `Recent session turns:\\n${sessionHistory}` : null,\n  context ? `Retrieved memory context:\\n${context}` : null,\n  `User question:\\n${base.query}`,\n  'Respond in concise plain text.'\n].filter(Boolean);\nconst sources = strongMemories.map((memory) => ({\n  id: memory.id,\n  title: memory.title,\n  project_slug: memory.project_slug ?? null,\n  similarity: memory.similarity,\n  lexical_overlap: memory.lexical_overlap,\n  snippet: typeof memory.content === 'string' ? memory.content.slice(0, 160) : ''\n}));\n\nreturn [{\n  json: {\n    ...base,\n    retrieval_strategy: base.project_slug ? 'project-first-fallback-general' : 'all-memories',\n    project_match_count: projectMemories.length,\n    general_match_count: generalMemories.length,\n    selected_memory_count: selected.length,\n    strong_memory_count: strongMemories.length,\n    strongest_similarity: strongMemories.length > 0 ? strongMemories[0].similarity : null,\n    similarity_threshold: similarityThreshold,\n    query_terms: queryTerms,\n    empty_retrieval: strongMemories.length === 0,\n    sources,\n    context,\n    context_preview: context.slice(0, 280),\n    session_turn_count_before: sessionTurns.length,\n    session_history: sessionHistory,\n    prompt: promptParts.join('\\n\\n'),\n    memory_ids: strongMemories.map((memory) => memory.id)\n  }\n}];"
+      },
+      "id": "code-assemble-retrieval-context",
+      "name": "Assemble Retrieval Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2660,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "condition-has-strong-retrieval",
+              "leftValue": "={{ $json.strong_memory_count > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-strong-retrieval",
+      "name": "Has Strong Retrieval?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2960,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama3', prompt: $json.prompt, stream: false }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "http-generate-assistant-answer",
+      "name": "Generate Assistant Answer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3260,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Assemble Retrieval Context').first().json;\nconst statusCode = $json.statusCode ?? 0;\nconst body = $json.body ?? {};\nconst answer = typeof body.response === 'string' ? body.response.trim() : '';\n\nif (statusCode < 200 || statusCode >= 300 || answer === '') {\n  return [{\n    json: {\n      ok: false,\n      error: {\n        code: 'OLLAMA_GENERATION_FAILED',\n        message: 'Ollama answer generation failed',\n        status: statusCode || null,\n        details: body.error ?? null\n      },\n      query: base.query,\n      session_id: base.session_id,\n      project_slug: base.project_slug ?? null,\n      top_k: base.top_k,\n      retrieval: {\n        strategy: base.retrieval_strategy,\n        project_match_count: base.project_match_count,\n        general_match_count: base.general_match_count,\n        memory_count: base.strong_memory_count,\n        strongest_similarity: base.strongest_similarity,\n        similarity_threshold: base.similarity_threshold,\n        empty: false\n      },\n      sources: base.sources,\n      context_preview: base.context_preview,\n      session: {\n        turn_count_before: base.session_turn_count_before,\n        history_used: base.session_turn_count_before > 0,\n        stored: false\n      }\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    answer,\n    query: base.query,\n    session_id: base.session_id,\n    project_slug: base.project_slug ?? null,\n    top_k: base.top_k,\n    retrieval: {\n      strategy: base.retrieval_strategy,\n      project_match_count: base.project_match_count,\n      general_match_count: base.general_match_count,\n      memory_count: base.strong_memory_count,\n      strongest_similarity: base.strongest_similarity,\n      similarity_threshold: base.similarity_threshold,\n      empty: false\n    },\n    sources: base.sources,\n    context_preview: base.context_preview,\n    session: {\n      turn_count_before: base.session_turn_count_before,\n      history_used: base.session_turn_count_before > 0,\n      stored: false\n    }\n  }\n}];"
+      },
+      "id": "code-build-assistant-response",
+      "name": "Build Assistant Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3560,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ok: true,\n    answer: 'I do not have enough stored memory to answer that yet.',\n    query: $json.query,\n    session_id: $json.session_id,\n    project_slug: $json.project_slug ?? null,\n    top_k: $json.top_k,\n    retrieval: {\n      strategy: $json.retrieval_strategy,\n      project_match_count: $json.project_match_count,\n      general_match_count: $json.general_match_count,\n      memory_count: 0,\n      strongest_similarity: $json.strongest_similarity,\n      similarity_threshold: $json.similarity_threshold,\n      empty: true\n    },\n    sources: [],\n    context_preview: '',\n    session: {\n      turn_count_before: $json.session_turn_count_before,\n      history_used: $json.session_turn_count_before > 0,\n      stored: false\n    }\n  }\n}];"
+      },
+      "id": "code-build-empty-retrieval-response",
+      "name": "Build Empty Retrieval Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO openbrain_chat_turns (\n  session_id,\n  role,\n  message_text,\n  project_slug,\n  metadata_json\n)\nVALUES (\n  $1::text,\n  'user',\n  $2::text,\n  NULLIF($3::text, ''),\n  $4::jsonb\n)\nRETURNING\n  id,\n  $1::text AS session_id,\n  NULLIF($3::text, '') AS project_slug,\n  $5::text AS answer_text,\n  ($6::jsonb)::text AS assistant_metadata_json_text,\n  ($7::jsonb)::text AS response_json_text;",
+        "options": {
+          "queryReplacement": "={{ [$json.session_id, $json.query, $json.project_slug || '', JSON.stringify({ top_k: $json.top_k, request_source: 'openbrain-assistant' }), $json.answer || $json.error?.message || 'OpenBrain assistant request failed.', JSON.stringify({ ok: $json.ok, query: $json.query, retrieval: $json.retrieval, source_count: Array.isArray($json.sources) ? $json.sources.length : 0, error: $json.error || null }), JSON.stringify($json)] }}"
+        }
+      },
+      "id": "postgres-store-user-turn",
+      "name": "Store User Turn",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3860,
+        140
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "j60Gpt1oeRVTUCH2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO openbrain_chat_turns (\n  session_id,\n  role,\n  message_text,\n  project_slug,\n  metadata_json\n)\nVALUES (\n  $1::text,\n  'assistant',\n  $2::text,\n  NULLIF($3::text, ''),\n  $4::jsonb\n)\nRETURNING id, ($5::jsonb)::text AS response_json_text;",
+        "options": {
+          "queryReplacement": "={{ [$json.session_id, $json.answer_text, $json.project_slug || '', $json.assistant_metadata_json_text, $json.response_json_text] }}"
+        }
+      },
+      "id": "postgres-store-assistant-turn",
+      "name": "Store Assistant Turn",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4160,
+        140
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "j60Gpt1oeRVTUCH2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = typeof $json.response_json_text === 'string'\n  ? JSON.parse($json.response_json_text)\n  : $json;\nconst session = response.session ?? {\n  turn_count_before: 0,\n  history_used: false,\n  stored: false\n};\nreturn [{\n  json: {\n    ...response,\n    session: {\n      ...session,\n      stored: true,\n      turn_count_after: (session.turn_count_before ?? 0) + 2\n    }\n  }\n}];"
+      },
+      "id": "code-return-assistant-response",
+      "name": "Return Assistant Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4460,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "respond-assistant-result",
+      "name": "Respond Assistant Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4760,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Assistant Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Assistant Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Assistant Request": {
+      "main": [
+        [
+          {
+            "node": "Request Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Load Session Turns",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Assistant Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Session Turns": {
+      "main": [
+        [
+          {
+            "node": "Generate Query Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Query Embedding": {
+      "main": [
+        [
+          {
+            "node": "Prepare Retrieval Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Retrieval Input": {
+      "main": [
+        [
+          {
+            "node": "Embedding Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding Ready?": {
+      "main": [
+        [
+          {
+            "node": "Retrieve Candidate Memories",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Embedding Failure Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve Candidate Memories": {
+      "main": [
+        [
+          {
+            "node": "Assemble Retrieval Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Retrieval Context": {
+      "main": [
+        [
+          {
+            "node": "Has Strong Retrieval?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Strong Retrieval?": {
+      "main": [
+        [
+          {
+            "node": "Generate Assistant Answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Empty Retrieval Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Assistant Answer": {
+      "main": [
+        [
+          {
+            "node": "Build Assistant Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Assistant Response": {
+      "main": [
+        [
+          {
+            "node": "Store User Turn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Empty Retrieval Response": {
+      "main": [
+        [
+          {
+            "node": "Store User Turn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Embedding Failure Response": {
+      "main": [
+        [
+          {
+            "node": "Store User Turn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store User Turn": {
+      "main": [
+        [
+          {
+            "node": "Store Assistant Turn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Assistant Turn": {
+      "main": [
+        [
+          {
+            "node": "Return Assistant Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Assistant Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Assistant Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "versionId": "27db0f91-94c5-4ba6-89dc-8b5b8e31e5a1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "parentFolder": {
+    "id": "3lDgAgPgmaSYyu8P"
+  },
+  "id": "openbrain-assistant"
+}
