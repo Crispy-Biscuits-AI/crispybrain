@@ -3,7 +3,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-note",
+        "path": "note",
         "responseMode": "lastNode",
         "options": {}
       },

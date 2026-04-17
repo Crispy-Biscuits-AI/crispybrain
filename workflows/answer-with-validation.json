@@ -1,10 +1,9 @@
 {
-  "name": "openbrain-answer-with-validation",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-answer-with-validation",
+        "path": "answer-with-validation",
         "responseMode": "lastNode",
         "responseData": "firstEntryJson",
         "options": {}
@@ -17,7 +16,7 @@
         0,
         0
       ],
-      "webhookId": "openbrain-answer-with-validation"
+      "webhookId": "answer-with-validation"
     },
     {
       "parameters": {
@@ -69,14 +68,14 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:5678/webhook/openbrain-answer-from-memory",
+        "url": "http://localhost:5678/webhook/answer-from-memory",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { \"query\": $json.query } }}",
         "options": {}
       },
       "id": "2bb8e1b4-cf93-4f8b-a2ea-70e734724277",
-      "name": "Call openbrain-answer-from-memory",
+      "name": "Call answer-from-memory",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -141,7 +140,7 @@
       "main": [
         [
           {
-            "node": "Call openbrain-answer-from-memory",
+            "node": "Call answer-from-memory",
             "type": "main",
             "index": 0
           }

@@ -3,7 +3,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-search-deactivated",
+        "path": "search-deactivated",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -13,7 +13,7 @@
         0
       ],
       "id": "509ca7c3-f224-4e73-a348-edfdc7a21e17",
-      "name": "openbrain-search",
+      "name": "search",
       "webhookId": "ab9bd97b-551c-47b7-9029-bfbbdda7a16f"
     },
     {

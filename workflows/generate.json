@@ -3,7 +3,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-generate",
+        "path": "generate",
         "responseMode": "lastNode",
         "options": {}
       },
@@ -14,7 +14,7 @@
         0
       ],
       "id": "79f1f838-82dc-40a1-9e08-e555b9358499",
-      "name": "openbrain-search",
+      "name": "search",
       "webhookId": "ab9bd97b-551c-47b7-9029-bfbbdda7a16f"
     },
     {
@@ -106,7 +106,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const question = $('Edit Fields').first().json.query;\n\nif (!items || items.length === 0) {\n  return [\n    {\n      json: {\n        prompt: `You are an assistant helping answer questions from the user's OpenBrain memory database.\n\nQuestion:\n${question}\n\nNo relevant memories were found. Explain that there is not yet enough stored information to answer.`\n      }\n    }\n  ];\n}\n\nconst memoryText = items.map(item => {\n  return `Title: ${item.json.title}\nCategory: ${item.json.category}\nContent: ${item.json.content}`;\n}).join('\\n\\n---\\n\\n');\n\nreturn [\n  {\n    json: {\n      prompt: `You are an assistant helping answer questions from the user's OpenBrain memory database.\n\nUse only the memory entries below.\n\nQuestion:\n${question}\n\nMemory Entries:\n${memoryText}\n\nAnswer briefly and factually. If the memories are incomplete, say what is missing.`\n    }\n  }\n];"
+        "jsCode": "const question = $('Edit Fields').first().json.query;\n\nif (!items || items.length === 0) {\n  return [\n    {\n      json: {\n        prompt: `You are an assistant helping answer questions from the user's CrispyBrain memory database.\n\nQuestion:\n${question}\n\nNo relevant memories were found. Explain that there is not yet enough stored information to answer.`\n      }\n    }\n  ];\n}\n\nconst memoryText = items.map(item => {\n  return `Title: ${item.json.title}\nCategory: ${item.json.category}\nContent: ${item.json.content}`;\n}).join('\\n\\n---\\n\\n');\n\nreturn [\n  {\n    json: {\n      prompt: `You are an assistant helping answer questions from the user's CrispyBrain memory database.\n\nUse only the memory entries below.\n\nQuestion:\n${question}\n\nMemory Entries:\n${memoryText}\n\nAnswer briefly and factually. If the memories are incomplete, say what is missing.`\n    }\n  }\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -241,9 +241,9 @@
         "params": {},
         "query": {},
         "body": {
-          "query": "OpenBrain embedding plan"
+          "query": "CrispyBrain embedding plan"
         },
-        "webhookUrl": "http://localhost:5678/webhook/openbrain-generate",
+        "webhookUrl": "http://localhost:5678/webhook/generate",
         "executionMode": "production"
       }
     ]
