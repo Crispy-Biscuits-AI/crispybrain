@@ -39,4 +39,4 @@ Behavior:
 - the legacy stored assistant endpoint `http://localhost:5678/webhook/openbrain-assistant` auto-migrates to `http://localhost:5678/webhook/assistant`
 - the stale incomplete endpoint `http://localhost:5678/webhook` also auto-migrates to `http://localhost:5678/webhook/assistant`
 - custom user-entered endpoints are preserved
-- workflow export filenames may remain legacy-stable under `workflows/openbrain-*.json`, but imported workflow ids and names are the concise CrispyBrain forms
+- active workflow export filenames now also use the concise CrispyBrain forms, such as `workflows/assistant.json` and `workflows/build-context.json`

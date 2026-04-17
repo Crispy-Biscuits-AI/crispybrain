@@ -17,7 +17,7 @@ The original OpenBrain concept introduced by Nate Jones inspired the early archi
 
 ## Repo Notes
 
-- The workflow export filenames remain legacy-stable under `workflows/openbrain-*.json` where they already existed.
+- The active workflow export filenames now match the concise imported workflow names under `workflows/`, such as `assistant.json`, `ingest.json`, and `build-context.json`.
 - The internal workflow `id` and `name` fields are the new concise CrispyBrain names such as `assistant`, `ingest`, and `build-context`.
 - OpenBrain and CrispyBrain are meant to coexist side-by-side in the same n8n instance.
 

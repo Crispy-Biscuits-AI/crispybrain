@@ -1,5 +1,5 @@
 {
-  "name": "insert-embedding-fixed",
+  "name": "insert-embedding-fixed-v2",
   "nodes": [
     {
       "parameters": {},
@@ -15,7 +15,7 @@
     {
       "parameters": {
         "operation": "read",
-        "fileSelector": "/home/node/.n8n-files/crispybrain/inbox/2026-04-14-openbrain-multi-chunk-test.txt",
+        "fileSelector": "/home/node/.n8n-files/crispybrain/inbox/2026-04-14-crispybrain-multi-chunk-test.txt",
         "options": {
           "putOutputFileInField": "data"
         }
@@ -62,8 +62,19 @@
         "method": "POST",
         "url": "http://host.docker.internal:11434/api/embed",
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"nomic-embed-text\",\n  \"input\": $json.content\n}",
+        "contentType": "json",
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "model",
+              "value": "nomic-embed-text"
+            },
+            {
+              "name": "input",
+              "value": "={{ $json.content }}"
+            }
+          ]
+        },
         "options": {}
       },
       "id": "2a4d4cfe-6fd0-48b7-ae57-7e9e4f4b1005",
@@ -165,5 +176,5 @@
   "meta": {
     "templateCredsSetupCompleted": false
   },
-  "id": "insert-embedding-fixed"
+  "id": "insert-embedding-fixed-v2"
 }

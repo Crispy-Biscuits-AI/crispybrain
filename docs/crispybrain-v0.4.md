@@ -12,7 +12,7 @@ CrispyBrain v0.4 is the first release in the CrispyBrain fork line. It preserves
 
 ## Active Entrypoint
 
-- Workflow export file: [openbrain-assistant.json](/Users/elric/repos/crispybrain/workflows/openbrain-assistant.json)
+- Workflow export file: [assistant.json](/Users/elric/repos/crispybrain/workflows/assistant.json)
 - Workflow id/name after import: `assistant`
 - Webhook: `POST http://localhost:5678/webhook/assistant`
 - n8n folder: `Personal -> CrispyBrain v0.4`
