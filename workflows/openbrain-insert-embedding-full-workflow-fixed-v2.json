@@ -1,5 +1,5 @@
 {
-  "name": "openbrain-insert-embedding",
+  "name": "insert-embedding-fixed-v2",
   "nodes": [
     {
       "parameters": {},
@@ -15,7 +15,7 @@
     {
       "parameters": {
         "operation": "read",
-        "fileSelector": "/home/node/.n8n-files/openbrain/inbox/2026-04-14-openbrain-multi-chunk-test.txt",
+        "fileSelector": "/home/node/.n8n-files/crispybrain/inbox/2026-04-14-openbrain-multi-chunk-test.txt",
         "options": {
           "putOutputFileInField": "data"
         }
@@ -176,5 +176,5 @@
   "meta": {
     "templateCredsSetupCompleted": false
   },
-  "id": "openbrain-insert-embedding"
+  "id": "insert-embedding-fixed-v2"
 }

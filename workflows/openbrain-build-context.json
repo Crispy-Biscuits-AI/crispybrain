@@ -1,14 +1,14 @@
 {
-  "name": "openbrain-build-context",
+  "name": "build-context",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-build-context",
+        "path": "build-context",
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "webhook-openbrain-build-context",
+      "id": "webhook-build-context",
       "name": "Build Context Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -16,7 +16,7 @@
         260,
         300
       ],
-      "webhookId": "openbrain-build-context"
+      "webhookId": "build-context"
     },
     {
       "parameters": {
@@ -81,8 +81,5 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "parentFolder": {
-    "id": "ShEzYm3G7TPHWSp2"
-  },
-  "id": "openbrain-build-context"
+  "id": "build-context"
 }

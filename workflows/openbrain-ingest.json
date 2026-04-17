@@ -1,10 +1,10 @@
 {
-  "name": "openbrain-ingest",
+  "name": "ingest",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-ingest",
+        "path": "ingest",
         "responseMode": "lastNode",
         "responseData": "allEntries",
         "options": {}
@@ -17,7 +17,7 @@
         0,
         0
       ],
-      "webhookId": "openbrain-ingest"
+      "webhookId": "ingest"
     },
     {
       "parameters": {
@@ -219,5 +219,5 @@
   "meta": {
     "templateCredsSetupCompleted": false
   },
-  "id": "openbrain-ingest"
+  "id": "ingest"
 }

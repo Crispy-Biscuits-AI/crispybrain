@@ -1,10 +1,10 @@
 {
-  "name": "openbrain-project-bootstrap",
+  "name": "project-bootstrap",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-project-bootstrap",
+        "path": "project-bootstrap",
         "responseMode": "lastNode",
         "responseData": "firstEntryJson",
         "options": {}
@@ -17,7 +17,7 @@
         260,
         300
       ],
-      "webhookId": "openbrain-project-bootstrap"
+      "webhookId": "project-bootstrap"
     },
     {
       "parameters": {
@@ -89,5 +89,5 @@
   "meta": {
     "templateCredsSetupCompleted": false
   },
-  "id": "openbrain-project-bootstrap"
+  "id": "project-bootstrap"
 }

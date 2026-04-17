@@ -1,14 +1,14 @@
 {
-  "name": "openbrain-validation-and-errors",
+  "name": "validation-and-errors",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-validation-and-errors",
+        "path": "validation-and-errors",
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "webhook-openbrain-validation-and-errors",
+      "id": "webhook-validation-and-errors",
       "name": "Validation Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -16,7 +16,7 @@
         260,
         300
       ],
-      "webhookId": "openbrain-validation-and-errors"
+      "webhookId": "validation-and-errors"
     },
     {
       "parameters": {
@@ -105,8 +105,5 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "parentFolder": {
-    "id": "ShEzYm3G7TPHWSp2"
-  },
-  "id": "openbrain-validation-and-errors"
+  "id": "validation-and-errors"
 }

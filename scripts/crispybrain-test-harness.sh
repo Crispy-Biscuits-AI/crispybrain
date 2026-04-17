@@ -169,6 +169,43 @@ openbrain_harness_apply_sql_file() {
   openbrain_harness_log "${output}"
 }
 
+openbrain_harness_folder_id_by_name() {
+  local folder_name="$1"
+  openbrain_harness_db_query "SELECT id FROM folder WHERE name = '${folder_name}' ORDER BY \"createdAt\" ASC LIMIT 1;"
+}
+
+openbrain_harness_generate_id() {
+  tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16
+}
+
+openbrain_harness_ensure_folder() {
+  local folder_name="$1"
+  local folder_id
+  folder_id="$(openbrain_harness_folder_id_by_name "${folder_name}")"
+  folder_id="$(printf '%s' "${folder_id}" | tr -d '[:space:]')"
+  if [[ -n "${folder_id}" ]]; then
+    printf '%s\n' "${folder_id}"
+    return 0
+  fi
+
+  local project_id
+  project_id="$(openbrain_harness_db_query "SELECT \"projectId\" FROM folder ORDER BY \"createdAt\" ASC LIMIT 1;")"
+  project_id="$(printf '%s' "${project_id}" | tr -d '[:space:]')"
+  [[ -n "${project_id}" ]] || openbrain_harness_fail "Could not determine the personal project id for folder creation"
+
+  folder_id="$(openbrain_harness_generate_id)"
+  openbrain_harness_db_query "INSERT INTO folder (id, name, \"projectId\") VALUES ('${folder_id}', '${folder_name}', '${project_id}');" >/dev/null
+  printf '%s\n' "${folder_id}"
+}
+
+openbrain_harness_render_workflow_for_folder() {
+  local source_path="$1"
+  local output_path="$2"
+  local folder_id="$3"
+  local folder_name="$4"
+  jq --arg folderId "${folder_id}" --arg folderName "${folder_name}" '.parentFolder = {id: $folderId, name: $folderName}' "${source_path}" > "${output_path}"
+}
+
 openbrain_harness_latest_execution_record() {
   local workflow_id="$1"
   docker exec "${OPENBRAIN_HARNESS_DB_CONTAINER}" psql -U n8n -d n8n -t -A -c "SELECT id::text || '|' || status || '|' || COALESCE(to_char(\"startedAt\", 'YYYY-MM-DD\"T\"HH24:MI:SSOF'), '') FROM execution_entity WHERE \"workflowId\" = '${workflow_id}' ORDER BY \"startedAt\" DESC LIMIT 1;"
@@ -237,9 +274,22 @@ openbrain_harness_assert_workflow_in_folder() {
   [[ "${actual_folder_id}" == "${folder_id}" ]] || openbrain_harness_fail "Workflow ${workflow_id} is in folder '${actual_folder_id}', expected '${folder_id}'"
 }
 
+openbrain_harness_assert_folder_has_no_legacy_prefixes() {
+  local folder_id="$1"
+  local legacy_count
+  legacy_count="$(openbrain_harness_db_query "SELECT COUNT(*) FROM workflow_entity WHERE \"parentFolderId\" = '${folder_id}' AND name LIKE 'openbrain-%';")"
+  legacy_count="$(printf '%s' "${legacy_count}" | tr -d '[:space:]')"
+  [[ "${legacy_count}" == "0" ]] || openbrain_harness_fail "Folder ${folder_id} still contains ${legacy_count} workflow names with the openbrain- prefix"
+}
+
+openbrain_harness_list_folder_workflow_names() {
+  local folder_id="$1"
+  openbrain_harness_db_query "SELECT name FROM workflow_entity WHERE \"parentFolderId\" = '${folder_id}' ORDER BY name;"
+}
+
 openbrain_harness_usage() {
   cat <<'EOF'
-Reusable OpenBrain n8n test harness.
+Reusable CrispyBrain n8n test harness.
 
 Source this file from a workflow-specific test script and call:
   openbrain_harness_copy_workflow
@@ -253,11 +303,15 @@ Source this file from a workflow-specific test script and call:
   openbrain_harness_get_json
   openbrain_harness_db_query
   openbrain_harness_apply_sql_file
+  openbrain_harness_folder_id_by_name
+  openbrain_harness_ensure_folder
+  openbrain_harness_render_workflow_for_folder
   openbrain_harness_assert_json_equals
   openbrain_harness_assert_json_number_gt
   openbrain_harness_assert_json_number_gte
   openbrain_harness_assert_json_string_contains
   openbrain_harness_assert_workflow_in_folder
+  openbrain_harness_assert_folder_has_no_legacy_prefixes
   openbrain_harness_assert_execution_success
 EOF
 }

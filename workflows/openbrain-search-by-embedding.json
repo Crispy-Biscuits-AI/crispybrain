@@ -1,10 +1,10 @@
 {
-  "name": "openbrain-search-by-embedding",
+  "name": "search-by-embedding",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-search-by-embedding",
+        "path": "search-by-embedding",
         "responseMode": "lastNode",
         "responseData": "allEntries",
         "options": {}
@@ -17,7 +17,7 @@
         0,
         0
       ],
-      "webhookId": "openbrain-search-by-embedding"
+      "webhookId": "search-by-embedding"
     },
     {
       "parameters": {
@@ -206,5 +206,5 @@
   "meta": {
     "templateCredsSetupCompleted": false
   },
-  "id": "openbrain-search-by-embedding"
+  "id": "search-by-embedding"
 }

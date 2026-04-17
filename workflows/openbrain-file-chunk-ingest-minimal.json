@@ -1,5 +1,5 @@
 {
-  "name": "openbrain-file-chunk-ingest-minimal",
+  "name": "file-chunk-ingest-minimal",
   "nodes": [
     {
       "parameters": {},
@@ -19,7 +19,7 @@
             {
               "id": "a1",
               "name": "file_path",
-              "value": "/data/openbrain/inbox/2026-04-14-openbrain-minimal-test.txt",
+              "value": "/data/crispybrain/inbox/2026-04-14-openbrain-minimal-test.txt",
               "type": "string"
             },
             {
@@ -118,7 +118,7 @@
       "credentials": {
         "postgres": {
           "id": "REPLACE_WITH_YOUR_POSTGRES_CREDENTIAL_ID",
-          "name": "OpenBrain Postgres"
+          "name": "CrispyBrain Postgres"
         }
       }
     }
@@ -178,6 +178,6 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "id": "openbrain-file-chunk-ingest-minimal",
+  "id": "file-chunk-ingest-minimal",
   "tags": []
 }

@@ -1,14 +1,14 @@
 {
-  "name": "openbrain-answer-from-memory",
+  "name": "answer-from-memory",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-answer-from-memory",
+        "path": "answer-from-memory",
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "webhook-openbrain-answer-from-memory",
+      "id": "webhook-answer-from-memory",
       "name": "Answer From Memory Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -16,7 +16,7 @@
         260,
         300
       ],
-      "webhookId": "openbrain-answer-from-memory"
+      "webhookId": "answer-from-memory"
     },
     {
       "parameters": {
@@ -81,8 +81,5 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "parentFolder": {
-    "id": "ShEzYm3G7TPHWSp2"
-  },
-  "id": "openbrain-answer-from-memory"
+  "id": "answer-from-memory"
 }

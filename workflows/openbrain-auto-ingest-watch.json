@@ -1,14 +1,14 @@
 {
-  "name": "openbrain-auto-ingest-watch",
+  "name": "auto-ingest-watch",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-auto-ingest-watch",
+        "path": "auto-ingest-watch",
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "webhook-openbrain-auto-ingest-watch",
+      "id": "webhook-auto-ingest-watch",
       "name": "Auto Ingest Watch Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -16,7 +16,7 @@
         260,
         300
       ],
-      "webhookId": "openbrain-auto-ingest-watch"
+      "webhookId": "auto-ingest-watch"
     },
     {
       "parameters": {
@@ -33,7 +33,7 @@
     },
     {
       "parameters": {
-        "jsCode": "if ($json.is_valid !== true) {\n  return [{\n    json: {\n      ok: false,\n      error: $json.error\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    filepath: $json.filepath,\n    filename: $json.filename,\n    project_slug: $json.project_slug,\n    next_workflow: 'openbrain-ingest'\n  }\n}];"
+        "jsCode": "if ($json.is_valid !== true) {\n  return [{\n    json: {\n      ok: false,\n      error: $json.error\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    filepath: $json.filepath,\n    filename: $json.filename,\n    project_slug: $json.project_slug,\n    next_workflow: 'ingest'\n  }\n}];"
       },
       "id": "code-build-auto-ingest-response",
       "name": "Build Handoff Payload",
@@ -105,8 +105,5 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "parentFolder": {
-    "id": "ShEzYm3G7TPHWSp2"
-  },
-  "id": "openbrain-auto-ingest-watch"
+  "id": "auto-ingest-watch"
 }

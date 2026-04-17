@@ -3,22 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OpenBrain v0.3 Chat</title>
+  <title>CrispyBrain v0.4</title>
   <style>
     :root {
-      --bg: #f6f1e8;
-      --panel: rgba(255, 252, 247, 0.92);
-      --ink: #1f2a2e;
-      --muted: #6b757b;
-      --line: rgba(31, 42, 46, 0.12);
-      --accent: #0d6b6b;
-      --user: #1f2a2e;
-      --assistant: #ffffff;
-      --error: #8b1e3f;
-      --shadow: 0 18px 40px rgba(28, 34, 38, 0.08);
+      --bg: #0c1217;
+      --panel: rgba(16, 23, 30, 0.94);
+      --ink: #edf5ff;
+      --muted: #98afc3;
+      --line: rgba(152, 175, 195, 0.18);
+      --accent: #5eead4;
+      --user: #14222c;
+      --assistant: rgba(10, 17, 24, 0.92);
+      --error: #ff7aa2;
+      --shadow: 0 22px 48px rgba(3, 8, 15, 0.42);
       --radius: 18px;
       --font-display: "Avenir Next", "Segoe UI", sans-serif;
       --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+    }
+
+    :root[data-theme="light-polarized"] {
+      --bg: #f6f8fb;
+      --panel: rgba(255, 255, 255, 0.94);
+      --ink: #13202c;
+      --muted: #546679;
+      --line: rgba(19, 32, 44, 0.12);
+      --accent: #005f73;
+      --user: #0f1720;
+      --assistant: #ffffff;
+      --error: #b42348;
+      --shadow: 0 18px 40px rgba(15, 23, 32, 0.12);
     }
 
     * { box-sizing: border-box; }
@@ -29,9 +42,9 @@
       font-family: var(--font-body);
       color: var(--ink);
       background:
-        radial-gradient(circle at top left, rgba(13, 107, 107, 0.14), transparent 32%),
-        radial-gradient(circle at bottom right, rgba(201, 130, 78, 0.12), transparent 28%),
-        linear-gradient(180deg, #faf7f0 0%, #f3ede2 100%);
+        radial-gradient(circle at top left, rgba(94, 234, 212, 0.16), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.16), transparent 28%),
+        linear-gradient(180deg, #081017 0%, #0f1822 100%);
       display: grid;
       place-items: center;
       padding: 24px;
@@ -52,7 +65,7 @@
     .sidebar {
       padding: 24px;
       border-right: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(13, 107, 107, 0.08), rgba(255, 255, 255, 0.6));
+      background: linear-gradient(180deg, rgba(94, 234, 212, 0.08), rgba(8, 16, 23, 0.34));
       display: flex;
       flex-direction: column;
       gap: 18px;
@@ -76,7 +89,7 @@
     .panel {
       padding: 16px;
       border-radius: var(--radius);
-      background: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--line);
     }
 
@@ -100,14 +113,15 @@
     }
 
     input,
-    textarea {
+    textarea,
+    select {
       width: 100%;
       border-radius: 14px;
-      border: 1px solid rgba(31, 42, 46, 0.14);
+      border: 1px solid rgba(152, 175, 195, 0.16);
       padding: 12px 14px;
       font: inherit;
       color: var(--ink);
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.06);
     }
 
     textarea {
@@ -123,7 +137,7 @@
       font-weight: 700;
       cursor: pointer;
       background: var(--accent);
-      color: white;
+      color: #041016;
     }
 
     button:disabled {
@@ -227,14 +241,21 @@
   <main class="app">
     <aside class="sidebar">
       <section class="brand">
-        <h1>OpenBrain v0.3</h1>
-        <p>Local project-aware assistant with session continuity.</p>
+        <h1>CrispyBrain</h1>
+        <p>v0.4 fork with concise workflow names, assistant continuity, and polarized themes.</p>
       </section>
 
       <section class="panel">
         <div class="field">
           <label for="endpoint">Webhook endpoint</label>
-          <input id="endpoint" value="http://localhost:5678/webhook/openbrain-assistant">
+          <input id="endpoint" value="http://localhost:5678/webhook/assistant">
+        </div>
+        <div class="field">
+          <label for="theme">Theme</label>
+          <select id="theme">
+            <option value="dark-polarized">dark polarized</option>
+            <option value="light-polarized">light polarized</option>
+          </select>
         </div>
         <div class="field">
           <label for="sessionId">Session ID</label>
@@ -248,7 +269,7 @@
       </section>
 
       <section class="panel">
-        <p class="hint">This page keeps the current session ID in browser storage so repeated turns stay inside the same OpenBrain conversation.</p>
+        <p class="hint">This page keeps the current session ID in browser storage so repeated turns stay inside the same CrispyBrain conversation.</p>
       </section>
 
       <section class="panel">
@@ -266,7 +287,7 @@
 
       <footer class="composer">
         <div class="composer-row">
-          <textarea id="message" placeholder="Ask OpenBrain about your stored memory..."></textarea>
+          <textarea id="message" placeholder="Ask CrispyBrain about your stored memory..."></textarea>
         </div>
         <div class="composer-row">
           <button id="send" type="button">Send</button>
@@ -280,6 +301,7 @@
     const endpointInput = document.getElementById('endpoint');
     const sessionIdInput = document.getElementById('sessionId');
     const projectSlugInput = document.getElementById('projectSlug');
+    const themeInput = document.getElementById('theme');
     const messageInput = document.getElementById('message');
     const messagesEl = document.getElementById('messages');
     const sendButton = document.getElementById('send');
@@ -287,27 +309,55 @@
     const statusEl = document.getElementById('status');
     const resetSessionButton = document.getElementById('resetSession');
 
-    const SESSION_STORAGE_KEY = 'openbrain-v0.3-session-id';
-    const ENDPOINT_STORAGE_KEY = 'openbrain-v0.3-endpoint';
-    const PROJECT_STORAGE_KEY = 'openbrain-v0.3-project-slug';
-    const DEFAULT_ENDPOINT = 'http://localhost:5678/webhook/openbrain-assistant';
+    const SESSION_STORAGE_KEY = 'crispybrain_session_id';
+    const ENDPOINT_STORAGE_KEY = 'crispybrain_endpoint';
+    const PROJECT_STORAGE_KEY = 'crispybrain_project_slug';
+    const THEME_STORAGE_KEY = 'crispybrain_theme';
+    const DEFAULT_ENDPOINT = 'http://localhost:5678/webhook/assistant';
+    const DEFAULT_THEME = 'dark-polarized';
     const LEGACY_INCOMPLETE_ENDPOINT = 'http://localhost:5678/webhook';
+    const LEGACY_ASSISTANT_ENDPOINT = 'http://localhost:5678/webhook/openbrain-assistant';
+    const LEGACY_ENDPOINT_STORAGE_KEYS = ['openbrain_endpoint', 'openbrain-v0.3-endpoint'];
+    const LEGACY_SESSION_STORAGE_KEYS = ['openbrain_session_id', 'openbrain-v0.3-session-id'];
+    const LEGACY_PROJECT_STORAGE_KEYS = ['openbrain_project_slug', 'openbrain-v0.3-project-slug'];
+    const LEGACY_THEME_STORAGE_KEYS = ['openbrain_theme'];
 
-    const createSessionId = () => `openbrain-ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const createSessionId = () => `crispybrain-ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const migrateStoredValue = (key, legacyKeys, fallback = '') => {
+      const current = localStorage.getItem(key);
+      if (current) return current;
+      for (const legacyKey of legacyKeys) {
+        const legacyValue = localStorage.getItem(legacyKey);
+        if (legacyValue) {
+          localStorage.setItem(key, legacyValue);
+          localStorage.removeItem(legacyKey);
+          return legacyValue;
+        }
+      }
+      return fallback;
+    };
     const normalizeEndpointValue = (value) => {
       const trimmed = typeof value === 'string' ? value.trim() : '';
-      if (!trimmed || trimmed === LEGACY_INCOMPLETE_ENDPOINT) {
+      if (!trimmed || trimmed === LEGACY_INCOMPLETE_ENDPOINT || trimmed === LEGACY_ASSISTANT_ENDPOINT) {
         return DEFAULT_ENDPOINT;
       }
       return trimmed;
     };
+    const normalizeThemeValue = (value) => value === 'light-polarized' ? 'light-polarized' : DEFAULT_THEME;
+    const applyTheme = (theme) => {
+      const nextTheme = normalizeThemeValue(theme);
+      document.documentElement.dataset.theme = nextTheme;
+      themeInput.value = nextTheme;
+      localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    };
 
     const loadState = () => {
-      const storedEndpoint = localStorage.getItem(ENDPOINT_STORAGE_KEY);
+      const storedEndpoint = migrateStoredValue(ENDPOINT_STORAGE_KEY, LEGACY_ENDPOINT_STORAGE_KEYS, endpointInput.value);
       const normalizedEndpoint = normalizeEndpointValue(storedEndpoint || endpointInput.value);
       endpointInput.value = normalizedEndpoint;
-      projectSlugInput.value = localStorage.getItem(PROJECT_STORAGE_KEY) || '';
-      sessionIdInput.value = localStorage.getItem(SESSION_STORAGE_KEY) || createSessionId();
+      projectSlugInput.value = migrateStoredValue(PROJECT_STORAGE_KEY, LEGACY_PROJECT_STORAGE_KEYS, '') || '';
+      sessionIdInput.value = migrateStoredValue(SESSION_STORAGE_KEY, LEGACY_SESSION_STORAGE_KEYS, createSessionId()) || createSessionId();
+      applyTheme(migrateStoredValue(THEME_STORAGE_KEY, LEGACY_THEME_STORAGE_KEYS, DEFAULT_THEME));
       if (storedEndpoint !== normalizedEndpoint) {
         localStorage.setItem(ENDPOINT_STORAGE_KEY, normalizedEndpoint);
       }
@@ -317,6 +367,7 @@
       localStorage.setItem(ENDPOINT_STORAGE_KEY, normalizeEndpointValue(endpointInput.value));
       localStorage.setItem(PROJECT_STORAGE_KEY, projectSlugInput.value.trim());
       localStorage.setItem(SESSION_STORAGE_KEY, sessionIdInput.value.trim());
+      localStorage.setItem(THEME_STORAGE_KEY, normalizeThemeValue(themeInput.value));
     };
 
     const appendMessage = (role, text, meta) => {
@@ -336,7 +387,7 @@
     const setLoading = (loading) => {
       sendButton.disabled = loading;
       loadingEl.hidden = !loading;
-      statusEl.textContent = loading ? 'Waiting for OpenBrain...' : 'Ready.';
+      statusEl.textContent = loading ? 'Waiting for CrispyBrain...' : 'Ready.';
     };
 
     const resetSession = () => {
@@ -395,7 +446,7 @@
         if (!response.ok || body.ok === false) {
           const errorMessage = body?.error?.message || body?.error || `Request failed with HTTP ${response.status}`;
           appendMessage('error', errorMessage);
-          statusEl.textContent = 'OpenBrain returned an error.';
+          statusEl.textContent = 'CrispyBrain returned an error.';
           return;
         }
 
@@ -419,9 +470,10 @@
     endpointInput.addEventListener('change', saveState);
     projectSlugInput.addEventListener('change', saveState);
     sessionIdInput.addEventListener('change', saveState);
+    themeInput.addEventListener('change', () => applyTheme(themeInput.value));
 
     loadState();
-    appendMessage('assistant', 'OpenBrain v0.3 is ready. Start with a question, optionally scoped to a project_slug.', `session=${sessionIdInput.value}`);
+    appendMessage('assistant', 'CrispyBrain v0.4 is ready. Start with a question, optionally scoped to a project_slug.', `session=${sessionIdInput.value}`);
   </script>
 </body>
 </html>

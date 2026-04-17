@@ -1,14 +1,14 @@
 {
-  "name": "openbrain-project-memory",
+  "name": "project-memory",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-project-memory",
+        "path": "project-memory",
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "webhook-openbrain-project-memory",
+      "id": "webhook-project-memory",
       "name": "Project Memory Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -16,7 +16,7 @@
         260,
         300
       ],
-      "webhookId": "openbrain-project-memory"
+      "webhookId": "project-memory"
     },
     {
       "parameters": {
@@ -105,8 +105,5 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "parentFolder": {
-    "id": "ShEzYm3G7TPHWSp2"
-  },
-  "id": "openbrain-project-memory"
+  "id": "project-memory"
 }

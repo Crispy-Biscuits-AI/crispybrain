@@ -1,6 +1,6 @@
-# OpenBrain Webhook Workflow Template
+# CrispyBrain Webhook Workflow Template
 
-Use this standard pattern for small OpenBrain v0.2 webhook workflows in n8n 2.16.1.
+Use this standard pattern for small CrispyBrain v0.4 webhook workflows in n8n 2.16.1.
 
 ## Required Node Order
 
@@ -12,7 +12,7 @@ Use this standard pattern for small OpenBrain v0.2 webhook workflows in n8n 2.16
 ## Webhook Node Pattern
 
 - Method: `POST`
-- Path: stable slug such as `openbrain-project-memory`
+- Path: stable slug such as `project-memory`
 - `responseMode`: `responseNode`
 - Use a stable filename that matches the workflow name.
 
@@ -21,7 +21,7 @@ Example:
 ```json
 {
   "httpMethod": "POST",
-  "path": "openbrain-project-memory",
+  "path": "project-memory",
   "responseMode": "responseNode"
 }
 ```
@@ -106,4 +106,4 @@ After that returns `{"data":{"waitingForWebhook":true}}`, send the real test pay
 http://localhost:5678/webhook-test/<path>
 ```
 
-The reusable helper for this repo lives at [openbrain-test-harness.sh](/Users/elric/repos/openbrain/scripts/openbrain-test-harness.sh).
+The reusable helper for this repo lives at [crispybrain-test-harness.sh](/Users/elric/repos/crispybrain/scripts/crispybrain-test-harness.sh).

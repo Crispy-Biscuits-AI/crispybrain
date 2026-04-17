@@ -1,15 +1,15 @@
 {
-  "name": "openbrain-smoke-test",
+  "name": "smoke-test",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "openbrain-smoke-test",
+        "path": "smoke-test",
         "responseMode": "lastNode",
         "responseData": "firstEntryJson",
         "options": {}
       },
-      "id": "webhook-openbrain-smoke-test",
+      "id": "webhook-smoke-test",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -17,7 +17,7 @@
         260,
         300
       ],
-      "webhookId": "openbrain-smoke-test"
+      "webhookId": "smoke-test"
     },
     {
       "parameters": {
@@ -32,7 +32,7 @@
             {
               "id": "06834f16-32da-4bd7-b07d-29762138ee0e",
               "name": "source",
-              "value": "openbrain-smoke-test",
+              "value": "smoke-test",
               "type": "string"
             },
             {
@@ -45,7 +45,7 @@
         },
         "options": {}
       },
-      "id": "set-openbrain-smoke-test-payload",
+      "id": "set-smoke-test-payload",
       "name": "Smoke Test Payload",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -77,6 +77,6 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
-  "id": "openbrain-smoke-test",
+  "id": "smoke-test",
   "tags": []
 }
