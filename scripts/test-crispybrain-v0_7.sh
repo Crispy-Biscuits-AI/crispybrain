@@ -273,6 +273,9 @@ anchor_consistency_baseline_hash=""
 exact_consistency_passes_completed=0
 exact_consistency_drift_count=0
 exact_consistency_baseline_hash=""
+semantic_consistency_passes_completed=0
+semantic_consistency_drift_count=0
+semantic_consistency_baseline_hash=""
 
 record_latency() {
   local kind="$1"
@@ -388,6 +391,7 @@ for cycle in $(seq 1 "${cycles_requested}"); do
   ingest_correlation="corr-v060-ingest-${cycle}"
   assistant_correlation="corr-v060-assistant-${cycle}"
   reviewed_probe_correlation="corr-v060-reviewed-source-${cycle}"
+  semantic_probe_correlation="corr-v071-semantic-source-${cycle}"
 
   checks_attempted=$(( checks_attempted + 1 ))
   crispybrain_harness_log "Test ${cycle}.1: invalid ingest rejection"
@@ -407,7 +411,7 @@ for cycle in $(seq 1 "${cycles_requested}"); do
     --arg token "${token}" \
     --arg anchor "${anchor_token}" \
     --arg correlation_id "${ingest_correlation}" \
-    '{filepath: $filepath, filename: $filename, content: ("CrispyBrain v0.7.1 anchor policy note. Token " + $token + ". Stable anchor " + $anchor + ". Reviewed knowledge should surface with strong trust metadata."), project_slug: "alpha", modifiedEpoch: 1713533000, correlation_id: $correlation_id}')"
+    '{filepath: $filepath, filename: $filename, content: ("CrispyBrain v0.7.1 anchor policy note. Text files are ingested through the local watch path before the assistant retrieves them later. Token " + $token + ". Stable anchor " + $anchor + ". Reviewed knowledge should surface with strong trust metadata."), project_slug: "alpha", modifiedEpoch: 1713533000, correlation_id: $correlation_id}')"
 
   checks_attempted=$(( checks_attempted + 1 ))
   crispybrain_harness_log "Test ${cycle}.2: valid ingest"
@@ -472,6 +476,23 @@ for cycle in $(seq 1 "${cycles_requested}"); do
   crispybrain_harness_assert_json_string_contains "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.answer' "${filename}"
   assert_source_contains_filename "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" "${filename}"
   assert_source_filename_has_review_status "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" "${filename}" 'reviewed'
+  assert_response_source_review_statuses_match_db "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
+  checks_passed=$(( checks_passed + 1 ))
+
+  checks_attempted=$(( checks_attempted + 1 ))
+  crispybrain_harness_log "Test ${cycle}.6: semantic retrieval stays semantic"
+  semantic_probe_payload="$(jq -cn --arg correlation_id "${semantic_probe_correlation}" '{message: "How does CrispyBrain ingest text files?", project_slug: "alpha", correlation_id: $correlation_id, top_k: 8}')"
+  measure_post_json 'http://localhost:5678/webhook/assistant' "${semantic_probe_payload}"
+  crispybrain_harness_log "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
+  [[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail "Semantic probe cycle ${cycle} returned HTTP ${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}"
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trace.correlation_id' "${semantic_probe_correlation}"
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trace.ranking_mode' 'semantic'
+  crispybrain_harness_assert_json_number_gte "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.retrieval.memory_count' '1'
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].project_match' 'true'
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].review_status' 'reviewed'
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].source_type' 'file_ingest'
+  crispybrain_harness_assert_json_string_contains "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].snippet' 'Text files are ingested through the local watch path'
+  crispybrain_harness_assert_json_string_contains "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.answer' 'ingest'
   assert_response_source_review_statuses_match_db "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
   checks_passed=$(( checks_passed + 1 ))
 
@@ -544,10 +565,42 @@ for pass in $(seq 1 "${consistency_passes_requested}"); do
   exact_consistency_passes_completed=$(( exact_consistency_passes_completed + 1 ))
 done
 
-consistency_passes_completed=$(( anchor_consistency_passes_completed + exact_consistency_passes_completed ))
-consistency_drift_count=$(( anchor_consistency_drift_count + exact_consistency_drift_count ))
+checks_attempted=$(( checks_attempted + 1 ))
+crispybrain_harness_log "Consistency test: ${consistency_passes_requested} repeated semantic assistant passes"
+semantic_consistency_baseline=""
+for pass in $(seq 1 "${consistency_passes_requested}"); do
+  semantic_consistency_session_id="cb-v071-semantic-consistency-session-${pass}-$(date +%s)-${RANDOM}"
+  semantic_consistency_correlation="corr-v071-semantic-consistency-${pass}"
+  semantic_consistency_payload="$(jq -cn --arg session_id "${semantic_consistency_session_id}" --arg correlation_id "${semantic_consistency_correlation}" '{message: "How does CrispyBrain ingest text files?", project_slug: "alpha", correlation_id: $correlation_id, session_id: $session_id, top_k: 8}')"
+  measure_post_json 'http://localhost:5678/webhook/assistant' "${semantic_consistency_payload}"
+  crispybrain_harness_log "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
+  [[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail "Semantic consistency pass ${pass} returned HTTP ${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}"
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trace.correlation_id' "${semantic_consistency_correlation}"
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trace.ranking_mode' 'semantic'
+  crispybrain_harness_assert_json_number_gte "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trust.reviewed_source_count' '1'
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].source_type' 'file_ingest'
+  crispybrain_harness_assert_json_string_contains "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].snippet' 'Text files are ingested through the local watch path'
+  crispybrain_harness_assert_json_string_contains "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.answer' 'ingest'
+  assert_response_source_review_statuses_match_db "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
+  normalized_semantic_consistency_payload="$(normalize_assistant_response_for_consistency "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}")"
+  normalized_semantic_consistency_hash="$(json_sha256 "${normalized_semantic_consistency_payload}")"
+  crispybrain_harness_log "Semantic consistency pass ${pass}/${consistency_passes_requested}: response_hash=${normalized_semantic_consistency_hash}"
+  if [[ -z "${semantic_consistency_baseline}" ]]; then
+    semantic_consistency_baseline="${normalized_semantic_consistency_payload}"
+    semantic_consistency_baseline_hash="${normalized_semantic_consistency_hash}"
+  elif [[ "${normalized_semantic_consistency_payload}" != "${semantic_consistency_baseline}" ]]; then
+    semantic_consistency_drift_count=$(( semantic_consistency_drift_count + 1 ))
+    crispybrain_harness_log "Semantic consistency drift detected on pass ${pass}: baseline_hash=${semantic_consistency_baseline_hash}, actual_hash=${normalized_semantic_consistency_hash}"
+    crispybrain_harness_log "Semantic consistency baseline payload: ${semantic_consistency_baseline}"
+    crispybrain_harness_log "Semantic consistency drift payload: ${normalized_semantic_consistency_payload}"
+  fi
+  semantic_consistency_passes_completed=$(( semantic_consistency_passes_completed + 1 ))
+done
+
+consistency_passes_completed=$(( anchor_consistency_passes_completed + exact_consistency_passes_completed + semantic_consistency_passes_completed ))
+consistency_drift_count=$(( anchor_consistency_drift_count + exact_consistency_drift_count + semantic_consistency_drift_count ))
 [[ "${consistency_drift_count}" == "0" ]] || crispybrain_harness_fail "Consistency test detected ${consistency_drift_count} drifting pass(es) across ${consistency_passes_completed} repeated runs"
-checks_passed=$(( checks_passed + 2 ))
+checks_passed=$(( checks_passed + 3 ))
 
 checks_attempted=$(( checks_attempted + 1 ))
 crispybrain_harness_log 'Demo output test: crispybrain-demo exposes trust and operator hints'
@@ -592,6 +645,8 @@ printf 'SUMMARY: anchor_consistency_passes_requested=%s anchor_consistency_passe
   "${consistency_passes_requested}" "${anchor_consistency_passes_completed}" "${anchor_consistency_drift_count}" "${anchor_consistency_baseline_hash}"
 printf 'SUMMARY: exact_consistency_passes_requested=%s exact_consistency_passes_completed=%s exact_consistency_drift_count=%s exact_consistency_baseline_hash=%s\n' \
   "${consistency_passes_requested}" "${exact_consistency_passes_completed}" "${exact_consistency_drift_count}" "${exact_consistency_baseline_hash}"
+printf 'SUMMARY: semantic_consistency_passes_requested=%s semantic_consistency_passes_completed=%s semantic_consistency_drift_count=%s semantic_consistency_baseline_hash=%s\n' \
+  "${consistency_passes_requested}" "${semantic_consistency_passes_completed}" "${semantic_consistency_drift_count}" "${semantic_consistency_baseline_hash}"
 printf 'SUMMARY: consistency_passes_completed=%s consistency_drift_count=%s\n' \
   "${consistency_passes_completed}" "${consistency_drift_count}"
 printf 'SUMMARY: alpha_total_rows_before=%s alpha_total_rows_after=%s alpha_suspect_rows_before=%s alpha_suspect_rows_after=%s alpha_reviewed_before=%s alpha_reviewed_after=%s\n' \
@@ -603,4 +658,4 @@ printf 'SUMMARY: valid_ingest_latency_ms avg=%s min=%s max=%s\n' \
 printf 'SUMMARY: assistant_latency_ms avg=%s min=%s max=%s\n' \
   "$(( assistant_latency_total / cycles_completed ))" "${assistant_latency_min}" "${assistant_latency_max}"
 
-crispybrain_harness_pass "CrispyBrain v0.7.1 verified anchor-aware retrieval, reviewed-row propagation, trust visibility, suspect export, and metrics snapshots across ${cycles_completed} cycles"
+crispybrain_harness_pass "CrispyBrain v0.7.1 verified anchor-aware retrieval, semantic routing, reviewed-row propagation, trust visibility, suspect export, and metrics snapshots across ${cycles_completed} cycles"
