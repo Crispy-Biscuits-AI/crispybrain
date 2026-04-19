@@ -54,6 +54,27 @@ if (!sources.some((source) => typeof source.title === 'string' && source.title.i
 EOF
 }
 
+assert_source_filename_has_review_status() {
+  local response_json="$1"
+  local expected_filename="$2"
+  local expected_review_status="$3"
+  RESPONSE_JSON="${response_json}" EXPECTED_FILENAME="${expected_filename}" EXPECTED_REVIEW_STATUS="${expected_review_status}" node - <<'EOF'
+const response = JSON.parse(process.env.RESPONSE_JSON);
+const expectedFilename = process.env.EXPECTED_FILENAME;
+const expectedReviewStatus = process.env.EXPECTED_REVIEW_STATUS;
+const sources = Array.isArray(response.sources) ? response.sources : [];
+const matchingSource = sources.find((source) => typeof source.title === 'string' && source.title.includes(expectedFilename));
+if (!matchingSource) {
+  console.error(`Expected at least one source title to include ${expectedFilename}`);
+  process.exit(1);
+}
+if (matchingSource.review_status !== expectedReviewStatus) {
+  console.error(`Expected source ${expectedFilename} to report review_status ${expectedReviewStatus}, got ${matchingSource.review_status}`);
+  process.exit(1);
+}
+EOF
+}
+
 assert_no_source_filename() {
   local response_json="$1"
   local blocked_filename="$2"
@@ -85,6 +106,31 @@ if (sources.some((source) => typeof source.snippet === 'string' && source.snippe
   process.exit(1);
 }
 EOF
+}
+
+memory_review_status_by_id() {
+  local memory_id="$1"
+  docker exec "${CRISPYBRAIN_HARNESS_DB_CONTAINER}" psql -U n8n -d n8n -At -c "SELECT COALESCE(NULLIF(metadata_json->>'review_status', ''), 'unreviewed') FROM memories WHERE id = ${memory_id} LIMIT 1;"
+}
+
+assert_response_source_review_statuses_match_db() {
+  local response_json="$1"
+  while IFS=$'\t' read -r source_id source_status; do
+    [[ -n "${source_id}" ]] || continue
+    local db_status
+    db_status="$(memory_review_status_by_id "${source_id}" | tr -d '[:space:]')"
+    [[ -n "${db_status}" ]] || crispybrain_harness_fail "Could not load DB review_status for retrieved source id ${source_id}"
+    [[ "${source_status}" == "${db_status}" ]] || crispybrain_harness_fail "Retrieved source id ${source_id} reported review_status '${source_status}', expected DB value '${db_status}'"
+  done < <(RESPONSE_JSON="${response_json}" node - <<'EOF'
+const response = JSON.parse(process.env.RESPONSE_JSON);
+const sources = Array.isArray(response.sources) ? response.sources : [];
+for (const source of sources) {
+  if (source && source.id !== undefined && source.id !== null) {
+    process.stdout.write(`${source.id}\t${source.review_status ?? ''}\n`);
+  }
+}
+EOF
+)
 }
 
 measure_post_json() {
@@ -270,6 +316,7 @@ for cycle in $(seq 1 "${cycles_requested}"); do
   invalid_correlation="corr-v060-invalid-${cycle}"
   ingest_correlation="corr-v060-ingest-${cycle}"
   assistant_correlation="corr-v060-assistant-${cycle}"
+  reviewed_probe_correlation="corr-v060-reviewed-source-${cycle}"
 
   checks_attempted=$(( checks_attempted + 1 ))
   crispybrain_harness_log "Test ${cycle}.1: invalid ingest rejection"
@@ -321,20 +368,33 @@ for cycle in $(seq 1 "${cycles_requested}"); do
   checks_passed=$(( checks_passed + 1 ))
 
   checks_attempted=$(( checks_attempted + 1 ))
-  crispybrain_harness_log "Test ${cycle}.4: assistant quality indicators"
+  crispybrain_harness_log "Test ${cycle}.4: assistant retrieval quality indicators"
   assistant_payload="$(jq -cn --arg anchor "${anchor_token}" --arg correlation_id "${assistant_correlation}" '{message: ("Which note contains stable anchor " + $anchor + "?"), project_slug: "alpha", correlation_id: $correlation_id}')"
   measure_post_json 'http://localhost:5678/webhook/assistant' "${assistant_payload}"
   crispybrain_harness_log "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
   [[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail "Assistant cycle ${cycle} returned HTTP ${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}"
   crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trace.correlation_id' "${assistant_correlation}"
-  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].review_status' 'reviewed'
+  crispybrain_harness_assert_json_number_gte "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.retrieval.memory_count' '1'
   crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].trust_band' 'high'
   crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].project_match' 'true'
   crispybrain_harness_assert_json_string_contains "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.sources[0].source_type' 'file_ingest'
   crispybrain_harness_assert_json_string_contains "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trust.overall_band' 'high'
-  assert_source_contains_filename "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" "${filename}"
+  assert_response_source_review_statuses_match_db "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
   assert_no_suspect_sources "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" "${suspect_ids_json}"
   record_latency 'assistant' "${CRISPYBRAIN_HARNESS_LAST_ELAPSED_MS}"
+  checks_passed=$(( checks_passed + 1 ))
+
+  checks_attempted=$(( checks_attempted + 1 ))
+  crispybrain_harness_log "Test ${cycle}.5: deterministic reviewed-row propagation"
+  reviewed_probe_payload="$(jq -cn --arg filename "${filename}" --arg correlation_id "${reviewed_probe_correlation}" '{message: ("Which note is named " + $filename + "?"), project_slug: "alpha", correlation_id: $correlation_id, top_k: 8}')"
+  measure_post_json 'http://localhost:5678/webhook/assistant' "${reviewed_probe_payload}"
+  crispybrain_harness_log "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
+  [[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail "Reviewed-row probe cycle ${cycle} returned HTTP ${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}"
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trace.correlation_id' "${reviewed_probe_correlation}"
+  crispybrain_harness_assert_json_number_gte "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trust.reviewed_source_count' '1'
+  assert_source_contains_filename "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" "${filename}"
+  assert_source_filename_has_review_status "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" "${filename}" 'reviewed'
+  assert_response_source_review_statuses_match_db "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
   checks_passed=$(( checks_passed + 1 ))
 
   cycles_completed=$(( cycles_completed + 1 ))
