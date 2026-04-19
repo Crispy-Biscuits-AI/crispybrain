@@ -58,6 +58,9 @@ function parseArgs(argv) {
     limit: null,
     outputPath: null,
     projectSlug: null,
+    reviewStatusFilter: null,
+    since: null,
+    until: null,
     ids: [],
     reviewStatus: null,
     reviewNote: null,
@@ -86,6 +89,15 @@ function parseArgs(argv) {
     } else if (arg === '--project-slug') {
       options.projectSlug = argv[index + 1];
       index += 1;
+    } else if (arg === '--review-status') {
+      options.reviewStatusFilter = argv[index + 1];
+      index += 1;
+    } else if (arg === '--since') {
+      options.since = argv[index + 1];
+      index += 1;
+    } else if (arg === '--until') {
+      options.until = argv[index + 1];
+      index += 1;
     } else if (arg === '--ids') {
       options.ids = String(argv[index + 1] || '')
         .split(',')
@@ -108,7 +120,7 @@ function parseArgs(argv) {
   if (options.limit !== null && (!Number.isInteger(options.limit) || options.limit < 1)) {
     fail('--limit must be a positive integer or "all"');
   }
-  if (!['summary', 'project-health', 'suspect', 'clean', 'export-suspect', 'snapshot-health', 'set-review-status'].includes(options.mode)) {
+  if (!['summary', 'project-health', 'suspect', 'clean', 'inspect', 'export-suspect', 'snapshot-health', 'set-review-status'].includes(options.mode)) {
     fail(`Unsupported mode: ${options.mode}`);
   }
   if (!['table', 'json', 'csv'].includes(options.format)) {
@@ -117,8 +129,26 @@ function parseArgs(argv) {
   if (options.projectSlug !== null && typeof options.projectSlug !== 'string') {
     fail('--project-slug must be a string');
   }
+  if (options.reviewStatusFilter !== null && !REVIEW_STATUSES.has(options.reviewStatusFilter)) {
+    fail(`--review-status must be one of: ${Array.from(REVIEW_STATUSES).join(', ')}`);
+  }
   if (options.reviewStatus !== null && !REVIEW_STATUSES.has(options.reviewStatus)) {
     fail(`--status must be one of: ${Array.from(REVIEW_STATUSES).join(', ')}`);
+  }
+  if (options.since !== null && !normalizeTimestamp(options.since)) {
+    fail('--since must be a valid timestamp');
+  }
+  if (options.until !== null && !normalizeTimestamp(options.until)) {
+    fail('--until must be a valid timestamp');
+  }
+  if (options.since !== null) {
+    options.since = normalizeTimestamp(options.since);
+  }
+  if (options.until !== null) {
+    options.until = normalizeTimestamp(options.until);
+  }
+  if (options.since !== null && options.until !== null && Date.parse(options.since) > Date.parse(options.until)) {
+    fail('--since must be earlier than or equal to --until');
   }
   if (options.mode === 'set-review-status' && options.ids.length === 0) {
     fail('--mode set-review-status requires --ids');
@@ -141,6 +171,7 @@ function usage() {
     '  node scripts/inspect-crispybrain-memory.js --mode summary',
     '  node scripts/inspect-crispybrain-memory.js --mode project-health --project-slug alpha --json',
     '  node scripts/inspect-crispybrain-memory.js --mode suspect --limit 10',
+    '  node scripts/inspect-crispybrain-memory.js --mode inspect --project-slug alpha --review-status reviewed --since 2026-01-01T00:00:00Z --limit 5 --json',
     '  node scripts/inspect-crispybrain-memory.js --mode export-suspect --format csv --project-slug alpha',
     '  node scripts/inspect-crispybrain-memory.js --mode snapshot-health --project-slug alpha',
     '  node scripts/inspect-crispybrain-memory.js --mode set-review-status --ids 55 --status reviewed --note "operator review"',
@@ -150,6 +181,7 @@ function usage() {
     '  project-health     Per-project health summary',
     '  suspect            List rows that fail the suspect-row rule or quality checks',
     '  clean              List rows that currently pass the suspect-row rule',
+    '  inspect            Exact memory row inspection with project/status/time filters',
     '  export-suspect     Export suspect rows to JSON or CSV with timestamped filenames',
     '  snapshot-health    Write a timestamped health snapshot JSON file',
     '  set-review-status  Explicitly set metadata_json.review_status on selected rows',
@@ -191,6 +223,53 @@ function queryRows(containerName) {
 
   const raw = runPsql(containerName, sql);
   return JSON.parse(raw || '[]');
+}
+
+function queryInspectionRows(containerName, options) {
+  const conditions = [];
+  if (options.projectSlug) {
+    conditions.push(`NULLIF(COALESCE(metadata_json->>'project_slug', ''), '') = ${sqlLiteral(options.projectSlug)}::text`);
+  }
+  if (options.reviewStatusFilter) {
+    conditions.push(`COALESCE(NULLIF(metadata_json->>'review_status', ''), 'unreviewed') = ${sqlLiteral(options.reviewStatusFilter)}::text`);
+  }
+  if (options.since) {
+    conditions.push(`created_at >= ${sqlLiteral(options.since)}::timestamptz`);
+  }
+  if (options.until) {
+    conditions.push(`created_at <= ${sqlLiteral(options.until)}::timestamptz`);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const limitClause = options.limit !== null ? `LIMIT ${options.limit}` : '';
+  const sql = [
+    'SELECT COALESCE(json_agg(row_to_json(t))::text, \'[]\')',
+    'FROM (',
+    '  SELECT',
+    '    id,',
+    '    title,',
+    '    content,',
+    '    COALESCE(NULLIF(metadata_json->>\'review_status\', \'\'), \'unreviewed\') AS review_status,',
+    '    NULLIF(COALESCE(metadata_json->>\'project_slug\', \'\'), \'\') AS project_slug,',
+    '    created_at,',
+    '    metadata_json',
+    '  FROM memories',
+    `  ${whereClause}`,
+    '  ORDER BY created_at DESC NULLS LAST, id DESC',
+    `  ${limitClause}`,
+    ') t;',
+  ].filter(Boolean).join(' ');
+
+  const raw = runPsql(containerName, sql);
+  return JSON.parse(raw || '[]').map((row) => ({
+    id: Number(row.id),
+    title: normalizeString(row.title),
+    content: typeof row.content === 'string' ? row.content : '',
+    review_status: normalizeReviewStatus(row.review_status),
+    project_slug: normalizeString(row.project_slug),
+    created_at: normalizeTimestamp(row.created_at),
+    metadata_json: row.metadata_json && typeof row.metadata_json === 'object' ? row.metadata_json : {},
+  }));
 }
 
 function normalizeString(value) {
@@ -705,6 +784,37 @@ function rowsToCsv(rows) {
   return lines.join('\n');
 }
 
+function renderInspectionRowsTable(rows, options) {
+  const lines = [
+    'CrispyBrain Memory Inspection Rows',
+    `Project slug filter: ${options.projectSlug || '(none)'}`,
+    `Review status filter: ${options.reviewStatusFilter || '(none)'}`,
+    `Since: ${options.since || '(none)'}`,
+    `Until: ${options.until || '(none)'}`,
+    `Limit: ${options.limit ?? 'all'}`,
+  ];
+  if (rows.length === 0) {
+    lines.push('', '(none)');
+    return lines.join('\n');
+  }
+
+  for (const row of rows) {
+    lines.push(
+      [
+        '',
+        `[${row.id}] ${row.title || '(untitled)'}`,
+        `  project_slug: ${row.project_slug || '(none)'}`,
+        `  review_status: ${row.review_status}`,
+        `  created_at: ${row.created_at || '(unknown)'}`,
+        `  content: ${row.content || '(empty)'}`,
+        `  metadata_json: ${JSON.stringify(row.metadata_json)}`,
+      ].join('\n'),
+    );
+  }
+
+  return lines.join('\n');
+}
+
 function timestampToken() {
   const iso = new Date().toISOString();
   return iso.replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
@@ -812,6 +922,9 @@ function main() {
   } else if (options.mode === 'clean') {
     payload = maybeLimit(cleanRows, options.limit);
     text = renderRowsTable(payload, 'Clean memory rows');
+  } else if (options.mode === 'inspect') {
+    payload = queryInspectionRows(containerName, options);
+    text = renderInspectionRowsTable(payload, options);
   } else if (options.mode === 'export-suspect') {
     payload = suspectRows;
     if (!outputPath) {

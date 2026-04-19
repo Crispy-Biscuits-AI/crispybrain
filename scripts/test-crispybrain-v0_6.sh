@@ -5,6 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 MEMORY_INSPECTOR="${SCRIPT_DIR}/inspect-crispybrain-memory.js"
+ASSISTANT_WORKFLOW_PATH="${REPO_ROOT}/workflows/assistant.json"
+ASSISTANT_CONTAINER_PATH="/tmp/crispybrain-assistant-v0_6-test.json"
 MIN_CYCLES=3
 MAX_CYCLES=12
 DEFAULT_CYCLES=4
@@ -133,6 +135,54 @@ EOF
 )
 }
 
+normalize_assistant_response_for_consistency() {
+  local response_json="$1"
+  RESPONSE_JSON="${response_json}" node - <<'EOF'
+const response = JSON.parse(process.env.RESPONSE_JSON);
+const normalizeSource = (source) => ({
+  id: source?.id ?? null,
+  title: source?.title ?? null,
+  project_slug: source?.project_slug ?? null,
+  source_type: source?.source_type ?? null,
+  category: source?.category ?? null,
+  created_at: source?.created_at ?? null,
+  review_status: source?.review_status ?? null,
+  project_match: source?.project_match ?? null,
+  content_length: source?.content_length ?? null,
+  chunk_size_band: source?.chunk_size_band ?? null,
+  duplicate_candidate: source?.duplicate_candidate ?? null,
+  trust_band: source?.trust_band ?? null,
+  confidence_band: source?.confidence_band ?? null,
+  uncertainty_indicator: source?.uncertainty_indicator ?? null,
+  uncertainty_reasons: Array.isArray(source?.uncertainty_reasons) ? source.uncertainty_reasons : [],
+  quality_flags: Array.isArray(source?.quality_flags) ? source.quality_flags : [],
+  similarity: source?.similarity ?? null,
+  lexical_overlap: source?.lexical_overlap ?? null,
+  snippet: source?.snippet ?? null,
+});
+const normalized = {
+  ok: response.ok ?? null,
+  answer: response.answer ?? null,
+  query: response.query ?? null,
+  project_slug: response.project_slug ?? null,
+  top_k: response.top_k ?? null,
+  retrieval: response.retrieval ?? null,
+  trust: response.trust ?? null,
+  sources: Array.isArray(response.sources) ? response.sources.map(normalizeSource) : [],
+  context_preview: response.context_preview ?? null,
+};
+process.stdout.write(JSON.stringify(normalized));
+EOF
+}
+
+json_sha256() {
+  local value="$1"
+  VALUE_TO_HASH="${value}" node - <<'EOF'
+const crypto = require('crypto');
+process.stdout.write(crypto.createHash('sha256').update(process.env.VALUE_TO_HASH).digest('hex'));
+EOF
+}
+
 measure_post_json() {
   local start_ms end_ms
   start_ms="$(now_ms)"
@@ -198,6 +248,12 @@ crispybrain_harness_require_command curl
 crispybrain_harness_require_command node
 crispybrain_harness_require_command docker
 [[ -x "${MEMORY_INSPECTOR}" ]] || crispybrain_harness_fail "Memory inspection tool is not executable: ${MEMORY_INSPECTOR}"
+[[ -f "${ASSISTANT_WORKFLOW_PATH}" ]] || crispybrain_harness_fail "Assistant workflow export was not found: ${ASSISTANT_WORKFLOW_PATH}"
+
+crispybrain_harness_copy_workflow "${ASSISTANT_WORKFLOW_PATH}" "${ASSISTANT_CONTAINER_PATH}" 'assistant'
+crispybrain_harness_import_workflow "${ASSISTANT_CONTAINER_PATH}" 'assistant'
+workflow_list="$(crispybrain_harness_list_workflows)"
+crispybrain_harness_assert_workflow_visible 'assistant' "${workflow_list}"
 
 checks_attempted=0
 checks_passed=0
@@ -208,6 +264,9 @@ ingest_latency_min=0
 ingest_latency_max=0
 assistant_latency_min=0
 assistant_latency_max=0
+consistency_passes_requested="${cycles_requested}"
+consistency_passes_completed=0
+consistency_drift_count=0
 
 record_latency() {
   local kind="$1"
@@ -277,6 +336,12 @@ checks_passed=$(( checks_passed + 1 ))
 
 AUTH_COOKIE="$(crispybrain_harness_mint_auth_cookie)"
 assert_nonempty_string "${AUTH_COOKIE}" 'auth cookie'
+crispybrain_harness_get_json "${CRISPYBRAIN_HARNESS_REST_BASE_URL}/workflows/assistant" -H "Cookie: ${CRISPYBRAIN_HARNESS_COOKIE_NAME}=${AUTH_COOKIE}"
+[[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail 'Could not fetch assistant workflow details after import'
+assistant_workflow_version_id="$(crispybrain_harness_json_get "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.versionId')"
+[[ -n "${assistant_workflow_version_id}" && "${assistant_workflow_version_id}" != 'null' ]] || crispybrain_harness_fail 'Assistant workflow versionId was missing after import'
+assistant_activation_payload="$(jq -cn --arg versionId "${assistant_workflow_version_id}" '{versionId: $versionId}')"
+crispybrain_harness_activate_workflow 'assistant' "${AUTH_COOKIE}" "${assistant_activation_payload}"
 
 suppressed_anchor="cbv060suppressed$(date +%s)${RANDOM}"
 suppressed_filename="cb-v060-suppressed-${suppressed_anchor}.txt"
@@ -401,6 +466,39 @@ for cycle in $(seq 1 "${cycles_requested}"); do
 done
 
 checks_attempted=$(( checks_attempted + 1 ))
+crispybrain_harness_log "Consistency test: ${consistency_passes_requested} repeated assistant passes"
+consistency_baseline=""
+consistency_baseline_hash=""
+for pass in $(seq 1 "${consistency_passes_requested}"); do
+  consistency_session_id="cb-v060-consistency-session-${pass}-$(date +%s)-${RANDOM}"
+  consistency_correlation="corr-v060-consistency-${pass}"
+  consistency_payload="$(jq -cn --arg filename "${filename}" --arg session_id "${consistency_session_id}" --arg correlation_id "${consistency_correlation}" '{message: ("Which note is named " + $filename + "?"), project_slug: "alpha", correlation_id: $correlation_id, session_id: $session_id, top_k: 8}')"
+  measure_post_json 'http://localhost:5678/webhook/assistant' "${consistency_payload}"
+  crispybrain_harness_log "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
+  [[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail "Consistency pass ${pass} returned HTTP ${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}"
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trace.correlation_id' "${consistency_correlation}"
+  crispybrain_harness_assert_json_number_gte "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.trust.reviewed_source_count' '1'
+  assert_source_contains_filename "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" "${filename}"
+  assert_source_filename_has_review_status "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" "${filename}" 'reviewed'
+  assert_response_source_review_statuses_match_db "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}"
+  normalized_consistency_payload="$(normalize_assistant_response_for_consistency "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}")"
+  normalized_consistency_hash="$(json_sha256 "${normalized_consistency_payload}")"
+  crispybrain_harness_log "Consistency pass ${pass}/${consistency_passes_requested}: response_hash=${normalized_consistency_hash}"
+  if [[ -z "${consistency_baseline}" ]]; then
+    consistency_baseline="${normalized_consistency_payload}"
+    consistency_baseline_hash="${normalized_consistency_hash}"
+  elif [[ "${normalized_consistency_payload}" != "${consistency_baseline}" ]]; then
+    consistency_drift_count=$(( consistency_drift_count + 1 ))
+    crispybrain_harness_log "Consistency drift detected on pass ${pass}: baseline_hash=${consistency_baseline_hash}, actual_hash=${normalized_consistency_hash}"
+    crispybrain_harness_log "Consistency baseline payload: ${consistency_baseline}"
+    crispybrain_harness_log "Consistency drift payload: ${normalized_consistency_payload}"
+  fi
+  consistency_passes_completed=$(( consistency_passes_completed + 1 ))
+done
+[[ "${consistency_drift_count}" == "0" ]] || crispybrain_harness_fail "Consistency test detected ${consistency_drift_count} drifting pass(es) across ${consistency_passes_completed} repeated runs"
+checks_passed=$(( checks_passed + 1 ))
+
+checks_attempted=$(( checks_attempted + 1 ))
 crispybrain_harness_log 'Demo output test: crispybrain-demo exposes trust and operator hints'
 last_anchor="cbv060anchor${cycles_requested}"
 demo_payload="$(jq -cn --arg anchor "${anchor_token}" '{question: ("Which note contains stable anchor " + $anchor + "?"), project_slug: "alpha", correlation_id: "corr-v060-demo"}')"
@@ -439,6 +537,8 @@ expected_total_rows=$(( initial_total_rows + cycles_completed + 1 ))
 checks_failed=$(( checks_attempted - checks_passed ))
 printf 'SUMMARY: cycles_requested=%s cycles_completed=%s checks_passed=%s checks_failed=%s\n' \
   "${cycles_requested}" "${cycles_completed}" "${checks_passed}" "${checks_failed}"
+printf 'SUMMARY: consistency_passes_requested=%s consistency_passes_completed=%s consistency_drift_count=%s consistency_baseline_hash=%s\n' \
+  "${consistency_passes_requested}" "${consistency_passes_completed}" "${consistency_drift_count}" "${consistency_baseline_hash}"
 printf 'SUMMARY: alpha_total_rows_before=%s alpha_total_rows_after=%s alpha_suspect_rows_before=%s alpha_suspect_rows_after=%s alpha_reviewed_before=%s alpha_reviewed_after=%s\n' \
   "${initial_total_rows}" "${final_total_rows}" "${initial_suspect_rows}" "${final_suspect_rows}" "${initial_reviewed_rows}" "${final_reviewed_rows}"
 printf 'SUMMARY: suspect_export_json=%s suspect_export_csv=%s health_snapshot_initial=%s health_snapshot_final=%s\n' \
