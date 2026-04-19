@@ -137,7 +137,7 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto 1fr auto;
   gap: 20px;
 }
 
@@ -448,6 +448,30 @@ textarea {
   border: 1px solid rgba(180, 35, 72, 0.18);
   background: rgba(180, 35, 72, 0.08);
   color: var(--error);
+}
+
+.demo-footer {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.demo-footer p {
+  margin: 0;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.demo-footer a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.demo-footer a:hover,
+.demo-footer a:focus-visible {
+  color: var(--ink);
 }
 
 code {

@@ -1,33 +1,28 @@
 # Contributing
 
-Thanks for helping improve CrispyBrain.
+Thanks for helping with CrispyBrain.
 
-## Before You Open A Change
+## Before You Change Anything
 
-- keep the public story truthful
-- prefer smaller, well-scoped changes
-- update docs when behavior or setup assumptions change
-- avoid adding complexity unless it clearly earns its place
+Start with:
 
-## Workflow Changes
+1. [README.md](README.md)
+2. [docs/demo-local.md](docs/demo-local.md)
+3. [docs/operator-quickstart.md](docs/operator-quickstart.md)
+4. [docs/legacy-naming-debt.md](docs/legacy-naming-debt.md)
 
-If you edit workflows in n8n:
+## Contribution Principles
 
-- export the updated workflow JSON back into `workflows/`
-- keep stable filenames for the current product path
-- document any new credential, model, or setup dependency
-- note runtime-sensitive changes in `docs/legacy-naming-debt.md` if relevant
+- keep the repo truthful to the current demo and workflow path
+- prefer small, grounded improvements over speculative rewrites
+- do not remove honest limitations just to make the repo sound cleaner
+- do not commit secrets, private memory content, or local `.env` values
+- keep public naming centered on CrispyBrain
 
-## Documentation Expectations
+## Workflow And Demo Changes
 
-- write for an outside operator, not just a current maintainer
-- avoid local absolute paths and private environment assumptions
-- call out limitations plainly instead of hiding them
+If you change the demo path or the workflow exports:
 
-## Pull Requests
-
-- explain what changed and why
-- mention any workflow exports that were refreshed
-- mention any setup or release-doc updates that should be reviewed alongside code
-
-For release hygiene, see [docs/release-checklist.md](docs/release-checklist.md).
+- update the relevant docs in the same change
+- preserve the `localhost:8787 -> crispybrain-demo -> assistant` story unless you are deliberately changing it
+- note any new manual steps or runtime assumptions explicitly

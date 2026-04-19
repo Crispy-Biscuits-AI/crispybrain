@@ -5,128 +5,159 @@
 <h1 align="center">CrispyBrain</h1>
 
 <p align="center">
-  A self-hosted project memory assistant built with n8n, Postgres, and Ollama.
+  An experimental local-first memory assistant with a real demo UI, real n8n workflow path, and a self-hosted lab runtime.
 </p>
 
-CrispyBrain is a practical local-first assistant for teams and individuals who want to ingest notes, keep project memory searchable, and answer questions from that memory through a simple webhook-driven workflow stack.
+`crispybrain` is the public product/demo repo for CrispyBrain.
 
-This repository is the public product repo for CrispyBrain. It includes the workflow exports, SQL, scripts, and docs needed to understand and run the current system. It does not try to be a full private operations repo, a CMS repo, or a general AI lab.
+It is the place to understand the current demo surface, the workflow shape, the public product direction, and the real local path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
 
-## Who It Is For
+## Current State
 
-- operators who already run or can provision `n8n`, Postgres, and Ollama
-- developers who want a concrete reference implementation for local memory retrieval
-- consultants or technical teams evaluating a small self-hosted AI memory stack
+- early, real, build-in-public demo
+- local-first and self-hosted
+- good for showing the current product slice honestly
+- not production-ready
+- not a turnkey hosted platform
 
-## What Problem It Solves
+## What The Demo Currently Proves
 
-CrispyBrain gives you a workflow-based assistant that:
+The current demo is a narrow but real vertical slice:
 
-- ingests project notes into Postgres
-- embeds and retrieves memory with Ollama
-- answers questions from stored context
-- keeps short session history for conversational continuity
+- the UI on port `8787` is real
+- `POST /api/demo/ask` is real
+- the request reaches n8n through `crispybrain-demo`
+- the demo wrapper forwards into the `assistant` workflow
+- the answer is grounded in retrieved memory rather than mocked text
 
-## What Is In This Repo
+The current documented path is:
 
-- `workflows/`: exported n8n workflow JSON files
-- `sql/`: the checked-in SQL migration used by the current workflow set
-- `scripts/`: import, test, and local helper scripts for maintainers
-- `docs/`: onboarding, scope, setup, release, and technical notes
-- `assets/`: public repo artwork
-
-## Minimum Runtime
-
-The smallest practical CrispyBrain setup today is:
-
-1. `n8n`
-2. Postgres with `pgvector`
-3. Ollama reachable from n8n at `http://host.docker.internal:11434`
-
-The checked-in workflows expect:
-
-- a Postgres credential in n8n named `Postgres account`
-- a `memories` table and a `projects` table already available in Postgres
-- the session-turn table created by `sql/crispybrain-v0_4-upgrade.sql`
-- Ollama models `llama3` and `nomic-embed-text`
+```text
+localhost:8787
+-> /api/demo/ask
+-> n8n crispybrain-demo
+-> assistant
+-> retrieval + grounded answer
+```
 
 ## Quickstart
 
-1. Read [Operator Quickstart](docs/operator-quickstart.md).
-2. Follow [Minimal Setup](docs/setup-minimal.md).
-3. Import or sync the workflows from [workflows/](workflows/).
-4. Review [Workflow Sync](docs/workflow-sync.md) before editing workflows in n8n.
-5. Check [Public Scope](docs/public-scope.md) for what this repo does and does not include.
+The most believable public quickstart currently uses both repos together.
 
-## Local Demo
-
-There is now a narrow local demo surface for CrispyBrain that runs on `http://localhost:8787` as a Compose-managed AI Lab service and forwards one intentional request path into n8n.
-
-Use [Local Demo](docs/demo-local.md) for:
-
-- the exact demo architecture
-- the default Docker Compose startup path for `crispybrain-demo-ui`
-- one-time n8n import steps for `workflows/crispybrain-demo.json`
-- the available `light`, `dark`, and `crispy` themes, with `crispy` as the default demo identity
-- the local fallback path if you need to run the proxy outside Docker
-- curl smoke tests
-- troubleshooting notes
-
-The main public entrypoint is the `assistant` workflow at:
-
-```text
-POST http://localhost:5678/webhook/assistant
-```
-
-Example request:
+1. Clone both repos as sibling directories.
 
 ```bash
-curl -X POST "http://localhost:5678/webhook/assistant" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"What is CrispyBrain?"}'
+git clone <crispybrain-repo-url> crispybrain
+git clone <crispy-ai-lab-repo-url> crispy-ai-lab
 ```
 
-## Current Core Workflows
+2. Configure and start the lab runtime.
 
-The current public product path is centered on stable workflow exports such as:
+```bash
+cd crispy-ai-lab
+cp .env.example .env
+docker compose up -d postgres n8n crispybrain-demo-ui
+```
 
-- `assistant.json`
-- `ingest.json`
-- `search-by-embedding.json`
-- `build-context.json`
-- `project-memory.json`
-- `project-bootstrap.json`
-- `validation-and-errors.json`
+3. Import the current workflow set from this repo into the running n8n container.
 
-Some additional workflow JSON files in `workflows/` are older experiments or intermediate fixes. They are kept for reference, not as the primary onboarding path.
+```bash
+WORKFLOW_DIR=../crispybrain/workflows \
+CONFIRM_IMPORT=I_UNDERSTAND \
+scripts/workflows/import-exported-into-docker.sh
+```
 
-## What Is Intentionally Out Of Scope
+4. In n8n, create a Postgres credential named `Postgres account`, then activate `assistant` and `crispybrain-demo`.
 
-This repo does not currently include:
+5. Open the demo UI.
 
-- CMS implementation material
-- client-specific integrations
-- managed hosting or SaaS packaging
-- production auth/access control
-- a fully self-contained Docker environment
+```text
+http://localhost:8787
+```
+
+6. Use:
+
+- project slug: `alpha`
+- question: `How am I planning to build CrispyBrain?`
+
+Success currently looks like:
+
+- the page loads on `localhost:8787`
+- the theme selector is available
+- the response includes an answer and source rows
+- the `debug` block shows the request passed through the demo workflow path
+
+## Themes
+
+The demo UI currently supports:
+
+- `light`
+- `dark`
+- `crispy`
+
+`crispy` is the default theme.
+
+The selected theme is stored client-side so it survives reloads and container restarts.
+
+Because CrispyBrain is being built in public, the demo also includes intentionally subtle support/contact links in the footer.
+They are optional and kept low-prominence so the UI still reads as a demo first.
+
+## Repo Layout
+
+- `demo/`: the current demo UI and local proxy server
+- `workflows/`: exported n8n workflow JSON, including `assistant` and `crispybrain-demo`
+- `sql/`: checked-in SQL needed by the current assistant path
+- `scripts/`: maintainer and local helper scripts
+- `docs/`: setup, demo, scope, and technical notes
+- `assets/`: public artwork used by the demo and docs
 
 ## Relationship To `crispy-ai-lab`
 
-`crispy-ai-lab` is a separate optional reference environment where CrispyBrain can be developed, tested, or run alongside broader lab tooling. It is not required to understand this repo, and it is not the public product identity for CrispyBrain.
+`crispy-ai-lab` is the sibling runtime repo.
+
+Use it when you want:
+
+- the Docker Compose stack
+- local Postgres and n8n services
+- the `crispybrain-demo-ui` service on `8787`
+- the practical operator/runtime setup for the demo
+
+Use this repo when you want:
+
+- the public demo surface
+- the current product-facing workflow path
+- demo docs and product positioning
+
+## Manual Steps And Honest Limitations
+
+This repo is public-ready, not fully turnkey.
+
+Current manual/runtime assumptions:
+
+- you still need to copy `.env.example` to `.env` in `crispy-ai-lab`
+- Ollama must already be running on the host
+- workflows must be imported into n8n
+- credentials must be created in n8n manually
+- the current workflow set still assumes a credential named `Postgres account`
+- the current demo dataset is strongest for project slug `alpha`
+
+Compatibility caveats that remain true on purpose:
+
+- some underlying table names and stored source titles may still contain earlier `openbrain-*` names
+- that legacy naming is documented and should not be casually renamed in this hardening pass
 
 ## Docs
 
+- [Local Demo](docs/demo-local.md)
 - [Operator Quickstart](docs/operator-quickstart.md)
 - [Minimal Setup](docs/setup-minimal.md)
 - [Workflow Sync](docs/workflow-sync.md)
-- [Local Demo](docs/demo-local.md)
 - [Public Scope](docs/public-scope.md)
 - [Private Boundary Notes](docs/private-boundary-notes.md)
 - [Legacy Naming Debt](docs/legacy-naming-debt.md)
-- [v0.4 Technical Note](docs/crispybrain-v0.4.md)
-- [Migration Notes](docs/MIGRATION.md)
-- [History](docs/HISTORY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
 
-## Status
+## License
 
-This repo is ready for an early public release as a technical, self-hosted CrispyBrain reference implementation. The documentation is intentionally explicit about current limitations so the public story stays truthful.
+[MIT](LICENSE)

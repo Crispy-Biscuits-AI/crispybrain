@@ -2,7 +2,7 @@
 
 This is the first intentional local demo surface for CrispyBrain inside the AI Lab.
 
-The primary supported runtime is now a Compose-managed lab service named `crispybrain-demo-ui`.
+The primary supported runtime is the Compose-managed lab service `crispybrain-demo-ui` from the sibling `crispy-ai-lab` repo.
 
 ## What It Proves
 
@@ -23,10 +23,11 @@ The primary supported runtime is now a Compose-managed lab service named `crispy
 
 ## Primary Runtime
 
-Start the AI Lab services, including the demo UI:
+Clone `crispybrain` and `crispy-ai-lab` as sibling directories, then start the AI Lab services from the lab repo:
 
 ```bash
-cd /Users/elric/repos/crispy-ai-lab
+cd ../crispy-ai-lab
+cp .env.example .env
 docker compose up -d postgres n8n crispybrain-demo-ui
 ```
 
@@ -44,7 +45,7 @@ http://localhost:8787
 
 ## Required Services
 
-You need the AI Lab runtime running from `/Users/elric/repos/crispy-ai-lab`:
+You need the AI Lab runtime from the sibling `crispy-ai-lab` repo:
 
 - Postgres
 - n8n
@@ -57,17 +58,18 @@ The demo currently assumes the core CrispyBrain workflow path exists in n8n:
 If `assistant` is not active in your local n8n instance, activate it and restart n8n:
 
 ```bash
-docker exec crispy-ai-lab-n8n-1 n8n update:workflow --id=assistant --active=true
-docker compose -f /Users/elric/repos/crispy-ai-lab/docker-compose.yml restart n8n
+cd ../crispy-ai-lab
+docker compose exec -T n8n n8n update:workflow --id=assistant --active=true
+docker compose restart n8n
 ```
 
 The demo wrapper added in this pass is:
 
 - `workflows/crispybrain-demo.json`
 
-The containerized demo UI service is defined in:
+The containerized demo UI service is defined in the sibling lab repo:
 
-- `/Users/elric/repos/crispy-ai-lab/docker-compose.yml`
+- `../crispy-ai-lab/docker-compose.yml`
 
 The container reaches the backend through an explicit environment variable in that Compose service:
 
@@ -79,12 +81,24 @@ If you use the fallback local script instead, the default upstream becomes:
 
 ## One-Time n8n Import
 
-Import the demo wrapper workflow into the running n8n container:
+Recommended import path:
 
 ```bash
-docker cp /Users/elric/repos/crispybrain/workflows/crispybrain-demo.json crispy-ai-lab-n8n-1:/tmp/crispybrain-demo.json
-docker exec crispy-ai-lab-n8n-1 n8n import:workflow --input=/tmp/crispybrain-demo.json
-docker compose -f /Users/elric/repos/crispy-ai-lab/docker-compose.yml restart n8n
+cd ../crispy-ai-lab
+WORKFLOW_DIR=../crispybrain/workflows \
+CONFIRM_IMPORT=I_UNDERSTAND \
+scripts/workflows/import-exported-into-docker.sh
+```
+
+That imports the current public workflow set, including `assistant` and `crispybrain-demo`.
+
+Manual equivalent for the demo wrapper workflow only:
+
+```bash
+cd ../crispy-ai-lab
+docker compose exec -T n8n sh -lc 'cat > /tmp/crispybrain-demo.json' < ../crispybrain/workflows/crispybrain-demo.json
+docker compose exec -T n8n n8n import:workflow --input=/tmp/crispybrain-demo.json
+docker compose restart n8n
 ```
 
 After restart, the demo webhook should be available at:
@@ -125,7 +139,7 @@ Theme behavior:
 If you need to run the demo proxy outside Docker for local debugging, you can still use the fallback script:
 
 ```bash
-cd /Users/elric/repos/crispybrain
+cd ../crispybrain
 python3 scripts/run_demo_server.py
 ```
 
@@ -222,7 +236,7 @@ Use the recommended question and `alpha` project slug first. The current `alpha`
 1. Start the lab stack:
 
 ```bash
-cd /Users/elric/repos/crispy-ai-lab
+cd ../crispy-ai-lab
 docker compose up -d postgres n8n crispybrain-demo-ui
 ```
 
@@ -275,7 +289,7 @@ curl -sS \
 8. Browser-check container restart resilience:
 
 ```bash
-cd /Users/elric/repos/crispy-ai-lab
+cd ../crispy-ai-lab
 docker compose restart crispybrain-demo-ui
 ```
 
