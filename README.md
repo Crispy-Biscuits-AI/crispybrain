@@ -5,12 +5,18 @@
 <h1 align="center">CrispyBrain</h1>
 
 <p align="center">
-  An experimental local-first memory assistant with a real demo UI, real n8n workflow path, and a self-hosted lab runtime.
+  CrispyBrain is a local-first AI memory system focused on knowledge quality, trust visibility, and operator control — with a real demo UI, n8n workflow pipeline, and self-hosted lab runtime.
 </p>
 
 `crispybrain` is the public product/demo repo for CrispyBrain: an open-source, self-hosted memory, retrieval, and agent lab built around real n8n workflow exports and a real local demo path.
 
 It is the place to understand the current demo surface, the workflow shape, the public product direction, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
+
+## Start Here
+
+- [Local demo](docs/demo-local.md)
+- [Ingest data](docs/ingest-text.md)
+- [Operator tools](docs/operator-quickstart.md)
 
 ## Current Status
 
