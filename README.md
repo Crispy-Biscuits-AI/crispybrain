@@ -32,6 +32,7 @@ It is the place to understand the current demo surface, the workflow shape, the 
 - not production-ready
 - not a turnkey hosted platform
 - `v0.5` adds structured tracing, boundary validation, and ingest replay detection to the checked-in workflow exports
+- `v0.6` adds knowledge-quality controls, source trust indicators, project health summaries, and safe suspect-row review/export tooling
 
 ## What The Demo Currently Proves
 
@@ -169,6 +170,7 @@ Compatibility caveats that remain true on purpose:
 - [Local Demo](docs/demo-local.md)
 - [Operator Quickstart](docs/operator-quickstart.md)
 - [CrispyBrain v0.5](docs/crispybrain-v0_5.md)
+- [CrispyBrain v0.6](docs/crispybrain-v0_6.md)
 - [Observability Model](docs/observability.md)
 - [Minimal Setup](docs/setup-minimal.md)
 - [Workflow Sync](docs/workflow-sync.md)
