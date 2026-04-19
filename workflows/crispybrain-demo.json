@@ -1,0 +1,200 @@
+{
+  "id": "crispybrain-demo",
+  "name": "crispybrain-demo",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "webhook-crispybrain-demo",
+      "name": "Demo Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crispybrain-demo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "crispybrain-demo"
+    },
+    {
+      "id": "code-normalize-demo-request",
+      "name": "Normalize Demo Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst rawQuestion = typeof payload.question === 'string' ? payload.question : (typeof payload.message === 'string' ? payload.message : payload.query);\nconst rawProjectSlug = payload.project_slug;\nconst rawSessionId = payload.session_id;\n\nconst buildError = (code, message) => [{\n  json: {\n    ok: false,\n    question: null,\n    project_slug: 'alpha',\n    answer: null,\n    sources: [],\n    error: { code, message },\n    debug: {\n      workflow: 'crispybrain-demo',\n      upstream_workflow: 'assistant',\n      teacher_used: false,\n      retrieval_count: 0,\n      defaulted_project_slug: true,\n      session_id: null\n    }\n  }\n}];\n\nif (typeof rawQuestion !== 'string' || rawQuestion.trim() === '') {\n  return buildError('INVALID_QUESTION', 'Please enter a question before submitting the demo.');\n}\n\nif (rawProjectSlug !== undefined && rawProjectSlug !== null && typeof rawProjectSlug !== 'string') {\n  return buildError('INVALID_PROJECT_SLUG', 'project_slug must be a string when provided.');\n}\n\nif (rawSessionId !== undefined && rawSessionId !== null && typeof rawSessionId !== 'string') {\n  return buildError('INVALID_SESSION_ID', 'session_id must be a string when provided.');\n}\n\nconst trimmedProjectSlug = typeof rawProjectSlug === 'string' ? rawProjectSlug.trim() : '';\nconst projectSlug = trimmedProjectSlug || 'alpha';\nconst sessionId = typeof rawSessionId === 'string' && rawSessionId.trim() !== ''\n  ? rawSessionId.trim()\n  : `crispybrain-demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;\n\nreturn [{\n  json: {\n    request_ok: true,\n    question: rawQuestion.trim(),\n    project_slug: projectSlug,\n    session_id: sessionId,\n    defaulted_project_slug: trimmedProjectSlug === ''\n  }\n}];"
+      }
+    },
+    {
+      "id": "if-demo-request-ok",
+      "name": "Request Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -140,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-demo-request-ok",
+              "leftValue": "={{ $json.request_ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "http-call-crispybrain-assistant",
+      "name": "Call Assistant Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        110,
+        -80
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/webhook/assistant",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: $json.question, project_slug: $json.project_slug, session_id: $json.session_id }) }}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "code-build-demo-response",
+      "name": "Build Demo Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const request = $('Normalize Demo Request').first().json;\nconst statusCode = $json.statusCode ?? 0;\nconst body = $json.body ?? {};\nconst sources = Array.isArray(body.sources) ? body.sources : [];\nconst workflowChain = Array.isArray(body.trace?.workflow_chain) ? body.trace.workflow_chain : [];\nconst debug = {\n  workflow: 'crispybrain-demo',\n  upstream_workflow: 'assistant',\n  teacher_used: workflowChain.includes('crispybrain-answer-from-memory') || (typeof body.answer === 'string' && body.answer.trim() !== ''),\n  retrieval_count: Number(body.retrieval?.memory_count ?? sources.length ?? 0),\n  defaulted_project_slug: request.defaulted_project_slug === true,\n  session_id: body.session_id ?? request.session_id,\n  upstream_status: statusCode || null,\n  trace_stage: body.trace?.stage ?? null\n};\n\nif (statusCode < 200 || statusCode >= 300) {\n  return [{\n    json: {\n      ok: false,\n      question: request.question,\n      project_slug: request.project_slug,\n      answer: null,\n      sources: [],\n      error: {\n        code: 'UPSTREAM_HTTP_ERROR',\n        message: 'The CrispyBrain demo workflow could not reach the assistant path successfully.',\n        status: statusCode || null\n      },\n      debug\n    }\n  }];\n}\n\nif (body.ok !== true) {\n  return [{\n    json: {\n      ok: false,\n      question: request.question,\n      project_slug: request.project_slug,\n      answer: typeof body.answer === 'string' && body.answer.trim() ? body.answer : null,\n      sources,\n      error: body.error ?? {\n        code: 'UPSTREAM_DEMO_FAILURE',\n        message: 'The CrispyBrain assistant did not return a successful answer.'\n      },\n      debug: {\n        ...debug,\n        retrieval_empty: body.retrieval?.empty === true\n      }\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    question: request.question,\n    project_slug: body.project_slug ?? request.project_slug,\n    answer: body.answer,\n    sources,\n    debug\n  }\n}];"
+      }
+    },
+    {
+      "id": "respond-demo-result",
+      "name": "Respond Demo Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        610,
+        0
+      ],
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Demo Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Demo Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Demo Request": {
+      "main": [
+        [
+          {
+            "node": "Request Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Call Assistant Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Demo Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Assistant Workflow": {
+      "main": [
+        [
+          {
+            "node": "Build Demo Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Demo Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Demo Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "versionId": "0a307fa1-2a0b-4a13-b8c4-98b218f3a001",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

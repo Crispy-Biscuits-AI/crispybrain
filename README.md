@@ -58,6 +58,20 @@ The checked-in workflows expect:
 4. Review [Workflow Sync](docs/workflow-sync.md) before editing workflows in n8n.
 5. Check [Public Scope](docs/public-scope.md) for what this repo does and does not include.
 
+## Local Demo
+
+There is now a narrow local demo surface for CrispyBrain that runs on `http://localhost:8787` as a Compose-managed AI Lab service and forwards one intentional request path into n8n.
+
+Use [Local Demo](docs/demo-local.md) for:
+
+- the exact demo architecture
+- the default Docker Compose startup path for `crispybrain-demo-ui`
+- one-time n8n import steps for `workflows/crispybrain-demo.json`
+- the available `light`, `dark`, and `crispy` themes, with `crispy` as the default demo identity
+- the local fallback path if you need to run the proxy outside Docker
+- curl smoke tests
+- troubleshooting notes
+
 The main public entrypoint is the `assistant` workflow at:
 
 ```text
@@ -105,6 +119,7 @@ This repo does not currently include:
 - [Operator Quickstart](docs/operator-quickstart.md)
 - [Minimal Setup](docs/setup-minimal.md)
 - [Workflow Sync](docs/workflow-sync.md)
+- [Local Demo](docs/demo-local.md)
 - [Public Scope](docs/public-scope.md)
 - [Private Boundary Notes](docs/private-boundary-notes.md)
 - [Legacy Naming Debt](docs/legacy-naming-debt.md)
