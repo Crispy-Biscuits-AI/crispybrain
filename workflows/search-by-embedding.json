@@ -21,7 +21,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\n\nconst rawQuery = payload.query;\nif (typeof rawQuery !== 'string' || rawQuery.trim() === '') {\n  throw new Error('Request body must include a string field named query.');\n}\n\nlet projectSlug = null;\nif (payload.project_slug !== undefined && payload.project_slug !== null) {\n  if (typeof payload.project_slug !== 'string') {\n    throw new Error('project_slug must be a string when provided');\n  }\n\n  const trimmed = payload.project_slug.trim();\n  projectSlug = trimmed || null;\n}\n\nreturn [{\n  json: {\n    query: rawQuery.trim(),\n    projectSlug\n  }\n}];"
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst rawQuery = payload.query;\nconst rawProjectSlug = payload.project_slug;\nconst runId = typeof payload.run_id === 'string' && payload.run_id.trim() !== '' ? payload.run_id.trim() : 'search-by-embedding-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);\nconst correlationId = typeof payload.correlation_id === 'string' && payload.correlation_id.trim() !== '' ? payload.correlation_id.trim() : runId;\nconst slugPattern = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;\nconst withStage = (trace, stage, status, extra = {}) => {\n  const timestamp = new Date().toISOString();\n  const errorCode = Object.prototype.hasOwnProperty.call(extra, 'error_code') ? extra.error_code : (trace.error_code ?? null);\n  const errorMessage = Object.prototype.hasOwnProperty.call(extra, 'error_message') ? extra.error_message : (trace.error_message ?? null);\n  return {\n    ...trace,\n    ...extra,\n    stage,\n    status,\n    error_code: errorCode,\n    error_message: errorMessage,\n    timestamp,\n    stage_history: [\n      ...(Array.isArray(trace.stage_history) ? trace.stage_history : []),\n      { stage, status, timestamp, error_code: errorCode, error_message: errorMessage },\n    ],\n  };\n};\nconst trace = {\n  run_id: runId,\n  correlation_id: correlationId,\n  workflow_name: 'search-by-embedding',\n  project_slug: null,\n  source_type: 'embedding_search_request',\n  filename: null,\n  filepath: null,\n  stage: 'received',\n  status: 'received',\n  error_code: null,\n  error_message: null,\n  timestamp: new Date().toISOString(),\n  workflow_chain: ['search-by-embedding'],\n  stage_history: [],\n};\nif (typeof rawQuery !== 'string' || rawQuery.trim() === '') {\n  return [{ json: { request_ok: false, error: { code: 'INVALID_QUERY', message: 'Request body must include a string field named query.', classification: 'validation', retryable: false }, trace: withStage(trace, 'validation', 'rejected', { error_code: 'INVALID_QUERY', error_message: 'Request body must include a string field named query.' }) } }];\n}\nlet projectSlug = null;\nif (rawProjectSlug !== undefined && rawProjectSlug !== null) {\n  if (typeof rawProjectSlug !== 'string') {\n    return [{ json: { request_ok: false, error: { code: 'INVALID_PROJECT_SLUG', message: 'project_slug must be a string when provided', classification: 'validation', retryable: false }, trace: withStage(trace, 'validation', 'rejected', { error_code: 'INVALID_PROJECT_SLUG', error_message: 'project_slug must be a string when provided' }) } }];\n  }\n  const trimmed = rawProjectSlug.trim();\n  if (trimmed && !slugPattern.test(trimmed)) {\n    return [{ json: { request_ok: false, error: { code: 'INVALID_PROJECT_SLUG', message: 'project_slug must use lowercase slug characters only', classification: 'validation', retryable: false }, trace: withStage(trace, 'validation', 'rejected', { project_slug: trimmed, error_code: 'INVALID_PROJECT_SLUG', error_message: 'project_slug must use lowercase slug characters only' }) } }];\n  }\n  projectSlug = trimmed || null;\n}\nreturn [{ json: { request_ok: true, query: rawQuery.trim(), projectSlug, trace: withStage({ ...trace, project_slug: projectSlug }, 'validated', 'accepted', { project_slug: projectSlug }) } }];"
       },
       "id": "b1d9f1a0-3a9a-4c69-a0c1-1f2b6d8f0002",
       "name": "Normalize Input",
@@ -57,7 +57,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const base = $('Normalize Input').first().json;\nconst rows = $input.all().map(item => item.json ?? {});\n\nif (!base.projectSlug) {\n  return [{ json: base }];\n}\n\nconst firstRow = rows[0] ?? {};\n\nconst isValid =\n  firstRow.project_slug_valid === true ||\n  firstRow.project_slug === base.projectSlug;\n\nif (!isValid) {\n  throw new Error(`Unknown project_slug: ${base.projectSlug}`);\n}\n\nreturn [{ json: base }];"
+        "jsCode": "const base = $('Normalize Input').first().json;\nconst rows = $input.all().map((item) => item.json ?? {});\nconst withStage = (trace, stage, status, extra = {}) => {\n  const timestamp = new Date().toISOString();\n  const errorCode = Object.prototype.hasOwnProperty.call(extra, 'error_code') ? extra.error_code : (trace.error_code ?? null);\n  const errorMessage = Object.prototype.hasOwnProperty.call(extra, 'error_message') ? extra.error_message : (trace.error_message ?? null);\n  return {\n    ...trace,\n    ...extra,\n    stage,\n    status,\n    error_code: errorCode,\n    error_message: errorMessage,\n    timestamp,\n    stage_history: [\n      ...(Array.isArray(trace.stage_history) ? trace.stage_history : []),\n      { stage, status, timestamp, error_code: errorCode, error_message: errorMessage },\n    ],\n  };\n};\nif (!base.projectSlug) {\n  return [{ json: { ...base, validation_ok: true, trace: withStage(base.trace, 'project_scope_ready', 'accepted') } }];\n}\nconst firstRow = rows[0] ?? {};\nconst isValid = firstRow.project_slug_valid === true || firstRow.project_slug === base.projectSlug;\nif (!isValid) {\n  return [{ json: { ...base, validation_ok: false, error: { code: 'UNKNOWN_PROJECT_SLUG', message: 'Unknown project_slug: ' + base.projectSlug, classification: 'validation', retryable: false }, trace: withStage(base.trace, 'project_scope_rejected', 'rejected', { error_code: 'UNKNOWN_PROJECT_SLUG', error_message: 'Unknown project_slug: ' + base.projectSlug }) } }];\n}\nreturn [{ json: { ...base, validation_ok: true, trace: withStage(base.trace, 'project_scope_ready', 'accepted') } }];"
       },
       "id": "b1d9f1a0-3a9a-4c69-a0c1-1f2b6d8f0004",
       "name": "Enforce Project Validation Code",
@@ -78,9 +78,12 @@
         "options": {
           "response": {
             "response": {
+              "fullResponse": true,
+              "neverError": true,
               "responseFormat": "json"
             }
-          }
+          },
+          "timeout": 120000
         }
       },
       "id": "b1d9f1a0-3a9a-4c69-a0c1-1f2b6d8f0005",
@@ -90,11 +93,14 @@
       "position": [
         1040,
         0
-      ]
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
-        "jsCode": "const base = $('Enforce Project Validation Code').first().json;\nconst embeddings = $json.embeddings;\n\nif (!Array.isArray(embeddings) || !Array.isArray(embeddings[0])) {\n  throw new Error('Ollama response did not contain embeddings[0].');\n}\n\nconst vector = embeddings[0];\nconst vectorLiteral = `[${vector.join(',')}]`;\n\nreturn [{\n  json: {\n    query: base.query,\n    projectSlug: base.projectSlug,\n    vector_literal: vectorLiteral\n  }\n}];"
+        "jsCode": "const base = $('Enforce Project Validation Code').first().json;\nconst statusCode = $json.statusCode ?? 0;\nconst body = $json.body ?? {};\nconst embeddings = body.embeddings;\nconst withStage = (trace, stage, status, extra = {}) => {\n  const timestamp = new Date().toISOString();\n  const errorCode = Object.prototype.hasOwnProperty.call(extra, 'error_code') ? extra.error_code : (trace.error_code ?? null);\n  const errorMessage = Object.prototype.hasOwnProperty.call(extra, 'error_message') ? extra.error_message : (trace.error_message ?? null);\n  return {\n    ...trace,\n    ...extra,\n    stage,\n    status,\n    error_code: errorCode,\n    error_message: errorMessage,\n    timestamp,\n    stage_history: [\n      ...(Array.isArray(trace.stage_history) ? trace.stage_history : []),\n      { stage, status, timestamp, error_code: errorCode, error_message: errorMessage },\n    ],\n  };\n};\nif (statusCode < 200 || statusCode >= 300 || !Array.isArray(embeddings) || !Array.isArray(embeddings[0])) {\n  return [{ json: { ...base, vector_ready: false, error: { code: 'OLLAMA_EMBEDDING_FAILED', message: 'Ollama response did not contain embeddings[0].', classification: 'transient', retryable: true, status: statusCode || null, details: body.error ?? null }, trace: withStage(base.trace, 'embedding_failed', 'failed', { error_code: 'OLLAMA_EMBEDDING_FAILED', error_message: 'Ollama response did not contain embeddings[0].' }) } }];\n}\nconst vector = embeddings[0];\nconst vectorLiteral = '[' + vector.join(',') + ']';\nreturn [{ json: { query: base.query, projectSlug: base.projectSlug, vector_literal: vectorLiteral, vector_ready: true, trace: withStage(base.trace, 'embedding_ready', 'accepted') } }];"
       },
       "id": "b1d9f1a0-3a9a-4c69-a0c1-1f2b6d8f0006",
       "name": "Prepare Vector",
@@ -127,6 +133,134 @@
           "name": "Postgres account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-search-request-ok-condition",
+              "leftValue": "={{ $json.request_ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-search-request-ok",
+      "name": "Input Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-search-project-valid-condition",
+              "leftValue": "={{ $json.validation_ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-search-project-valid",
+      "name": "Project Validation Passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-search-vector-ready-condition",
+              "leftValue": "={{ $json.vector_ready === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-search-vector-ready",
+      "name": "Vector Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1380,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.all().map((item) => item.json ?? {});\nconst base = $('Prepare Vector').first().json;\nconst withStage = (trace, stage, status, extra = {}) => {\n  const timestamp = new Date().toISOString();\n  const errorCode = Object.prototype.hasOwnProperty.call(extra, 'error_code') ? extra.error_code : (trace.error_code ?? null);\n  const errorMessage = Object.prototype.hasOwnProperty.call(extra, 'error_message') ? extra.error_message : (trace.error_message ?? null);\n  return {\n    ...trace,\n    ...extra,\n    stage,\n    status,\n    error_code: errorCode,\n    error_message: errorMessage,\n    timestamp,\n    stage_history: [\n      ...(Array.isArray(trace.stage_history) ? trace.stage_history : []),\n      { stage, status, timestamp, error_code: errorCode, error_message: errorMessage },\n    ],\n  };\n};\nreturn [{ json: { ok: true, query: base.query, project_slug: base.projectSlug, result_count: results.length, results, trace: withStage(base.trace, 'search_completed', 'succeeded', { project_slug: base.projectSlug ?? null }) } }];"
+      },
+      "id": "code-build-search-response",
+      "name": "Build Search Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1900,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const error = $json.error ?? { code: 'UNKNOWN_FAILURE', message: 'Search workflow failed without a structured error payload', classification: 'unknown', retryable: false };\nconst trace = $json.trace ?? null;\nconst withStage = (existingTrace, stage, status, extra = {}) => {\n  if (!existingTrace) return null;\n  const timestamp = new Date().toISOString();\n  const errorCode = Object.prototype.hasOwnProperty.call(extra, 'error_code') ? extra.error_code : (existingTrace.error_code ?? null);\n  const errorMessage = Object.prototype.hasOwnProperty.call(extra, 'error_message') ? extra.error_message : (existingTrace.error_message ?? null);\n  return {\n    ...existingTrace,\n    ...extra,\n    stage,\n    status,\n    error_code: errorCode,\n    error_message: errorMessage,\n    timestamp,\n    stage_history: [\n      ...(Array.isArray(existingTrace.stage_history) ? existingTrace.stage_history : []),\n      { stage, status, timestamp, error_code: errorCode, error_message: errorMessage },\n    ],\n  };\n};\nreturn [{ json: { ok: false, error, query: $json.query ?? null, project_slug: $json.projectSlug ?? null, trace: withStage(trace, trace?.stage ?? 'failed', trace?.status ?? 'failed', { error_code: error.code, error_message: error.message }) } }];"
+      },
+      "id": "code-return-search-failure",
+      "name": "Return Search Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1900,
+        200
+      ]
     }
   ],
   "connections": {
@@ -145,7 +279,25 @@
       "main": [
         [
           {
+            "node": "Input Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Is Valid?": {
+      "main": [
+        [
+          {
             "node": "Validate Project Slug",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Search Failure",
             "type": "main",
             "index": 0
           }
@@ -167,7 +319,25 @@
       "main": [
         [
           {
+            "node": "Project Validation Passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Project Validation Passed?": {
+      "main": [
+        [
+          {
             "node": "Generate Query Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Search Failure",
             "type": "main",
             "index": 0
           }
@@ -189,7 +359,36 @@
       "main": [
         [
           {
+            "node": "Vector Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Ready?": {
+      "main": [
+        [
+          {
             "node": "Search Memories",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Search Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Memories": {
+      "main": [
+        [
+          {
+            "node": "Build Search Response",
             "type": "main",
             "index": 0
           }

@@ -31,6 +31,7 @@ It is the place to understand the current demo surface, the workflow shape, the 
 - good for showing the current product slice honestly
 - not production-ready
 - not a turnkey hosted platform
+- `v0.5` adds structured tracing, boundary validation, and ingest replay detection to the checked-in workflow exports
 
 ## What The Demo Currently Proves
 
@@ -167,6 +168,8 @@ Compatibility caveats that remain true on purpose:
 
 - [Local Demo](docs/demo-local.md)
 - [Operator Quickstart](docs/operator-quickstart.md)
+- [CrispyBrain v0.5](docs/crispybrain-v0_5.md)
+- [Observability Model](docs/observability.md)
 - [Minimal Setup](docs/setup-minimal.md)
 - [Workflow Sync](docs/workflow-sync.md)
 - [Public Scope](docs/public-scope.md)
