@@ -1,0 +1,331 @@
+{
+  "name": "crispybrain-build-context",
+  "nodes": [
+    {
+      "id": "webhook-crispybrain-build-context",
+      "name": "Build Context Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -860,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crispybrain-build-context",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "crispybrain-build-context"
+    },
+    {
+      "id": "code-normalize-context-request",
+      "name": "Normalize Context Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const payload = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst rawQuery = typeof payload.message === 'string' ? payload.message : payload.query;\nconst rawProjectSlug = payload.project_slug;\nconst rawTopK = payload.top_k;\nconst rawSessionTurns = payload.session_turns;\nconst buildError = (code, message) => [{ json: { ok: false, error: { code, message }, query: null, project_slug: null, top_k: null, retrieval: { strategy: 'project-first-fallback-general', project_match_count: 0, general_match_count: 0, memory_count: 0, strongest_similarity: null, similarity_threshold: 0.72, empty: true }, context_bundle: null, sources: [], context_preview: '', session: { turn_count_before: 0, history_used: false, stored: false } } }];\nif (typeof rawQuery !== 'string' || rawQuery.trim() === '') return buildError('INVALID_INPUT', 'Missing or invalid query/message');\nif (rawProjectSlug !== undefined && rawProjectSlug !== null && typeof rawProjectSlug !== 'string') return buildError('INVALID_PROJECT_SLUG', 'project_slug must be a string when provided');\nif (rawTopK !== undefined && rawTopK !== null && (!Number.isInteger(rawTopK) || rawTopK < 1 || rawTopK > 8)) return buildError('INVALID_TOP_K', 'top_k must be an integer between 1 and 8');\nif (rawSessionTurns !== undefined && !Array.isArray(rawSessionTurns)) return buildError('INVALID_SESSION_TURNS', 'session_turns must be an array when provided');\nconst sessionTurns = Array.isArray(rawSessionTurns) ? rawSessionTurns.map((turn) => ({ role: turn?.role === 'assistant' ? 'assistant' : 'user', message_text: typeof turn?.message_text === 'string' ? turn.message_text : '', project_slug: typeof turn?.project_slug === 'string' && turn.project_slug.trim() ? turn.project_slug.trim() : null, created_at: typeof turn?.created_at === 'string' ? turn.created_at : null, metadata_json: turn?.metadata_json ?? null })).filter((turn) => turn.message_text) : [];\nconst projectSlug = typeof rawProjectSlug === 'string' && rawProjectSlug.trim() ? rawProjectSlug.trim() : null;\nconst recentUserTurns = sessionTurns.filter((turn) => turn.role === 'user').map((turn) => turn.message_text.trim()).filter(Boolean).slice(-2);\nconst retrievalQuery = projectSlug ? rawQuery.trim() : Array.from(new Set([rawQuery.trim(), ...recentUserTurns])).join('\\n');\nreturn [{ json: { request_ok: true, query: rawQuery.trim(), retrieval_query: retrievalQuery, project_slug: projectSlug, top_k: Number.isInteger(rawTopK) ? rawTopK : 5, session_turns: sessionTurns, retrieval_strategy: projectSlug ? 'project-first-fallback-general' : 'general-scope-first-fallback-all', requested_at: new Date().toISOString() } }];\n"
+      }
+    },
+    {
+      "id": "if-context-request-ok",
+      "name": "Request Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -420,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-if-context-request-ok",
+              "leftValue": "={{ $json.request_ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "http-context-embed",
+      "name": "Generate Query Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'nomic-embed-text', input: $('Normalize Context Request').first().json.retrieval_query || $('Normalize Context Request').first().json.query, truncate: true }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "code-prepare-retrieval-input",
+      "name": "Prepare Retrieval Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const request = $('Normalize Context Request').first().json;\nconst statusCode = $json.statusCode ?? 0;\nconst body = $json.body ?? {};\nconst embeddings = body.embeddings;\nif (statusCode < 200 || statusCode >= 300 || !Array.isArray(embeddings) || !Array.isArray(embeddings[0])) {\n  return [{ json: { ...request, embedding_ok: false, error: { code: 'OLLAMA_EMBEDDING_FAILED', message: 'Ollama embedding request failed while building context', status: statusCode || null, details: body.error ?? null } } }];\n}\nreturn [{ json: { ...request, embedding_ok: true, vector_literal: `[${embeddings[0].join(',')}]` } }];\n"
+      }
+    },
+    {
+      "id": "if-context-embedding-ready",
+      "name": "Embedding Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-if-context-embedding-ready",
+              "leftValue": "={{ $json.embedding_ok === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "code-build-context-error",
+      "name": "Build Embedding Failure Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        470,
+        120
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: { ok: false, error: $json.error, query: $json.query, project_slug: $json.project_slug ?? null, top_k: $json.top_k, retrieval: { strategy: $json.retrieval_strategy, project_match_count: 0, general_match_count: 0, memory_count: 0, strongest_similarity: null, similarity_threshold: 0.72, empty: true }, context_bundle: null, sources: [], context_preview: '', session: { turn_count_before: Array.isArray($json.session_turns) ? $json.session_turns.length : 0, history_used: Array.isArray($json.session_turns) ? $json.session_turns.length > 0 : false, stored: false } } }];\n"
+      }
+    },
+    {
+      "id": "pg-context-retrieve",
+      "name": "Retrieve Candidate Memories",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        470,
+        -80
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  COALESCE((\n    SELECT jsonb_agg(row_to_json(project_rows) ORDER BY project_rows.distance)\n    FROM (\n      SELECT id, title, source, category, content, metadata_json,\n        COALESCE(NULLIF(metadata_json->>'project_slug', ''), NULL) AS project_slug,\n        ROUND((1 - (embedding <=> $1::vector))::numeric, 6) AS similarity,\n        (embedding <=> $1::vector) AS distance\n      FROM memories\n      WHERE embedding IS NOT NULL\n        AND $2::text IS NOT NULL\n        AND NULLIF(COALESCE(metadata_json->>'project_slug', ''), '') = $2::text\n      ORDER BY distance\n      LIMIT $3::int\n    ) project_rows\n  ), '[]'::jsonb) AS project_memories,\n  COALESCE((\n    SELECT jsonb_agg(row_to_json(general_rows) ORDER BY general_rows.distance)\n    FROM (\n      SELECT id, title, source, category, content, metadata_json,\n        COALESCE(NULLIF(metadata_json->>'project_slug', ''), NULL) AS project_slug,\n        ROUND((1 - (embedding <=> $1::vector))::numeric, 6) AS similarity,\n        (embedding <=> $1::vector) AS distance\n      FROM memories\n      WHERE embedding IS NOT NULL\n        AND COALESCE(NULLIF(metadata_json->>'project_slug', ''), '') = ''\n      ORDER BY distance\n      LIMIT $3::int\n    ) general_rows\n  ), '[]'::jsonb) AS general_memories,\n  COALESCE((\n    SELECT jsonb_agg(row_to_json(all_rows) ORDER BY all_rows.distance)\n    FROM (\n      SELECT id, title, source, category, content, metadata_json,\n        COALESCE(NULLIF(metadata_json->>'project_slug', ''), NULL) AS project_slug,\n        ROUND((1 - (embedding <=> $1::vector))::numeric, 6) AS similarity,\n        (embedding <=> $1::vector) AS distance\n      FROM memories\n      WHERE embedding IS NOT NULL\n      ORDER BY distance\n      LIMIT $3::int\n    ) all_rows\n  ), '[]'::jsonb) AS all_memories;\n",
+        "options": {
+          "queryReplacement": "={{ [$json.vector_literal, $json.project_slug, $json.top_k] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "j60Gpt1oeRVTUCH2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "code-assemble-context",
+      "name": "Assemble Retrieval Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        -80
+      ],
+      "parameters": {
+        "jsCode": "const base = $('Prepare Retrieval Input').first().json;\nconst projectMemories = Array.isArray($json.project_memories) ? $json.project_memories : [];\nconst generalMemories = Array.isArray($json.general_memories) ? $json.general_memories : [];\nconst selected = [];\nconst seen = new Set();\nconst add = (memory) => { if (!memory || seen.has(memory.id) || selected.length >= base.top_k) return; seen.add(memory.id); selected.push(memory); };\nif (base.project_slug) { for (const memory of projectMemories) add(memory); for (const memory of generalMemories) add(memory); } else { for (const memory of generalMemories) add(memory); }\nconst similarityThreshold = 0.72;\nconst stopTerms = new Set(['what','when','where','which','who','how','this','that','with','from','into','your','about']);\nconst scoringText = (base.retrieval_query || base.query || '').toLowerCase();\nconst queryTerms = Array.from(new Set((scoringText.match(/[a-z0-9]{4,}/g) ?? []).filter((term) => !stopTerms.has(term))));\nconst isUsableContent = (content) => {\n  const value = typeof content === 'string' ? content.trim() : '';\n  if (value.length < 20) return false;\n  if (value.includes('\\uFFFD')) return false;\n  const alphaCount = (value.match(/[A-Za-z]/g) ?? []).length;\n  if (alphaCount < 12) return false;\n  const safeCount = (value.match(/[A-Za-z0-9\\s.,:;!?()'\"_\\/-]/g) ?? []).length;\n  return safeCount / value.length >= 0.7;\n};\nconst scored = selected.filter((memory) => isUsableContent(memory.content)).map((memory) => {\n  const haystack = `${memory.title ?? ''}\\n${memory.content ?? ''}`.toLowerCase();\n  const lexicalOverlap = queryTerms.filter((term) => haystack.includes(term)).length;\n  const similarity = typeof memory.similarity === 'number' ? memory.similarity : 0;\n  return { ...memory, lexical_overlap: lexicalOverlap, passes_relevance: similarity >= similarityThreshold || lexicalOverlap >= 1 };\n}).sort((a, b) => {\n  if (base.project_slug) {\n    const ap = a.project_slug === base.project_slug ? 1 : 0;\n    const bp = b.project_slug === base.project_slug ? 1 : 0;\n    if (bp !== ap) return bp - ap;\n  }\n  if (b.lexical_overlap !== a.lexical_overlap) return b.lexical_overlap - a.lexical_overlap;\n  return (b.similarity ?? 0) - (a.similarity ?? 0);\n});\nconst strong = scored.filter((memory) => memory.passes_relevance).slice(0, base.top_k);\nconst sessionTurns = Array.isArray(base.session_turns) ? base.session_turns : [];\nconst sessionHistory = sessionTurns.map((turn) => `${turn.role === 'assistant' ? 'Assistant' : 'User'}: ${turn.message_text}`).join('\\n');\nconst context = strong.map((memory, index) => `Memory ${index + 1}: ${memory.title}\\n${memory.content}`).join('\\n\\n');\nconst prompt = [\n  'You are CrispyBrain, a local project-aware memory assistant.',\n  'Answer using the retrieved memory context only. If memory is incomplete, say so plainly.',\n  base.project_slug ? `Requested project_slug: ${base.project_slug}` : null,\n  sessionHistory ? `Recent session turns:\\n${sessionHistory}` : null,\n  context ? `Retrieved memory context:\\n${context}` : null,\n  `User question:\\n${base.query}`,\n  'Respond in concise plain text and avoid inventing facts not present in memory.'\n].filter(Boolean).join('\\n\\n');\nconst sources = strong.map((memory) => ({ id: memory.id, title: memory.title, project_slug: memory.project_slug ?? null, similarity: memory.similarity, lexical_overlap: memory.lexical_overlap, snippet: typeof memory.content === 'string' ? memory.content.slice(0, 180) : '', metadata: memory.metadata_json ?? null }));\nconst retrieval = { strategy: base.project_slug ? 'project-first-fallback-general' : 'blank-scope-only', project_match_count: projectMemories.length, general_match_count: generalMemories.length, memory_count: strong.length, strongest_similarity: strong.length > 0 ? strong[0].similarity : null, similarity_threshold: similarityThreshold, empty: strong.length === 0 };\nreturn [{ json: { ok: true, query: base.query, project_slug: base.project_slug ?? null, top_k: base.top_k, retrieval, sources, context_preview: context.slice(0, 280), session: { turn_count_before: sessionTurns.length, history_used: sessionTurns.length > 0, stored: false }, context_bundle: { query: base.query, project_slug: base.project_slug ?? null, top_k: base.top_k, requested_at: base.requested_at, retrieval, sources, context, context_preview: context.slice(0, 280), prompt, session: { turn_count_before: sessionTurns.length, history_used: sessionTurns.length > 0, stored: false }, session_turns: sessionTurns, trace: { workflow_chain: ['crispybrain-build-context'], memory_ids: strong.map((memory) => memory.id), query_terms: queryTerms } } } }];\n"
+      }
+    },
+    {
+      "id": "respond-build-context",
+      "name": "Respond Build Context",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        930,
+        0
+      ],
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Build Context Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Context Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Context Request": {
+      "main": [
+        [
+          {
+            "node": "Request Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Generate Query Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Build Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Query Embedding": {
+      "main": [
+        [
+          {
+            "node": "Prepare Retrieval Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Retrieval Input": {
+      "main": [
+        [
+          {
+            "node": "Embedding Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding Ready?": {
+      "main": [
+        [
+          {
+            "node": "Retrieve Candidate Memories",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Embedding Failure Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve Candidate Memories": {
+      "main": [
+        [
+          {
+            "node": "Assemble Retrieval Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Retrieval Context": {
+      "main": [
+        [
+          {
+            "node": "Respond Build Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Embedding Failure Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Build Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "a658cd64-79a2-4445-b42e-22453fc38b82",
+  "id": "crispybrain-build-context",
+  "active": false
+}

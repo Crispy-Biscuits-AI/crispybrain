@@ -11,6 +11,7 @@ env/
 # Environment files
 .env
 .env.*
+!.env.example
 
 # macOS
 .DS_Store
@@ -22,7 +23,7 @@ env/
 n8n-data/
 postgres-data/
 
-# OpenBrain working folders
+# Legacy local working folders from earlier experiments
 openbrain/inbox/
 openbrain/archive/
 

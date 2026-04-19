@@ -106,4 +106,4 @@ After that returns `{"data":{"waitingForWebhook":true}}`, send the real test pay
 http://localhost:5678/webhook-test/<path>
 ```
 
-The reusable helper for this repo lives at [crispybrain-test-harness.sh](/Users/elric/repos/crispybrain/scripts/crispybrain-test-harness.sh).
+The reusable helper for this repo lives at [`scripts/crispybrain-test-harness.sh`](../scripts/crispybrain-test-harness.sh).

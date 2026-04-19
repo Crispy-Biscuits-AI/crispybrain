@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# shellcheck source=/Users/elric/repos/crispybrain/scripts/crispybrain-test-harness.sh
+# shellcheck source=./crispybrain-test-harness.sh
 source "${SCRIPT_DIR}/crispybrain-test-harness.sh"
 
 IMPORT_SCRIPT="${SCRIPT_DIR}/import-crispybrain-v0_4.sh"

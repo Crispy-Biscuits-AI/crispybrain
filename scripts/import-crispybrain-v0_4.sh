@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# shellcheck source=/Users/elric/repos/crispybrain/scripts/crispybrain-test-harness.sh
+# shellcheck source=./crispybrain-test-harness.sh
 source "${SCRIPT_DIR}/crispybrain-test-harness.sh"
 
 SQL_PATH="${REPO_ROOT}/sql/crispybrain-v0_4-upgrade.sql"

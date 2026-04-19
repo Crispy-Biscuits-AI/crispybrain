@@ -1,21 +1,17 @@
 # CrispyBrain v0.4
 
-CrispyBrain v0.4 is the first release in the CrispyBrain fork line. It preserves the OpenBrain v0.1-v0.3 lineage in the original repository while rebranding the active assistant, simplifying workflow names, and shortening the primary webhook path.
+This document is the technical note for the current public workflow set.
 
-## What v0.4 Adds
+## What v0.4 Represents
 
-- a unified assistant workflow with internal id/name `assistant`
-- session continuity backed by `openbrain_chat_turns`
-- project-aware retrieval with general fallback
-- a static local UI at [crispybrain-v0.4-chat.html](/Users/elric/repos/crispybrain/docs/crispybrain-v0.4-chat.html)
-- import and validation scripts for `Personal -> CrispyBrain v0.4`
+`v0.4` is the first public-facing CrispyBrain release line in this repository. It establishes the current assistant webhook, workflow naming, local UI, and session continuity behavior.
 
-## Active Entrypoint
+## Main Entrypoint
 
-- Workflow export file: [assistant.json](/Users/elric/repos/crispybrain/workflows/assistant.json)
-- Workflow id/name after import: `assistant`
-- Webhook: `POST http://localhost:5678/webhook/assistant`
-- n8n folder: `Personal -> CrispyBrain v0.4`
+- workflow export: [assistant.json](../workflows/assistant.json)
+- imported workflow name: `assistant`
+- webhook: `POST http://localhost:5678/webhook/assistant`
+- optional local UI: [crispybrain-v0.4-chat.html](crispybrain-v0.4-chat.html)
 
 Accepted request body:
 
@@ -30,111 +26,34 @@ Accepted request body:
 
 `query` is also accepted as an alias for `message`.
 
-## Response Shape
+## Current Runtime Assumptions
 
-Successful response:
+- n8n executes the workflows
+- Postgres stores `memories`, `projects`, and the session-turn table
+- `sql/crispybrain-v0_4-upgrade.sql` creates the `openbrain_chat_turns` table used by the assistant workflow
+- Ollama is reachable from n8n at `http://host.docker.internal:11434`
 
-```json
-{
-  "ok": true,
-  "answer": "CrispyBrain is the independently branded evolution of OpenBrain...",
-  "query": "What is CrispyBrain?",
-  "session_id": "crispybrain-v0-4-session-test",
-  "project_slug": "alpha",
-  "top_k": 4,
-  "retrieval": {
-    "strategy": "project-first-fallback-general",
-    "project_match_count": 2,
-    "general_match_count": 1,
-    "memory_count": 2,
-    "strongest_similarity": 0.82,
-    "similarity_threshold": 0.72,
-    "empty": false
-  },
-  "sources": [
-    {
-      "id": 16,
-      "title": "crispybrain-alpha-plan.txt :: chunk 01",
-      "project_slug": "alpha",
-      "similarity": 0.82,
-      "snippet": "CrispyBrain is being built incrementally..."
-    }
-  ],
-  "session": {
-    "turn_count_before": 2,
-    "history_used": true,
-    "stored": true,
-    "turn_count_after": 4
-  }
-}
-```
+## Import And Test Helpers
 
-Validation failure:
+For maintainers running the expected local Docker setup:
 
-```json
-{
-  "ok": false,
-  "error": {
-    "code": "INVALID_INPUT",
-    "message": "Missing or invalid query/message"
-  }
-}
-```
+- import helper: [`scripts/import-crispybrain-v0_4.sh`](../scripts/import-crispybrain-v0_4.sh)
+- test helper: [`scripts/test-crispybrain-v0_4.sh`](../scripts/test-crispybrain-v0_4.sh)
 
-## Import
-
-Run:
-
-```bash
-./scripts/import-crispybrain-v0_4.sh
-```
-
-The import script:
-
-1. applies [crispybrain-v0_4-upgrade.sql](/Users/elric/repos/crispybrain/sql/crispybrain-v0_4-upgrade.sql)
-2. ensures the `CrispyBrain v0.4` folder exists
-3. imports every valid workflow export in [workflows](/Users/elric/repos/crispybrain/workflows)
-4. verifies imported workflow names do not use the `openbrain-` prefix
-5. verifies the `assistant` webhook path and folder placement
-6. activates the `assistant` workflow
-
-## Test
-
-Run:
-
-```bash
-./scripts/test-crispybrain-v0_4.sh
-```
-
-The test covers:
-
-1. UI endpoint and theme defaults
-2. localStorage migration from OpenBrain keys to CrispyBrain keys
-3. plain assistant smoke request
-4. project-aware retrieval
-5. multi-turn session continuity
-6. invalid-input handling
-7. empty retrieval fallback
+These scripts are convenience helpers, not the only supported way to run CrispyBrain.
 
 ## Local UI
 
-Open [crispybrain-v0.4-chat.html](/Users/elric/repos/crispybrain/docs/crispybrain-v0.4-chat.html) in a browser after importing the workflows.
-
-The UI:
+The local UI:
 
 - defaults to `http://localhost:5678/webhook/assistant`
-- migrates the old OpenBrain assistant endpoint automatically
-- preserves custom user-entered endpoints
-- stores `session_id`, `project_slug`, endpoint, and theme in CrispyBrain-specific localStorage keys
-- supports `dark polarized` and `light polarized` without a page reload
-
-## Lineage
-
-OpenBrain v0.1-v0.3 remain preserved in `/Users/elric/repos/openbrain`. CrispyBrain begins at v0.4 in this repository as an independently branded fork that acknowledges Nate Jones and the original OpenBrain concept while diverging in branding, workflow naming, and local UX.
+- preserves custom endpoints
+- migrates older local browser keys where needed
+- supports `dark polarized` and `light polarized`
 
 ## Deferred
 
-- database table renames
+- renaming runtime-sensitive legacy table names
 - authentication and access control
-- streaming responses
-- cleanup of older duplicate experimental workflows already present in n8n
+- turnkey packaging for every environment
+- cleanup of older experimental workflow variants

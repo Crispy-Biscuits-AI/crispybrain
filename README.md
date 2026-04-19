@@ -5,42 +5,66 @@
 <h1 align="center">CrispyBrain</h1>
 
 <p align="center">
-  Local AI memory, retrieval, and orchestration system
+  A self-hosted project memory assistant built with n8n, Postgres, and Ollama.
 </p>
 
-<p align="center">
-  <b>CrispyBrain v0.4</b> · Forked from OpenBrain · Self-hosted · n8n-powered
-</p>
+CrispyBrain is a practical local-first assistant for teams and individuals who want to ingest notes, keep project memory searchable, and answer questions from that memory through a simple webhook-driven workflow stack.
 
-CrispyBrain v0.4 is the independently branded fork that carries the project forward, while OpenBrain v0.1 through v0.3 remain preserved in `/Users/elric/repos/openbrain` for historical continuity.
+This repository is the public product repo for CrispyBrain. It includes the workflow exports, SQL, scripts, and docs needed to understand and run the current system. It does not try to be a full private operations repo, a CMS repo, or a general AI lab.
 
-The original OpenBrain concept introduced by Nate Jones inspired the early architecture. This fork preserves that lineage while giving the working system its own crisp identity.
+## Who It Is For
 
-- Reference: [Nate Jones OpenBrain video](https://www.youtube.com/watch?v=2JiMmye2ezg&utm_source=chatgpt.com)
+- operators who already run or can provision `n8n`, Postgres, and Ollama
+- developers who want a concrete reference implementation for local memory retrieval
+- consultants or technical teams evaluating a small self-hosted AI memory stack
 
-## What v0.4 Changes <img src="assets/biscuit-emoji.png" width="18" valign="middle">
+## What Problem It Solves
 
-- Rebrands the working system from OpenBrain to CrispyBrain
-- Simplifies workflow names by dropping the `openbrain-` prefix
-- Changes the assistant webhook from `/webhook/openbrain-assistant` to `/webhook/assistant`
-- Imports CrispyBrain workflows into `Personal -> CrispyBrain v0.4`
-- Adds a local GUI with `dark polarized` and `light polarized` themes
-- Preserves the existing Postgres schema and table names, including `openbrain_chat_turns`
+CrispyBrain gives you a workflow-based assistant that:
 
-## Repo Notes
+- ingests project notes into Postgres
+- embeds and retrieves memory with Ollama
+- answers questions from stored context
+- keeps short session history for conversational continuity
 
-- The active workflow export filenames now match the concise imported workflow names under `workflows/`, such as `assistant.json`, `ingest.json`, and `build-context.json`.
-- The internal workflow `id` and `name` fields are the new concise CrispyBrain names such as `assistant`, `ingest`, and `build-context`.
-- OpenBrain and CrispyBrain are meant to coexist side-by-side in the same n8n instance.
+## What Is In This Repo
 
-## Active Entrypoint
+- `workflows/`: exported n8n workflow JSON files
+- `sql/`: the checked-in SQL migration used by the current workflow set
+- `scripts/`: import, test, and local helper scripts for maintainers
+- `docs/`: onboarding, scope, setup, release, and technical notes
+- `assets/`: public repo artwork
 
-- Workflow id/name: `assistant`
-- Webhook: `http://localhost:5678/webhook/assistant`
-- n8n folder: `CrispyBrain v0.4`
-- Local UI: [crispybrain-v0.4-chat.html](/Users/elric/repos/crispybrain/docs/crispybrain-v0.4-chat.html)
+## Minimum Runtime
 
-Example smoke request:
+The smallest practical CrispyBrain setup today is:
+
+1. `n8n`
+2. Postgres with `pgvector`
+3. Ollama reachable from n8n at `http://host.docker.internal:11434`
+
+The checked-in workflows expect:
+
+- a Postgres credential in n8n named `Postgres account`
+- a `memories` table and a `projects` table already available in Postgres
+- the session-turn table created by `sql/crispybrain-v0_4-upgrade.sql`
+- Ollama models `llama3` and `nomic-embed-text`
+
+## Quickstart
+
+1. Read [Operator Quickstart](docs/operator-quickstart.md).
+2. Follow [Minimal Setup](docs/setup-minimal.md).
+3. Import or sync the workflows from [workflows/](workflows/).
+4. Review [Workflow Sync](docs/workflow-sync.md) before editing workflows in n8n.
+5. Check [Public Scope](docs/public-scope.md) for what this repo does and does not include.
+
+The main public entrypoint is the `assistant` workflow at:
+
+```text
+POST http://localhost:5678/webhook/assistant
+```
+
+Example request:
 
 ```bash
 curl -X POST "http://localhost:5678/webhook/assistant" \
@@ -48,54 +72,46 @@ curl -X POST "http://localhost:5678/webhook/assistant" \
   -d '{"message":"What is CrispyBrain?"}'
 ```
 
-## Import
+## Current Core Workflows
 
-Run:
+The current public product path is centered on stable workflow exports such as:
 
-```bash
-./scripts/import-crispybrain-v0_4.sh
-```
+- `assistant.json`
+- `ingest.json`
+- `search-by-embedding.json`
+- `build-context.json`
+- `project-memory.json`
+- `project-bootstrap.json`
+- `validation-and-errors.json`
 
-This script:
+Some additional workflow JSON files in `workflows/` are older experiments or intermediate fixes. They are kept for reference, not as the primary onboarding path.
 
-1. applies `sql/crispybrain-v0_4-upgrade.sql`
-2. ensures the `CrispyBrain v0.4` folder exists
-3. imports every valid workflow export under `workflows/`
-4. verifies the imported workflows in that folder no longer use the `openbrain-` prefix
-5. verifies the assistant webhook path is `assistant`
-6. activates the `assistant` workflow
+## What Is Intentionally Out Of Scope
 
-## Test
+This repo does not currently include:
 
-Run:
+- CMS implementation material
+- client-specific integrations
+- managed hosting or SaaS packaging
+- production auth/access control
+- a fully self-contained Docker environment
 
-```bash
-./scripts/test-crispybrain-v0_4.sh
-```
+## Relationship To `crispy-ai-lab`
 
-The test verifies:
+`crispy-ai-lab` is a separate optional reference environment where CrispyBrain can be developed, tested, or run alongside broader lab tooling. It is not required to understand this repo, and it is not the public product identity for CrispyBrain.
 
-1. the GUI and docs point to `http://localhost:5678/webhook/assistant`
-2. legacy endpoint values migrate to the new assistant endpoint
-3. the default theme is `dark polarized`
-4. custom endpoints remain untouched
-5. the assistant webhook still passes a live smoke request
-6. session continuity and invalid-input handling still work
+## Docs
 
-## Docs <img src="assets/biscuit-emoji.png" width="18" valign="middle">
+- [Operator Quickstart](docs/operator-quickstart.md)
+- [Minimal Setup](docs/setup-minimal.md)
+- [Workflow Sync](docs/workflow-sync.md)
+- [Public Scope](docs/public-scope.md)
+- [Private Boundary Notes](docs/private-boundary-notes.md)
+- [Legacy Naming Debt](docs/legacy-naming-debt.md)
+- [v0.4 Technical Note](docs/crispybrain-v0.4.md)
+- [Migration Notes](docs/MIGRATION.md)
+- [History](docs/HISTORY.md)
 
-- [crispybrain-v0.4.md](/Users/elric/repos/crispybrain/docs/crispybrain-v0.4.md)
-- [HISTORY.md](/Users/elric/repos/crispybrain/docs/HISTORY.md)
-- [MIGRATION.md](/Users/elric/repos/crispybrain/docs/MIGRATION.md)
-- [crispybrain-webhook-template.md](/Users/elric/repos/crispybrain/docs/crispybrain-webhook-template.md)
+## Status
 
-## Deferred
-
-- Renaming the existing database table names and SQL schema objects
-- Authentication and access control
-- Streaming responses
-- Deep cleanup of older duplicate experimental workflows already present in n8n
-
-<p align="center">
-  <img src="assets/biscuit-emoji.png" alt="CrispyBrain biscuit emoji" width="18">
-</p>
+This repo is ready for an early public release as a technical, self-hosted CrispyBrain reference implementation. The documentation is intentionally explicit about current limitations so the public story stays truthful.
