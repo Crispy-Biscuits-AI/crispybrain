@@ -11,6 +11,19 @@ It focuses on:
 - clearer trust indicators on memory-backed answers
 - simple trendable health snapshots without inventing new infrastructure
 
+## Release Summary
+
+`v0.6` is the release where CrispyBrain starts exposing memory quality and operator control directly in the checked-in repo surface.
+
+In practical terms, the validated `v0.6` state includes:
+
+- project memory health visibility through the upgraded inspector
+- source quality indicators in assistant and demo responses
+- operator control over review state without a destructive schema change
+- suspect review/export workflows for local inspection
+- file-based metrics snapshots over time
+- a multi-cycle runtime harness that exercises ingest, duplicate rejection, suppression, review-state updates, and response metadata
+
 ## What Changed
 
 ### 1. Memory health summary
@@ -103,6 +116,15 @@ The `crispybrain-demo` workflow now passes through:
 
 This makes the visible demo/test output show the v0.6 quality layer without requiring a frontend rewrite.
 
+### 7. Runtime validation and stabilization
+
+The checked-in `v0.6` state was stabilized with the runtime harness hotfix that separated two different concerns:
+
+- retrieval ranking correctness
+- metadata correctness for whatever rows were actually retrieved
+
+That distinction matters because a reviewed row can be stored and surfaced correctly without necessarily becoming the top-ranked retrieval result for a broad semantic query.
+
 ## Memory Inspection Tool
 
 Run:
@@ -127,6 +149,17 @@ The suspect-row rule remains intentionally narrow:
 
 `v0.6` extends operator visibility around that rule, but it does not broaden the rule speculatively.
 
+## Key Lesson
+
+The main `v0.6` runtime lesson is that retrieval ranking and metadata correctness are separate concerns.
+
+The harness hotfix kept the ranking check and the review-status propagation check distinct:
+
+- broad anchor-style queries remain useful for checking retrieval quality and source metadata consistency
+- deterministic filename-style queries are a better way to prove that a reviewed row is surfaced with the correct `review_status`
+
+This keeps the release honest about what is already true today versus what still belongs in a later ranking pass.
+
 ## Operator Page Status
 
 There is not a safe editable operator UI surface inside the allowed paths for this task.
@@ -138,6 +171,27 @@ Because of that, `v0.6` ships:
 - repo-local inspection/export/snapshot tooling
 
 The dedicated operator page is deferred rather than forced into a risky frontend rewrite.
+
+## Known Limitations
+
+Current limitations remain explicit:
+
+- there is no full operator UI yet
+- retrieval ranking is not yet quality-aware
+- review state mainly affects suppression, not ranking
+
+This means a reviewed memory can still lose to older unreviewed memories on a broad similarity query even when the response metadata is correct.
+
+## Likely v0.7 Direction
+
+The next logical step after `v0.6` is not more metadata alone, but using that metadata more directly in retrieval and operator workflows.
+
+Likely `v0.7` themes:
+
+- quality-aware retrieval ranking
+- lightweight operator UI
+- automated quality scoring
+- feedback loops from review outcomes back into ingestion
 
 ## v0.6 Runtime Check
 
@@ -159,3 +213,4 @@ The harness verifies:
 - project health summary generation
 - suspect export generation
 - metrics snapshot generation
+- deterministic reviewed-row propagation checks
