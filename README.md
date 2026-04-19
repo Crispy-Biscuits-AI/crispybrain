@@ -102,6 +102,11 @@ The selected theme is stored client-side so it survives reloads and container re
 Because CrispyBrain is being built in public, the demo also includes intentionally subtle support/contact links in the footer.
 They are optional and kept low-prominence so the UI still reads as a demo first.
 
+## Ingesting Your Own Data
+
+If you want to try CrispyBrain with your own plain text notes, use the short guide in [docs/ingest-text.md](docs/ingest-text.md).
+It documents the current lab-based inbox path as it works today, including the main assumptions and limits.
+
 ## Repo Layout
 
 - `demo/`: the current demo UI and local proxy server
