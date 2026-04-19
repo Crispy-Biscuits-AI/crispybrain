@@ -1,6 +1,5 @@
-CrispyBrain BlueSky/X Post (v1)
+CrispyBrain is not a polished AI memory product.
 
-Paste your original short-form post here.
+It's a local-first memory / retrieval lab with a real n8n path, a local demo UI, plain-text ingest, and visible source + trust metadata.
 
-Do NOT rewrite.
-Do NOT optimize.
+Trying to make the workflow inspectable instead of magical.

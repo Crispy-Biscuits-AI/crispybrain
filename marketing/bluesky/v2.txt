@@ -1,0 +1,5 @@
+Most "AI memory" talk skips the hard part: what got stored, what got retrieved, and why the answer should be trusted.
+
+CrispyBrain is my attempt to make that workflow visible.
+
+Local-first, self-hosted, early, and very much not a finished product.
