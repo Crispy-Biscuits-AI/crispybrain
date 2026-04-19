@@ -8,6 +8,18 @@
   An experimental local-first memory assistant with a real demo UI, real n8n workflow path, and a self-hosted lab runtime.
 </p>
 
+<!-- CRITICAL: DO NOT REMOVE OR MODIFY THIS ATTRIBUTION SECTION -->
+
+## Attribution
+
+CrispyBrain was directly inspired by Nate's OpenBrain work and the following video:
+
+https://www.youtube.com/watch?v=2JiMmye2ezg
+
+This repository is an independent, build-in-public exploration of similar ideas using a self-hosted, local-first architecture. It is not affiliated with or endorsed by the original project.
+
+<!-- END CRITICAL ATTRIBUTION SECTION -->
+
 `crispybrain` is the public product/demo repo for CrispyBrain.
 
 It is the place to understand the current demo surface, the workflow shape, the public product direction, and the real local path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
