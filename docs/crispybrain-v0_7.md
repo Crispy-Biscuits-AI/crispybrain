@@ -2,28 +2,50 @@
 
 `v0.7` is a stability and observability hardening pass.
 
+`v0.7.1` is a small follow-on patch that resolves the retrieval-policy ambiguity from `v0.7` without widening the repo shape.
+
 It keeps the current retrieval and demo behavior intact while tightening three areas:
 
-- deterministic reviewed-first retrieval ordering inside the checked-in assistant workflow
+- anchor-aware deterministic retrieval ordering inside the checked-in assistant workflow
 - script-first memory inspection with exact project, review-status, and time-range filters
 - repeated-pass consistency checks in the existing runtime harness
 
 ## What Changed
 
-### Deterministic retrieval hardening
+### Anchor-aware deterministic retrieval
 
-The checked-in `assistant` workflow now makes candidate retrieval deterministic with explicit ordering:
+The checked-in `assistant` workflow now uses two conservative ranking modes:
 
-- `reviewed` rows ahead of `unreviewed`
-- then existing similarity ordering
+- `anchor`: for strong lexical anchors such as exact filename-style probes, quoted titles, or unique title-like anchor tokens
+- `semantic`: for the existing broad semantic path when strong anchor evidence is absent
+
+`suppressed` rows remain excluded in both modes.
+
+Anchor mode is designed for note lookup behavior rather than general semantic search.
+
+Inside anchor mode, matching candidates are ordered by:
+
+- strongest title/name anchor evidence first
+- then stronger lexical anchor overlap
+- then `reviewed` ahead of `unreviewed`
 - then `created_at DESC`
 - then `id DESC`
 
-`suppressed` rows remain excluded.
+Inside semantic mode, the existing project-first path is preserved and made deterministic with:
+
+- project match first when a `project_slug` is provided
+- then `reviewed` ahead of `unreviewed`
+- then similarity ordering
+- then `created_at DESC`
+- then `id DESC`
+
+That means recency only decides ties after anchor evidence or similarity have already kept multiple rows eligible.
+This patch does not force a global "newest wins" policy.
 
 The workflow also logs:
 
 - inbound query context
+- ranking mode (`anchor` or `semantic`)
 - retrieval candidate summaries
 - selected context/source summaries
 - final response summaries
@@ -60,13 +82,15 @@ The underlying query is an exact Postgres query against `memories`, ordered by `
 
 ### Harness consistency passes
 
-The existing `scripts/test-crispybrain-v0_6.sh` harness now performs repeated assistant passes after the ingest/review cycle checks.
+The harness now lives at `scripts/test-crispybrain-v0_7.sh`, with `scripts/test-crispybrain-v0_6.sh` kept as a compatibility wrapper.
 
 It:
 
+- imports and activates the checked-in `workflows/assistant.json` before validation
 - reuses the existing cycle count as the consistency pass count
 - keeps the safe cap at `12`
 - prints the exact pass count
+- validates both an exact filename probe and an anchored-but-not-exact lexical query
 - normalizes assistant responses for meaningful comparison
 - reports drift clearly with hashes and payloads if any pass changes
 
@@ -75,14 +99,15 @@ It:
 Use:
 
 ```bash
-./scripts/test-crispybrain-v0_6.sh --cycles 4
+./scripts/test-crispybrain-v0_7.sh --cycles 5
 ```
 
 That run now validates:
 
 - existing ingest and review-state checks
 - reviewed-source propagation
-- deterministic repeated-pass assistant output for the normalized response payload
+- anchor-aware note lookup for strong lexical queries
+- deterministic repeated-pass assistant output for both anchor-style and exact filename probes
 - inspector support for exact filtered row inspection
 
 ## Known Limitation
@@ -90,3 +115,5 @@ That run now validates:
 This release hardens deterministic retrieval and the inspectable output surface inside the repo-controlled path.
 
 It does not claim to redesign the answer model itself beyond the current checked-in workflow behavior.
+
+For broad semantic questions without strong lexical anchors, similarity still governs the main retrieval path and recency only applies as a deterministic fallback after higher-priority ranking signals.

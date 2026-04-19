@@ -28,14 +28,16 @@ CrispyBrain is still an early, real, build-in-public system.
 - not a turnkey hosted platform
 - `v0.5` added structured tracing, boundary validation, and ingest replay detection
 - `v0.6` is the quality and control release
+- `v0.7.1` is the current stability patch for anchor-aware deterministic retrieval
 
-The validated `v0.6` state adds:
+The validated `v0.7.1` state adds:
 
 - trust visibility and source-quality indicators in responses
 - review-state controls and project health visibility
 - upgraded memory inspection and operator tooling
 - suspect review/export workflows and metrics snapshots
 - a validated multi-cycle runtime harness
+- conservative anchor-aware note lookup with deterministic reviewed/recency tie-breaking
 
 ## Why CrispyBrain Exists
 
@@ -54,6 +56,7 @@ Today’s checked-in repo surface can:
 
 - run a real demo flow through `crispybrain-demo` and `assistant`
 - retrieve memory-backed answers instead of static demo text
+- answer exact note-name and strong anchor-style note lookups deterministically
 - expose trust and source metadata in responses
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
@@ -135,11 +138,13 @@ Use these docs as the next stop depending on what you want to do:
 - [Operator Quickstart](docs/operator-quickstart.md): get the fastest realistic operator setup
 - [Ingesting Text](docs/ingest-text.md): drop plain text into the current ingest path safely
 - [Workflow Sync](docs/workflow-sync.md): keep checked-in workflow exports aligned with n8n
+- [CrispyBrain v0.7](docs/crispybrain-v0_7.md): anchor-aware deterministic retrieval, harness coverage, and validation notes
 - [CrispyBrain v0.6](docs/crispybrain-v0_6.md): release summary, runtime validation notes, and known limitations
 
 ## Memory Quality and Trust
 
 `v0.6` introduced the first real quality-and-control layer in the public repo.
+`v0.7.1` keeps that layer in place and makes retrieval policy explicit.
 
 That includes:
 
@@ -153,7 +158,14 @@ The main `v0.6` lesson is worth keeping explicit:
 
 - retrieval ranking and metadata correctness are separate concerns
 
-A reviewed row can be stored and surfaced with correct metadata without necessarily becoming the top-ranked result for a broad semantic query.
+`v0.7.1` narrows that ambiguity instead of pretending it disappeared:
+
+- strong lexical anchors switch retrieval into a conservative anchor mode
+- anchor mode prefers stronger title/token matches, then reviewed rows, then `created_at DESC`, then `id DESC`
+- non-anchor questions stay on the semantic path
+- semantic retrieval remains project-first and similarity-driven, with deterministic review/recency/id ordering when candidates remain eligible
+
+Recency matters as a tie-breaker, not as a global override.
 
 ## Demo Surface and Themes
 
@@ -186,8 +198,8 @@ Current manual/runtime assumptions:
 Current product limitations remain explicit:
 
 - there is no full operator UI yet
-- retrieval ranking is not yet quality-aware
-- review state mainly affects suppression, not ranking
+- anchor detection is intentionally conservative and only activates on strong lexical evidence
+- broad semantic questions still rely on the current similarity-led retrieval path rather than a global newest-wins rule
 
 Compatibility caveats that remain true on purpose:
 
@@ -196,10 +208,10 @@ Compatibility caveats that remain true on purpose:
 
 ## Near-Term Roadmap
 
-The next conservative steps after `v0.6` are:
+The next conservative steps after `v0.7.1` are:
 
-- quality-aware retrieval
 - lightweight operator UI
+- broader anchor heuristics only if they stay inspectable and testable
 - stronger feedback loops into ingestion
 
 Those are the most obvious follow-ons to the current validated repo state, not promises of a larger platform rewrite.
