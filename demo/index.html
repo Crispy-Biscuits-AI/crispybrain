@@ -113,6 +113,13 @@
             </button>
           </div>
 
+          <section class="source-summary-shell">
+            <h3>Why this answer</h3>
+            <div id="source-summary" class="source-summary">
+              <p class="empty-state">No supporting trace summary yet.</p>
+            </div>
+          </section>
+
           <div id="sources-output" class="sources-output">
             <p class="empty-state">No supporting memory found.</p>
           </div>
@@ -160,8 +167,16 @@
               <h3>Retrieval</h3>
               <dl class="trace-list">
                 <div class="trace-row">
-                  <dt>Sources retrieved</dt>
+                  <dt>Sources used</dt>
                   <dd id="trace-source-count">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Selected sources</dt>
+                  <dd id="trace-selected-count">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Candidate pool</dt>
+                  <dd id="trace-candidate-count">—</dd>
                 </div>
                 <div class="trace-row">
                   <dt>Top match score</dt>
@@ -194,12 +209,17 @@
                   <dd id="trace-memory-state">—</dd>
                 </div>
                 <div class="trace-row">
+                  <dt>Project slug</dt>
+                  <dd id="trace-project-slug">—</dd>
+                </div>
+                <div class="trace-row">
                   <dt>Trace stage</dt>
                   <dd id="trace-stage">—</dd>
                 </div>
               </dl>
             </section>
           </div>
+          <p id="trace-note" class="trace-note">No grounding note yet.</p>
         </div>
       </section>
 

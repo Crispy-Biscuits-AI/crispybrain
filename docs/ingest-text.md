@@ -81,6 +81,18 @@ What is CrispyBrain designed to do?
 - the chunks are stored in Postgres as memory
 - later, the assistant retrieves the relevant chunks when you ask a question
 
+## Scoped Auto-Review
+
+The ingest workflow does not auto-review ordinary user content.
+
+The one narrow exception is the repo-controlled historical corpus under `openbrain-history`.
+Rows are auto-marked as `reviewed` only when both of these are true:
+
+- `project_slug = openbrain-history`
+- `filepath` matches the trusted repo inbox path for that history pack, using either the host path or the mounted n8n container path
+
+This keeps the trust layer intact for normal inbox content while making the curated OpenBrain/CrispyBrain history pack usable immediately after ingest.
+
 ## How to Know It Worked
 
 - If the answer uses the ideas from your file, it worked.

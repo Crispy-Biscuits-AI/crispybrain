@@ -230,6 +230,9 @@ When retrieval support is available, the UI now shows:
 - an answer panel with the current response
 - an open-by-default sources panel with visible source cards and previews
 - an open-by-default trace panel with live execution, retrieval, and behavior signals when the backend returns them
+- the sources panel now includes a `Why this answer` summary with project slug, answer mode, grounding status, selected-source count, candidate count, and the current grounding note when present
+- source cards now prefer the assistant's `selected_sources` list and expose file/path labels plus visible review, quality, and project metadata when those fields are present in the response
+- the trace panel now shows project slug, selected-source count, candidate count, grounding status, answer mode, and the current grounding note without hiding the existing layout or footer
 
 When support is weak or absent, the workflow stays explicit instead of implying confidence:
 

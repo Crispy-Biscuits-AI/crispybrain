@@ -17,19 +17,24 @@ const traceDrawer = document.getElementById("trace-drawer");
 const traceToggleButtons = document.querySelectorAll("[data-toggle-trace]");
 const answerState = document.getElementById("answer-state");
 const answerOutput = document.getElementById("answer-output");
+const sourceSummary = document.getElementById("source-summary");
 const sourcesOutput = document.getElementById("sources-output");
+const traceNote = document.getElementById("trace-note");
 
 const traceFields = {
   elapsed: document.getElementById("trace-elapsed"),
   inputTokens: document.getElementById("trace-input-tokens"),
   outputTokens: document.getElementById("trace-output-tokens"),
   sourceCount: document.getElementById("trace-source-count"),
+  selectedCount: document.getElementById("trace-selected-count"),
+  candidateCount: document.getElementById("trace-candidate-count"),
   topScore: document.getElementById("trace-top-score"),
   grounding: document.getElementById("trace-grounding"),
   mode: document.getElementById("trace-mode"),
   answerMode: document.getElementById("trace-answer-mode"),
   fallback: document.getElementById("trace-fallback"),
   memoryState: document.getElementById("trace-memory-state"),
+  projectSlug: document.getElementById("trace-project-slug"),
   stage: document.getElementById("trace-stage"),
 };
 
@@ -124,8 +129,9 @@ function setBusy(isBusy) {
 
 function resetPanels() {
   updateSourceLabels(0);
+  renderSourceSummary({}, [], []);
   renderSources([]);
-  renderTrace({}, { elapsedMs: null });
+  renderTrace({}, { elapsedMs: null }, [], []);
 
   if (!statusPill.classList.contains("busy")) {
     answerState.textContent = "Ready for a query";
@@ -134,23 +140,78 @@ function resetPanels() {
 }
 
 function renderSuccess(body, meta = {}) {
-  const sources = normalizeSources(body.sources);
+  const selectedSources = normalizeSources(body.selected_sources || body.sources);
+  const retrievedCandidates = normalizeSources(body.retrieved_candidates);
   answerOutput.textContent = body.answer || "No answer text returned.";
-  answerState.textContent = buildAnswerState(body, sources);
+  answerState.textContent = buildAnswerState(body, selectedSources);
 
-  updateSourceLabels(sources.length);
-  renderSources(sources);
-  renderTrace(body, meta);
+  updateSourceLabels(selectedSources.length);
+  renderSourceSummary(body, selectedSources, retrievedCandidates);
+  renderSources(selectedSources);
+  renderTrace(body, meta, selectedSources, retrievedCandidates);
 }
 
 function renderError(error, body = {}, meta = {}) {
-  const sources = normalizeSources(body.sources);
+  const selectedSources = normalizeSources(body.selected_sources || body.sources);
+  const retrievedCandidates = normalizeSources(body.retrieved_candidates);
   answerState.textContent = "Request could not be completed";
   answerOutput.textContent = body.answer || error.message || "The memory query failed.";
 
-  updateSourceLabels(sources.length);
-  renderSources(sources);
-  renderTrace({ ...body, error }, meta);
+  updateSourceLabels(selectedSources.length);
+  renderSourceSummary({ ...body, error }, selectedSources, retrievedCandidates);
+  renderSources(selectedSources);
+  renderTrace({ ...body, error }, meta, selectedSources, retrievedCandidates);
+}
+
+function renderSourceSummary(body, selectedSources, retrievedCandidates) {
+  sourceSummary.innerHTML = "";
+
+  const grounding = asObject(body.grounding);
+  const trace = asObject(body.trace);
+  const noteText = cleanText(grounding.note)
+    || (body.answer_mode === "insufficient" ? "No strong supporting memory was retrieved." : "");
+  const summaryItems = [
+    ["Project", cleanText(body.project_slug) || cleanText(trace.project_slug)],
+    ["Answer mode", cleanText(body.answer_mode)],
+    ["Grounding", cleanText(grounding.status)],
+    ["Selected", selectedSources.length > 0 ? String(selectedSources.length) : ""],
+    ["Candidates", retrievedCandidates.length > 0 ? String(retrievedCandidates.length) : ""],
+  ].filter(([, value]) => value);
+
+  if (summaryItems.length === 0 && !noteText) {
+    sourceSummary.innerHTML = '<p class="empty-state">No supporting trace summary yet.</p>';
+    return;
+  }
+
+  const card = document.createElement("div");
+  card.className = "source-summary-card";
+
+  if (summaryItems.length > 0) {
+    const list = document.createElement("dl");
+    list.className = "summary-list";
+
+    for (const [label, value] of summaryItems) {
+      const row = document.createElement("div");
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const detail = document.createElement("dd");
+      detail.textContent = value;
+      row.appendChild(term);
+      row.appendChild(detail);
+      list.appendChild(row);
+    }
+
+    card.appendChild(list);
+  }
+
+  if (noteText) {
+    const note = document.createElement("p");
+    note.className = "summary-note";
+    note.textContent = noteText;
+    card.appendChild(note);
+  }
+
+  sourceSummary.appendChild(card);
 }
 
 function renderSources(sources) {
@@ -173,6 +234,13 @@ function renderSources(sources) {
     snippet.textContent = source.snippet || "No preview available.";
     card.appendChild(snippet);
 
+    if (source.pathLabel) {
+      const path = document.createElement("p");
+      path.className = "source-path";
+      path.textContent = source.pathLabel;
+      card.appendChild(path);
+    }
+
     const meta = document.createElement("p");
     meta.className = "source-meta";
     const parts = [];
@@ -181,9 +249,11 @@ function renderSources(sources) {
       parts.push(`score ${source.score.toFixed(3)}`);
     }
 
-    if (source.identifier) {
-      parts.push(source.identifier);
-    }
+    if (source.reviewStatus) parts.push(source.reviewStatus);
+    if (source.sourceQuality) parts.push(`quality ${source.sourceQuality}`);
+    if (source.sourceIndependence) parts.push(source.sourceIndependence);
+    if (source.projectSlug) parts.push(`project ${source.projectSlug}`);
+    if (source.identifier) parts.push(source.identifier);
 
     meta.textContent = parts.join(" · ") || "Supporting memory";
     card.appendChild(meta);
@@ -192,8 +262,7 @@ function renderSources(sources) {
   }
 }
 
-function renderTrace(body, meta = {}) {
-  const sources = normalizeSources(body.sources);
+function renderTrace(body, meta = {}, selectedSources = [], retrievedCandidates = []) {
   const retrieval = asObject(body.retrieval);
   const grounding = asObject(body.grounding);
   const trace = asObject(body.trace);
@@ -206,14 +275,22 @@ function renderTrace(body, meta = {}) {
   setTraceField("inputTokens", formatTokenCount(usage.inputTokens));
   setTraceField("outputTokens", formatTokenCount(usage.outputTokens));
   setTraceField("sourceCount", formatPlain(firstNumber(
-    sources.length,
+    selectedSources.length,
     grounding.supporting_source_count,
     debug.supporting_source_count,
     retrieval.memory_count,
     debug.retrieval_count,
   )));
+  setTraceField("selectedCount", formatPlain(firstNumber(
+    selectedSources.length,
+    grounding.supporting_source_count,
+  )));
+  setTraceField("candidateCount", formatPlain(firstNumber(
+    retrievedCandidates.length,
+    body.filtered_candidate_count,
+  )));
   setTraceField("topScore", formatScore(firstNumber(
-    strongestSourceScore(sources),
+    strongestSourceScore(selectedSources),
     retrieval.strongest_similarity,
     grounding.strongest_similarity,
   )));
@@ -223,14 +300,28 @@ function renderTrace(body, meta = {}) {
   setTraceField("mode", determineRetrievalMode(body));
   setTraceField("answerMode", formatPlain(body.answer_mode));
   setTraceField("fallback", determineFallbackState(body));
-  setTraceField("memoryState", determineMemoryState(body, sources));
+  setTraceField("memoryState", determineMemoryState(body, selectedSources));
+  setTraceField("projectSlug", formatPlain(
+    cleanText(body.project_slug) || cleanText(trace.project_slug)
+  ));
   setTraceField("stage", formatPlain(
     trace.stage || debug.trace_stage || debug.workflow || "—"
   ));
+  setTraceNote(
+    cleanText(grounding.note)
+      || cleanText(error.message)
+      || "No grounding note yet.",
+    grounding.weak_grounding === true || body.answer_mode === "insufficient",
+  );
 }
 
 function setTraceField(key, value) {
   traceFields[key].textContent = value;
+}
+
+function setTraceNote(value, isWarning) {
+  traceNote.textContent = value;
+  traceNote.classList.toggle("is-warning", isWarning === true);
 }
 
 function updateSourceLabels(count) {
@@ -283,10 +374,19 @@ function normalizeSources(value) {
   return value.map((source) => {
     const record = asObject(source);
     return {
-      title: cleanText(record.title) || cleanText(record.source) || "Untitled source",
+      title: cleanText(record.title) || cleanText(record.source_label) || cleanText(record.source) || "Untitled source",
       snippet: cleanText(record.snippet) || cleanText(record.content),
-      score: firstNumber(record.similarity, record.score),
-      identifier: presentValue(record.project_slug, record.id),
+      score: firstNumber(record.similarity, record.score, record.retrieval_score),
+      identifier: presentValue(
+        cleanText(record.filename),
+        cleanText(record.source_type),
+        firstNumber(record.memory_id, record.id),
+      ),
+      pathLabel: cleanText(record.filepath) || cleanText(record.filename),
+      projectSlug: cleanText(record.project_slug),
+      reviewStatus: cleanText(record.review_status),
+      sourceQuality: cleanText(record.source_quality),
+      sourceIndependence: cleanText(record.source_independence),
     };
   });
 }

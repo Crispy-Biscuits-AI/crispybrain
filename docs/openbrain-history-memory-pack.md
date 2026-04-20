@@ -140,6 +140,7 @@ What was fixed in the runtime path:
 - `ingest` had to be active in n8n before the watcher handoff could succeed
 - `auto-ingest-watch` needed a payload fix so each discovered file is forwarded from its own current path content instead of risking repeated first-file content during multi-file ingest
 - `assistant` needed a weak-grounding fix so broad history queries with reviewed supporting sources return cautious grounded answers instead of the generic insufficient-memory failure
+- `ingest` now auto-marks this repo-controlled `openbrain-history` corpus as `reviewed` when the ingest request carries the matching project slug and trusted repo inbox filepath, so the pack does not require manual review promotion after clean re-ingest
 
 Operational note:
 
