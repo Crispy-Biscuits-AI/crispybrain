@@ -4,6 +4,8 @@ This is the first intentional local demo surface for CrispyBrain inside the AI L
 
 The primary supported runtime is the Compose-managed lab service `crispybrain-demo-ui` from the sibling `crispy-ai-lab` repo.
 
+The canonical CrispyBrain ingest inbox now lives in this repo at `/Users/elric/repos/crispybrain/inbox/<project-slug>/`.
+
 ## What It Proves
 
 - the UI on `8787` is real
@@ -92,6 +94,24 @@ scripts/workflows/import-exported-into-docker.sh
 ```
 
 That imports the current public workflow set, including `assistant` and `crispybrain-demo`.
+
+## Canonical Inbox Path
+
+Use the repo-owned inbox path for local note drops:
+
+```text
+/Users/elric/repos/crispybrain/inbox/<project-slug>/
+```
+
+For the default demo project:
+
+```bash
+mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
+```
+
+Place plain `.txt` notes in that folder before querying the demo with the matching `project_slug`.
+
+This repo-scoped change does not update protected runtime wiring outside this repo, so if your active watcher still points at an older lab path or container mount, update that separately before expecting automatic pickup.
 
 Manual equivalent for the demo wrapper workflow only:
 

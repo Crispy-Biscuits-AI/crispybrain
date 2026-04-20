@@ -1,9 +1,10 @@
 # Ingesting Text into CrispyBrain
 
 CrispyBrain can store plain text as memory and use it later when you ask a question.
-In the current local setup, the simplest path is to drop a `.txt` file into the lab inbox and then query that project in the demo UI.
+In the current local setup, the canonical path is to drop a `.txt` file into the CrispyBrain repo inbox and then query that project in the demo UI.
 
-This guide assumes you are using the default local lab setup from `crispy-ai-lab` and that the ingest/watch workflows are already active in n8n.
+This guide assumes the ingest/watch path is configured to observe the CrispyBrain repo inbox and that the ingest workflows are already active in n8n.
+This repo change does not modify protected runtime wiring such as Docker Compose mounts, so older local lab setups may still need a separate runtime update before the watcher sees this path live.
 
 ## The Simplest Path
 
@@ -14,11 +15,18 @@ Step 1 — Create a text file
 
 Step 2 — Place it in the inbox folder
 
-- Default folder structure: `crispybrain/inbox/<project-slug>/`
-- Default local lab example: `../crispy-ai-lab/crispybrain/inbox/alpha/`
-- Example file path: `../crispy-ai-lab/crispybrain/inbox/alpha/my-notes.txt`
+- Canonical folder structure: `/Users/elric/repos/crispybrain/inbox/<project-slug>/`
+- Relative repo path: `inbox/<project-slug>/`
+- Example folder: `/Users/elric/repos/crispybrain/inbox/alpha/`
+- Example file path: `/Users/elric/repos/crispybrain/inbox/alpha/my-notes.txt`
 
 If the `alpha` folder does not exist yet, create it first.
+
+Example:
+
+```bash
+mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
+```
 
 Step 3 — Wait briefly
 
@@ -66,4 +74,5 @@ What is CrispyBrain designed to do?
 - Plain text `.txt` files are the safest path today.
 - PDFs and other document formats are not the simple default path here.
 - This depends on the ingest/watch workflows being active in your local n8n setup.
+- Older docs or local wiring may still mention a sibling `crispy-ai-lab` inbox location; treat that as legacy-only for this project.
 - The default demo setup is strongest with project slug `alpha` unless you have configured another project path.

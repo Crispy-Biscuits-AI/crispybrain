@@ -82,6 +82,7 @@ browser
 
 The main runtime lives in the sibling `crispy-ai-lab` repo.
 This repo provides the checked-in workflow exports, docs, and public-facing product surface for that lab runtime.
+The canonical ingest inbox for CrispyBrain is now the repo-owned path `inbox/<project-slug>/`, which resolves locally to `/Users/elric/repos/crispybrain/inbox/<project-slug>/`.
 
 ## Repository Structure
 
@@ -121,9 +122,11 @@ scripts/workflows/import-exported-into-docker.sh
 
 4. In n8n, create a Postgres credential named `Postgres account`, then activate `assistant` and `crispybrain-demo`.
 
-5. Open the demo UI at `http://localhost:8787`.
+5. Create the repo-owned inbox folder you want to ingest from, for example `mkdir -p /Users/elric/repos/crispybrain/inbox/alpha`, and place plain text notes under that project folder.
 
-6. Use:
+6. Open the demo UI at `http://localhost:8787`.
+
+7. Use:
 
 - project slug: `alpha`
 - question: `How am I planning to build CrispyBrain?`

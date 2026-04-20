@@ -51,7 +51,23 @@ CONFIRM_IMPORT=I_UNDERSTAND \
 scripts/workflows/import-exported-into-docker.sh
 ```
 
-## 5. Activate The Webhook Workflows
+## 5. Create The Repo-Owned Inbox Folder
+
+The canonical CrispyBrain ingest path is:
+
+```text
+/Users/elric/repos/crispybrain/inbox/<project-slug>/
+```
+
+For the default project:
+
+```bash
+mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
+```
+
+Put plain `.txt` notes in that folder if your local watch path is wired to the repo-owned inbox.
+
+## 6. Activate The Webhook Workflows
 
 Activate:
 
@@ -65,7 +81,7 @@ http://localhost:5678/webhook/assistant
 http://localhost:5678/webhook/crispybrain-demo
 ```
 
-## 6. Smoke Test The Assistant Path
+## 7. Smoke Test The Assistant Path
 
 ```bash
 curl -sS \
@@ -82,7 +98,7 @@ Inspect:
 - `retrieval.memory_count`
 - the first source row if one exists
 
-## 7. Run The `v0.8` Evaluation Pack
+## 8. Run The `v0.8` Evaluation Pack
 
 Use the repo-tracked harness:
 
@@ -109,7 +125,7 @@ The terminal output prints, for each case:
 - pass/fail
 - compact diagnostic JSON
 
-## 8. What `v0.8` Adds For Operators
+## 9. What `v0.8` Adds For Operators
 
 The current workflows now surface:
 
@@ -118,3 +134,5 @@ The current workflows now surface:
 - source evidence fields already available in the workflow output, including memory ids, trust bands, review state, similarity, and chunk indexes when present
 
 `v0.8` does not invent confidence scores or hidden quality labels beyond the observable fields already present in the repo-owned path.
+
+This quickstart does not change protected runtime files such as Docker Compose, so automatic watch-based ingest still depends on your external runtime being wired to the repo-owned inbox path above.
