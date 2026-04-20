@@ -34,6 +34,12 @@ cp .env.example .env
 docker compose up -d postgres n8n crispybrain-demo-ui
 ```
 
+If you have changed files in `../crispybrain/demo/` or `../crispybrain/assets/`, rebuild the UI service so port `8787` serves the updated image contents:
+
+```bash
+docker compose up -d --build crispybrain-demo-ui
+```
+
 Verify the UI container is running:
 
 ```bash
@@ -317,6 +323,12 @@ Use the recommended query and `alpha` project slug first. The current `alpha` me
 ```bash
 cd ../crispy-ai-lab
 docker compose up -d postgres n8n crispybrain-demo-ui
+```
+
+If the browser still shows an older UI after repo changes, rebuild the UI service explicitly:
+
+```bash
+docker compose up -d --build crispybrain-demo-ui
 ```
 
 2. Verify the service is running:

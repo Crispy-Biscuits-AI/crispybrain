@@ -169,6 +169,12 @@ cp .env.example .env
 docker compose up -d postgres n8n crispybrain-demo-ui
 ```
 
+If you change files under `demo/` or `assets/`, rebuild the UI service so `localhost:8787` serves the new baked image contents:
+
+```bash
+docker compose up -d --build crispybrain-demo-ui
+```
+
 3. Import the current workflow set from this repo into the running n8n container.
 
 ```bash
