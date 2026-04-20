@@ -110,7 +110,7 @@ CONFIRM_IMPORT=I_UNDERSTAND \
 scripts/workflows/import-exported-into-docker.sh
 ```
 
-That imports the current public workflow set, including `assistant`, `ingest`, and `crispybrain-demo`.
+That imports the current public workflow set, including `assistant`, `ingest`, `crispybrain-demo`, and the canonical watcher export `auto-ingest-watch`.
 
 If you organize the workflows in n8n folders, the recommended home is `Personal -> CrispyBrain`.
 
@@ -132,7 +132,14 @@ mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 
 Place plain `.txt` notes in that folder before querying the demo with the matching `project_slug`.
 
-This repo-scoped change does not update protected runtime wiring outside this repo, so if your active watcher still points at an older lab path or container mount, update that separately before expecting automatic pickup.
+Current verified local blocker:
+
+- `auto-ingest-watch` is active in n8n
+- it watches `/home/node/.n8n-files/crispybrain/inbox` inside the container
+- the current bind mount points there from `/Users/elric/repos/crispy-ai-lab/crispybrain/inbox`
+- a real file drop into `/Users/elric/repos/crispybrain/inbox/<project-slug>/` does not currently appear at the watched container path
+
+This repo-scoped change does not update protected runtime wiring outside this repo, so repo-path file-drop ingest remains blocked until that bind mount is updated.
 
 Manual equivalent for the demo wrapper workflow only:
 
@@ -160,6 +167,7 @@ To verify the current live path in n8n, confirm both of these are true:
 - `crispybrain-demo` is active and exposes `/webhook/crispybrain-demo`
 - the `Call Assistant Workflow` node inside `crispybrain-demo` targets `/webhook/assistant`
 - `/webhook/crispybrain-assistant` and `/webhook/crispybrain-ingest` are no longer active
+- if you are testing automatic ingest, the same dropped file is visible at `/home/node/.n8n-files/crispybrain/inbox/<project-slug>/` inside the n8n container
 
 ## Demo UI Themes
 

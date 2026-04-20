@@ -38,14 +38,18 @@ If you use n8n folders, keep that runtime grouped under `Personal -> CrispyBrain
 
 Folder placement is organizational only. Runtime behavior comes from the workflow `active` state plus the webhook or trigger path that callers hit.
 
+The canonical watcher is `auto-ingest-watch`. Its checked-in export uses a local file trigger on `/home/node/.n8n-files/crispybrain/inbox` and posts downstream to the canonical ingest webhook `/webhook/ingest`.
+
 ## How To Verify The Active Runtime
 
 Check at least these things in n8n:
 
 - `assistant`, `ingest`, and `crispybrain-demo` are active
+- `auto-ingest-watch` is the only active watch workflow family
 - `crispybrain-demo` still calls `/webhook/assistant`
 - `crispybrain-assistant`, `crispybrain-ingest`, and `crispybrain-auto-ingest-watch` are inactive
 - any remaining client still hitting `/webhook/crispybrain-assistant` or `/webhook/crispybrain-ingest` is updated to the canonical public endpoints
+- if you expect repo-path file drops to work, the n8n bind mount must expose `/Users/elric/repos/crispybrain/inbox` at `/home/node/.n8n-files/crispybrain/inbox`
 
 The audit-friendly workflow list query used in this repo is:
 
@@ -70,7 +74,7 @@ ORDER BY w.name;
 1. Make the workflow change in n8n.
 2. Export the updated workflow JSON.
 3. Save it back into the matching file under `workflows/`.
-4. Check that credential names, webhook paths, and model endpoints still match the docs.
+4. Check that credential names, trigger paths, webhook paths, and model endpoints still match the docs.
 5. Update `README.md` or `docs/setup-minimal.md` if the operator story changed.
 
 ## Before Commit
@@ -81,6 +85,7 @@ Verify at least these things:
 - the assistant entrypoint is still `/webhook/assistant`
 - the ingest entrypoint is still `/webhook/ingest`
 - the demo entrypoint is still `/webhook/crispybrain-demo`
+- the watcher entrypoint, if active, still watches the intended mounted inbox path
 - required credentials are still documented
 - no local absolute paths or private notes were introduced
 - any runtime-sensitive legacy name changes are documented in [legacy-naming-debt.md](legacy-naming-debt.md)

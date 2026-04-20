@@ -120,6 +120,14 @@ Canonical public webhooks after the hard cutover are:
 
 Any remaining client still calling `POST /webhook/crispybrain-assistant` or `POST /webhook/crispybrain-ingest` must be updated.
 
+The canonical watcher workflow is now `auto-ingest-watch`, and it is wired to call `POST /webhook/ingest`.
+
+Verified blocker in the current local lab runtime:
+
+- a real file drop into `/Users/elric/repos/crispybrain/inbox/<project-slug>/` did not reach the active n8n watcher
+- the n8n container is currently watching `/home/node/.n8n-files/crispybrain/inbox`
+- true repo-path file-drop ingest remains blocked until that runtime mount points at the repo inbox
+
 Today’s verified demo path is:
 
 - `crispybrain-demo` -> `assistant`

@@ -71,6 +71,14 @@ mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 
 Put plain `.txt` notes in that folder if your local watch path is wired to the repo-owned inbox.
 
+Current verified local blocker:
+
+- the active `auto-ingest-watch` workflow in n8n watches `/home/node/.n8n-files/crispybrain/inbox`
+- the current n8n bind mount points there from `/Users/elric/repos/crispy-ai-lab/crispybrain/inbox`
+- a real file drop into `/Users/elric/repos/crispybrain/inbox/<project-slug>/` does not currently reach that watched container path
+
+Until that runtime mount is updated, the repo inbox remains passive even though the canonical watcher is active.
+
 ## 6. Activate The Webhook Workflows
 
 Activate:
@@ -81,7 +89,7 @@ Activate:
 
 Optional:
 
-- `auto-ingest-watch` only if your external watch/runtime is wired to call it
+- `auto-ingest-watch`
 
 Recommended n8n organization:
 
@@ -91,6 +99,8 @@ Folder placement is organizational only. The live runtime is determined by:
 
 - the workflow `active` toggle
 - the webhook path or trigger the caller actually uses
+
+The canonical watcher is `auto-ingest-watch`, and its downstream handoff is `POST /webhook/ingest`.
 
 For a duplicate-family audit, verify the current runtime list directly in n8n:
 
@@ -124,6 +134,15 @@ Retired legacy endpoints after the hard cutover:
 - `http://localhost:5678/webhook/crispybrain-ingest`
 
 Any remaining client still using those retired endpoints must be updated to the canonical public webhooks above.
+
+If you want to verify the current file-drop truth directly, check both sides of the mount:
+
+```bash
+ls -la /Users/elric/repos/crispybrain/inbox/alpha
+docker exec crispy-ai-lab-n8n-1 ls -la /home/node/.n8n-files/crispybrain/inbox/alpha
+```
+
+In a truly live repo-path file-drop setup, the same dropped file must be visible in both places before `auto-ingest-watch` can trigger.
 
 ## 7. Smoke Test The Assistant Path
 
