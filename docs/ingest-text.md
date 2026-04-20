@@ -86,6 +86,7 @@ What is CrispyBrain designed to do?
 - If the answer uses the ideas from your file, it worked.
 - If you want a deeper check, look at recent n8n executions for both `auto-ingest-watch` and `ingest`.
 - If the file is visible inside the container but `ingest` does not move, inspect the latest `auto-ingest-watch` execution for a downstream error.
+- If multiple different filenames ingest as the same text, re-import [auto-ingest-watch.json](/Users/elric/repos/crispybrain/workflows/auto-ingest-watch.json), clear the affected rows, and re-run the watcher so each file is forwarded with its own current content.
 
 ## Current Limitations
 

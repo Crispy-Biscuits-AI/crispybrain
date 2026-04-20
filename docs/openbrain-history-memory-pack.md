@@ -125,6 +125,26 @@ Remaining ambiguity:
 - the repo does not document `v0.95` as a canonical release tag
 - the task wording may use `v0.95` as shorthand for `v0.9.5`, but the pack does not upgrade that shorthand into a repo-confirmed fact
 
+## Runtime Validation Loop (2026-04-20)
+
+This end-to-end validation pass checked the real local ingest and assistant path, not just the text files on disk.
+
+What was verified:
+
+- the canonical project slug for this pack is `openbrain-history`
+- the local inbox mount exposes `inbox/openbrain-history/` to the n8n container
+- the assistant retrieves this pack only after `ingest` is active and the files have actually been stored in `memories`
+
+What was fixed in the runtime path:
+
+- `ingest` had to be active in n8n before the watcher handoff could succeed
+- `auto-ingest-watch` needed a payload fix so each discovered file is forwarded from its own current path content instead of risking repeated first-file content during multi-file ingest
+- `assistant` needed a weak-grounding fix so broad history queries with reviewed supporting sources return cautious grounded answers instead of the generic insufficient-memory failure
+
+Operational note:
+
+- if `openbrain-history` rows already exist from an earlier broken watcher pass, clear those rows and re-ingest the pack after re-importing the updated watcher workflow
+
 ## How To Use The Memory Pack In The Lab
 
 1. Ensure the local ingest/watch path is active in the lab runtime.

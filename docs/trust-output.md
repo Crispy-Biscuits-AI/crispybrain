@@ -195,13 +195,11 @@ These help explain why:
 
 ## Weak evidence behavior
 
-When a note is retrieved but the support remains weak, the assistant still routes the answer to `answer_mode = insufficient`.
+When a note is retrieved but the support remains weak, the assistant can still return `answer_mode = direct` while marking `grounding.status = weak`.
 
-That means the response preserves the existing fallback message:
+That means the response can answer cautiously from visible evidence instead of collapsing to the generic fallback message.
 
-`I do not have enough stored memory to answer that yet.`
-
-The retrieval is still inspectable through:
+The retrieval remains inspectable through:
 
 - `retrieved_candidates`
 - `grounding`
