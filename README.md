@@ -5,50 +5,53 @@
 <h1 align="center">CrispyBrain</h1>
 
 <p align="center">
-  CrispyBrain is a local-first, self-hosted memory and retrieval system built around checked-in n8n workflows, a real demo UI, and operator-visible trust output.
+  CrispyBrain is a local-first, self-hosted memory system that exposes what it knows, how it knows it, and where it conflicts — instead of pretending to produce a single correct answer.
 </p>
 
 `crispybrain` is the public product/demo repo for CrispyBrain: an open-source memory, retrieval, and agent lab built around real workflow exports and a real local demo path.
 
 It is the place to understand the current demo surface, the workflow shape, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
 
-CrispyBrain does not claim ground truth from stored notes. It retrieves evidence, keeps disagreement visible when notes conflict, and makes weak support explicit through `answer_mode`, `grounding`, and trust metadata instead of collapsing everything into a single confident answer.
+## <img src="assets/biscuit-emoji.png" width="18" /> Latest Capabilities
 
-<img src="assets/biscuit-emoji.png" width="18" alt="" /> What makes it different:
+CrispyBrain currently provides:
 
-- <img src="assets/biscuit-emoji.png" width="18" alt="" /> conflict stays explicit instead of being rewritten into a guessed "truth"
-- <img src="assets/biscuit-emoji.png" width="18" alt="" /> visible sources, support counts, and trust fields stay attached to the answer path
-- <img src="assets/biscuit-emoji.png" width="18" alt="" /> weak or missing evidence stays inspectable and can still resolve to `answer_mode = insufficient`
+- Evidence-aware retrieval (not just semantic similarity)
+- Conflict detection with explicit non-collapse behavior
+- Source quality weighting (not all notes count equally)
+- Independence-aware reasoning (distinguishes repeated vs independent evidence)
+- Correlation handling (duplicate-heavy signals are discounted)
+- Structured trust output (inspectable reasoning surface)
+- Deterministic evaluation system (tests match live behavior)
 
-## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Start Here
+## <img src="assets/biscuit-emoji.png" width="18" /> What This Is Not
+
+CrispyBrain is not:
+- a chatbot
+- a knowledge base
+- a system that “just remembers everything”
+
+It is a system that models evidence, conflict, and uncertainty explicitly.
+
+## <img src="assets/biscuit-emoji.png" width="18" /> Start Here
 
 - [Local demo](docs/demo-local.md)
 - [Ingest data](docs/ingest-text.md)
 - [Operator tools](docs/operator-quickstart.md)
 
-## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Current Status (v0.9.5)
+## Current Status (v0.9.5)
 
-CrispyBrain is still an early, real, build-in-public system, but the checked-in `v0.9.5` path is specific and inspectable.
+CrispyBrain is a working local-first memory and retrieval system with:
 
-- local-first and self-hosted
-- not production-ready and not a turnkey hosted platform
-- retrieval uses semantic ranking with lexical fallback for anchors, identifiers, and sparse factual queries
-- conflict handling keeps disagreement explicit instead of collapsing to a winner
-- support is exposed as raw, deduped, weighted, and independence-adjusted counts
-- source quality, source independence, evidence clusters, and trust output stay visible to operators
-- the repo-tracked `v0.9.5` evaluation harness is aligned with the checked-in workflow/runtime shape
+- semantic + lexical retrieval
+- conflict detection (no forced answers)
+- support counts (raw + deduplicated)
+- weighted support (source quality)
+- independence-aware reasoning (correlation handling)
+- structured trust output (exposes evidence and uncertainty)
+- deterministic evaluation harness aligned with runtime behavior
 
-## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Latest Capabilities
-
-- Evidence-aware retrieval: short-note boosts, lexical fallback, candidate preservation, and conservative trimming for factual or entity-focused queries.
-- Conflict detection and structured output: `answer_mode`, `conflict_flag`, `conflict_severity`, `conflict_details`, and support summaries are returned without claiming a single truth.
-- Source quality weighting: visible conflict sources carry deterministic `low` / `medium` / `high` quality labels and fixed weighting.
-- Independence-aware reasoning: support can be compared as raw, deduped, weighted, cluster-counted, and independence-adjusted evidence.
-- Correlation handling: duplicate-like and related notes are discounted so correlated evidence does not look unfairly strong.
-- Trust and inspection layer: `sources`, `selected_sources`, `retrieved_candidates`, `grounding`, `trust`, and operator tooling stay aligned with what the workflows actually return.
-- Deterministic evaluation system: `./scripts/test-crispybrain-v0_9_5.sh` validates the same checked-in `assistant`, `ingest`, and `crispybrain-demo` workflow path documented here.
-
-## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Why CrispyBrain Exists
+## <img src="assets/biscuit-emoji.png" width="18" /> Why CrispyBrain Exists
 
 CrispyBrain exists to make a local memory-backed assistant path visible and inspectable instead of magical.
 
@@ -59,7 +62,7 @@ The repo is intentionally honest about the current slice:
 - grounded retrieval instead of mocked answers
 - operator-facing inspection tools for memory quality
 
-## <img src="assets/biscuit-emoji.png" width="18" alt="" /> What It Can Do Today
+## <img src="assets/biscuit-emoji.png" width="18" /> What It Can Do Today
 
 Today’s checked-in repo surface can:
 
@@ -206,7 +209,7 @@ Use these docs as the next stop depending on what you want to do:
 - [CrispyBrain v0.7](docs/crispybrain-v0_7.md): anchor-aware deterministic retrieval, harness coverage, and validation notes
 - [CrispyBrain v0.6](docs/crispybrain-v0_6.md): release summary, runtime validation notes, and known limitations
 
-## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Memory Quality and Trust
+## <img src="assets/biscuit-emoji.png" width="18" /> Memory Quality and Trust
 
 `v0.6` introduced the first real quality-and-control layer in the public repo.
 `v0.7.1` keeps that layer in place and makes retrieval policy explicit.
