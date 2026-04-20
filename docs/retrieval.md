@@ -1,12 +1,14 @@
 # Retrieval
 
-## v0.9 changes
+## v0.9.1 calibration
 
-`v0.9` keeps the existing `assistant` retrieval path and extends it in three narrow ways:
+`v0.9.1` keeps the existing `assistant` retrieval path and adds a small calibration layer on top of `v0.9`:
 
 - short factual notes get a ranking boost instead of being filtered out as low-signal by default
 - lexical fallback candidates are collected alongside semantic candidates for identifiers, anchors, codes, and sparse factual queries
 - the retrieval stage preserves a slightly wider competing set so the answer layer can see agreement or disagreement instead of collapsing too early
+- obviously generic runtime/build-context notes can be trimmed back out of factual candidate lists before final answer selection
+- a lightweight entity/topic focus can boost clearly on-topic notes and trim off-topic generic noise when the query names a subject
 
 ## Short-note boost
 
@@ -52,6 +54,52 @@ That preservation is what enables:
 
 - generalized answers across multiple notes
 - conflict detection when multiple retrieved notes disagree
+
+## Candidate trimming
+
+`v0.9.1` adds a conservative cleanup pass after raw candidate scoring.
+
+It does not redesign retrieval and it does not remove lexical fallback.
+Instead it only trims candidates when all of these are true:
+
+- the query looks factual or entity-focused
+- the note looks like generic runtime/build-context noise from filename/title heuristics
+- the note does not match the inferred entity/topic focus strongly enough to stay visible
+
+The main goal is to keep `retrieved_candidates` readable in the demo and trust output.
+
+Examples of notes that can now be trimmed more aggressively:
+
+- `build-context-*`
+- `runtime-fix-*`
+- generic local runtime/test notes with protocol-like words but no real subject match
+
+## Entity / topic focus
+
+When the query exposes a simple subject/property shape such as:
+
+- `What protocol does Alpha system use?`
+- `How does the delta guide improve retrieval for ids?`
+- `What is the beacon protocol?`
+
+the assistant now infers a small `entity_focus` object.
+
+That focus is used to:
+
+- boost notes that clearly mention the named subject
+- keep property-only generic notes from crowding the visible candidate list
+- stay conservative enough that anchor lookup and lexical fallback still work
+
+## Limitations
+
+The calibration layer is intentionally heuristic.
+
+Non-goals:
+
+- full entity linking
+- ontology-driven topic classification
+- hard truth ranking between conflicting notes
+- aggressive filtering that could hide legitimate competing evidence
 
 ## Conflict detection input
 
