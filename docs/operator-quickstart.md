@@ -92,6 +92,24 @@ Folder placement is organizational only. The live runtime is determined by:
 - the workflow `active` toggle
 - the webhook path or trigger the caller actually uses
 
+For a duplicate-family audit, verify the current runtime list directly in n8n:
+
+```sql
+SELECT w.name, w.active, COALESCE(f.name, '') AS folder_name
+FROM workflow_entity w
+LEFT JOIN folder f ON f.id = w."parentFolderId"
+WHERE w.name IN (
+  'assistant',
+  'crispybrain-assistant',
+  'ingest',
+  'crispybrain-ingest',
+  'auto-ingest-watch',
+  'crispybrain-auto-ingest-watch',
+  'crispybrain-demo'
+)
+ORDER BY w.name;
+```
+
 Verify the webhooks are available at:
 
 ```text

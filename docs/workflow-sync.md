@@ -28,9 +28,44 @@ The canonical runtime entrypoints are:
 - required: `crispybrain-demo`
 - optional: `auto-ingest-watch`
 
+Retired duplicate in the current audited runtime:
+
+- `crispybrain-auto-ingest-watch`, moved to `Personal -> CrispyBrain Archive` and left inactive
+
+Still-active alternates that were not safe to retire in that audit:
+
+- `crispybrain-assistant`
+- `crispybrain-ingest`
+
 If you use n8n folders, keep that runtime grouped under `Personal -> CrispyBrain`.
 
 Folder placement is organizational only. Runtime behavior comes from the workflow `active` state plus the webhook or trigger path that callers hit.
+
+## How To Verify The Active Runtime
+
+Check at least these things in n8n:
+
+- `assistant`, `ingest`, and `crispybrain-demo` are active
+- `crispybrain-demo` still calls `/webhook/assistant`
+- any duplicate family you plan to retire has either no recent executions or no active callers
+
+The audit-friendly workflow list query used in this repo is:
+
+```sql
+SELECT w.name, w.active, COALESCE(f.name, '') AS folder_name
+FROM workflow_entity w
+LEFT JOIN folder f ON f.id = w."parentFolderId"
+WHERE w.name IN (
+  'assistant',
+  'crispybrain-assistant',
+  'ingest',
+  'crispybrain-ingest',
+  'auto-ingest-watch',
+  'crispybrain-auto-ingest-watch',
+  'crispybrain-demo'
+)
+ORDER BY w.name;
+```
 
 ## Recommended Sync Process
 

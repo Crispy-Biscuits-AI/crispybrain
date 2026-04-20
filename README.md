@@ -102,6 +102,17 @@ The canonical CrispyBrain entrypoint set is:
 - required: `crispybrain-demo`
 - optional: `auto-ingest-watch`
 
+Current retired duplicate in the audited local n8n runtime:
+
+- `crispybrain-auto-ingest-watch`, now inactive in `Personal -> CrispyBrain Archive`
+
+Still-active alternate families intentionally left untouched in this pass:
+
+- `crispybrain-assistant`
+- `crispybrain-ingest`
+
+They were not retired because recent executions were still present in the runtime audit.
+
 If you organize them into folders in n8n, the recommended home is `Personal -> CrispyBrain`.
 
 Folder placement is organizational only. What is actually live is determined by the workflow `active` state and the webhook or trigger path that your caller hits.
