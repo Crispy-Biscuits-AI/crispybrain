@@ -93,6 +93,23 @@ The canonical ingest inbox for CrispyBrain is now the repo-owned path `inbox/<pr
 - `docs/`: setup, demo, scope, and technical notes
 - `assets/`: public artwork used by the demo and docs
 
+## Canonical n8n Runtime
+
+The canonical CrispyBrain entrypoint set is:
+
+- required: `assistant`
+- required: `ingest`
+- required: `crispybrain-demo`
+- optional: `auto-ingest-watch`
+
+If you organize them into folders in n8n, the recommended home is `Personal -> CrispyBrain`.
+
+Folder placement is organizational only. What is actually live is determined by the workflow `active` state and the webhook or trigger path that your caller hits.
+
+Today’s verified demo path is:
+
+- `crispybrain-demo` -> `assistant`
+
 ## Getting Started
 
 The most believable local path uses this repo and `crispy-ai-lab` together.
@@ -120,7 +137,7 @@ CONFIRM_IMPORT=I_UNDERSTAND \
 scripts/workflows/import-exported-into-docker.sh
 ```
 
-4. In n8n, create a Postgres credential named `Postgres account`, then activate `assistant` and `crispybrain-demo`.
+4. In n8n, create a Postgres credential named `Postgres account`, then activate `assistant`, `ingest`, and `crispybrain-demo`. Activate `auto-ingest-watch` only if your local runtime is actually wired to use it.
 
 5. Create the repo-owned inbox folder you want to ingest from, for example `mkdir -p /Users/elric/repos/crispybrain/inbox/alpha`, and place plain text notes under that project folder.
 

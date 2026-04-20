@@ -42,6 +42,10 @@ The minimum public path for local operator validation is:
 - `workflows/crispybrain-demo.json`
 - `workflows/ingest.json`
 
+Optional if your local runtime really uses a watch handoff:
+
+- `workflows/auto-ingest-watch.json`
+
 Recommended import path:
 
 ```bash
@@ -72,12 +76,27 @@ Put plain `.txt` notes in that folder if your local watch path is wired to the r
 Activate:
 
 - `assistant`
+- `ingest`
 - `crispybrain-demo`
+
+Optional:
+
+- `auto-ingest-watch` only if your external watch/runtime is wired to call it
+
+Recommended n8n organization:
+
+- place the canonical workflows under `Personal -> CrispyBrain`
+
+Folder placement is organizational only. The live runtime is determined by:
+
+- the workflow `active` toggle
+- the webhook path or trigger the caller actually uses
 
 Verify the webhooks are available at:
 
 ```text
 http://localhost:5678/webhook/assistant
+http://localhost:5678/webhook/ingest
 http://localhost:5678/webhook/crispybrain-demo
 ```
 

@@ -15,11 +15,22 @@ If a workflow changes in n8n and you want that change to be part of the product,
 Use stable filenames for the current product path, such as:
 
 - `assistant.json`
+- `crispybrain-demo.json`
 - `ingest.json`
-- `search-by-embedding.json`
-- `build-context.json`
+- `auto-ingest-watch.json`
 
 Avoid creating new `-v2` or `-fixed` variants for core workflows unless you are deliberately preserving an experiment or migration artifact.
+
+The canonical runtime entrypoints are:
+
+- required: `assistant`
+- required: `ingest`
+- required: `crispybrain-demo`
+- optional: `auto-ingest-watch`
+
+If you use n8n folders, keep that runtime grouped under `Personal -> CrispyBrain`.
+
+Folder placement is organizational only. Runtime behavior comes from the workflow `active` state plus the webhook or trigger path that callers hit.
 
 ## Recommended Sync Process
 
@@ -35,6 +46,8 @@ Verify at least these things:
 
 - workflow name and filename still match
 - the assistant entrypoint is still `/webhook/assistant`
+- the ingest entrypoint is still `/webhook/ingest`
+- the demo entrypoint is still `/webhook/crispybrain-demo`
 - required credentials are still documented
 - no local absolute paths or private notes were introduced
 - any runtime-sensitive legacy name changes are documented in [legacy-naming-debt.md](legacy-naming-debt.md)

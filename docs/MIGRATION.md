@@ -23,7 +23,12 @@
 
 | Old folder | New folder |
 | --- | --- |
-| `Personal -> OpenBrain v0.3` | `Personal -> CrispyBrain v0.4` |
+| `Personal -> OpenBrain v0.3` | `Personal -> CrispyBrain` |
+
+Note:
+
+- folders in n8n are organizational only
+- the live runtime still depends on which workflows are active and which webhook paths callers hit
 
 ## LocalStorage Migration
 

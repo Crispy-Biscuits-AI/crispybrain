@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-N8N_CONTAINER="${N8N_CONTAINER:-ai-n8n}"
-DB_CONTAINER="${DB_CONTAINER:-ai-postgres}"
+PREFERRED_N8N_CONTAINER="${PREFERRED_N8N_CONTAINER:-crispy-ai-lab-n8n-1}"
+FALLBACK_N8N_CONTAINER="${FALLBACK_N8N_CONTAINER:-ai-n8n}"
+PREFERRED_DB_CONTAINER="${PREFERRED_DB_CONTAINER:-crispy-ai-lab-postgres-1}"
+FALLBACK_DB_CONTAINER="${FALLBACK_DB_CONTAINER:-ai-postgres}"
 DB_USER="${DB_USER:-n8n}"
 DB_NAME="${DB_NAME:-n8n}"
-ASSISTANT_URL="${ASSISTANT_URL:-http://localhost:5678/webhook/crispybrain-assistant}"
+ASSISTANT_URL="${ASSISTANT_URL:-http://localhost:5678/webhook/assistant}"
 SESSION_ID="crispybrain-health-check"
 
 failures=()
+warnings=()
 
 log_fail() {
   failures+=("$1")
@@ -19,11 +22,26 @@ log_pass() {
   printf 'PASS: %s\n' "$1"
 }
 
+log_warn() {
+  warnings+=("$1")
+  printf 'WARN: %s\n' "$1"
+}
+
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
     printf 'FAIL: missing required command: %s\n' "$1" >&2
     exit 1
   }
+}
+
+detect_container() {
+  local preferred="$1"
+  local fallback="$2"
+  if docker ps --format '{{.Names}}' | grep -Fxq "${preferred}"; then
+    printf '%s\n' "${preferred}"
+    return 0
+  fi
+  printf '%s\n' "${fallback}"
 }
 
 check_http_json() {
@@ -43,38 +61,82 @@ require_cmd curl
 require_cmd grep
 require_cmd sh
 
-printf '=== CrispyBrain v0.4 Health Check ===\n'
+N8N_CONTAINER="${N8N_CONTAINER:-$(detect_container "${PREFERRED_N8N_CONTAINER}" "${FALLBACK_N8N_CONTAINER}")}"
+DB_CONTAINER="${DB_CONTAINER:-$(detect_container "${PREFERRED_DB_CONTAINER}" "${FALLBACK_DB_CONTAINER}")}"
+
+printf '=== CrispyBrain Health Check ===\n'
 
 printf '\n[1/4] Workflow state\n'
 docker exec "${DB_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -c "
-SELECT name, active
-FROM workflow_entity
-WHERE name LIKE 'crispybrain-%' OR name = 'assistant'
+SELECT w.name, w.active, COALESCE(f.name, '') AS folder_name
+FROM workflow_entity w
+LEFT JOIN folder f ON f.id = w.\"parentFolderId\"
+WHERE w.name IN (
+  'assistant',
+  'ingest',
+  'crispybrain-demo',
+  'auto-ingest-watch',
+  'crispybrain-assistant',
+  'crispybrain-ingest',
+  'crispybrain-auto-ingest-watch'
+)
 ORDER BY name;
 "
 
 workflow_rows="$(docker exec "${DB_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -t -A -F '|' -c "
-SELECT name, active
-FROM workflow_entity
-WHERE name LIKE 'crispybrain-%' OR name = 'assistant'
+SELECT w.name, w.active, COALESCE(f.name, '') AS folder_name
+FROM workflow_entity w
+LEFT JOIN folder f ON f.id = w.\"parentFolderId\"
+WHERE w.name IN (
+  'assistant',
+  'ingest',
+  'crispybrain-demo',
+  'auto-ingest-watch',
+  'crispybrain-assistant',
+  'crispybrain-ingest',
+  'crispybrain-auto-ingest-watch'
+)
 ORDER BY name;
 ")"
 
-assistant_row="$(printf '%s\n' "${workflow_rows}" | grep '^assistant|')"
-if printf '%s\n' "${assistant_row}" | grep -q '|t$'; then
-  log_fail 'legacy workflow "assistant" is active'
+required_workflows=(assistant ingest crispybrain-demo)
+for workflow_name in "${required_workflows[@]}"; do
+  workflow_row="$(printf '%s\n' "${workflow_rows}" | grep "^${workflow_name}|")"
+  if [[ -z "${workflow_row}" ]]; then
+    log_fail "required workflow not found: ${workflow_name}"
+    continue
+  fi
+  if printf '%s\n' "${workflow_row}" | grep -q '|t|'; then
+    log_pass "required workflow active: ${workflow_name}"
+  else
+    log_fail "required workflow inactive: ${workflow_name}"
+  fi
+done
+
+auto_watch_row="$(printf '%s\n' "${workflow_rows}" | grep '^auto-ingest-watch|' || true)"
+if [[ -z "${auto_watch_row}" ]]; then
+  log_warn 'optional workflow not found: auto-ingest-watch'
+elif printf '%s\n' "${auto_watch_row}" | grep -q '|t|'; then
+  log_pass 'optional workflow active: auto-ingest-watch'
 else
-  log_pass 'legacy workflow "assistant" is inactive'
+  log_warn 'optional workflow inactive: auto-ingest-watch'
 fi
 
-inactive_crispybrain="$(printf '%s\n' "${workflow_rows}" | grep '^crispybrain-' | grep '|f$' || true)"
-if [[ -n "${inactive_crispybrain}" ]]; then
-  printf '%s\n' "${inactive_crispybrain}" | while IFS='|' read -r name active; do
-    printf 'FAIL: crispybrain workflow inactive: %s\n' "${name}"
+canonical_folder_mismatch="$(printf '%s\n' "${workflow_rows}" | awk -F'|' '$1=="assistant" || $1=="ingest" || $1=="crispybrain-demo" { if ($3 != "CrispyBrain") print $1 "|" $3 }')"
+if [[ -n "${canonical_folder_mismatch}" ]]; then
+  printf '%s\n' "${canonical_folder_mismatch}" | while IFS='|' read -r name folder_name; do
+    printf 'FAIL: canonical workflow in unexpected folder: %s (%s)\n' "${name}" "${folder_name:-<none>}"
   done
-  failures+=("one or more crispybrain workflows are inactive")
+  failures+=("canonical workflows are not grouped under CrispyBrain")
 else
-  log_pass 'all crispybrain-* workflows are active'
+  log_pass 'canonical workflows are grouped under CrispyBrain'
+fi
+
+alternate_active="$(printf '%s\n' "${workflow_rows}" | awk -F'|' '$1=="crispybrain-assistant" || $1=="crispybrain-ingest" || $1=="crispybrain-auto-ingest-watch" { if ($2 == "t") print $1 }')"
+if [[ -n "${alternate_active}" ]]; then
+  log_warn "alternate crispybrain-* entrypoints still active: $(printf '%s\n' "${alternate_active}" | paste -sd ',' -)"
+else
+  log_pass 'no alternate crispybrain-* entrypoints are active'
 fi
 
 printf '\n[2/4] Recent n8n logs\n'
@@ -130,12 +192,20 @@ fi
 
 printf '\n[4/4] Final summary\n'
 if (( ${#failures[@]} == 0 )); then
-  printf 'PASS: CrispyBrain v0.4 is healthy\n'
+  printf 'PASS: CrispyBrain is healthy\n'
+  if (( ${#warnings[@]} > 0 )); then
+    for warning in "${warnings[@]}"; do
+      printf ' - warning: %s\n' "${warning}"
+    done
+  fi
   exit 0
 fi
 
-printf 'FAIL: CrispyBrain v0.4 has issues\n'
+printf 'FAIL: CrispyBrain has issues\n'
 for failure in "${failures[@]}"; do
   printf ' - %s\n' "${failure}"
+done
+for warning in "${warnings[@]}"; do
+  printf ' - warning: %s\n' "${warning}"
 done
 exit 1

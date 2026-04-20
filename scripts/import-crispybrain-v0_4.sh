@@ -10,10 +10,11 @@ source "${SCRIPT_DIR}/crispybrain-test-harness.sh"
 
 SQL_PATH="${REPO_ROOT}/sql/crispybrain-v0_4-upgrade.sql"
 WORKFLOW_DIR="${REPO_ROOT}/workflows"
-TARGET_FOLDER_NAME="CrispyBrain v0.4"
+TARGET_FOLDER_NAME="CrispyBrain"
 ASSISTANT_WORKFLOW_ID="assistant"
 ASSISTANT_WEBHOOK_PATH="assistant"
 ENTRYPOINT_WEBHOOK_URL="http://localhost:5678/webhook/assistant"
+REQUIRED_ACTIVE_WORKFLOW_IDS=("assistant" "ingest" "crispybrain-demo")
 
 crispybrain_harness_require_command jq
 
@@ -73,11 +74,15 @@ crispybrain_harness_get_json "${CRISPYBRAIN_HARNESS_REST_BASE_URL}/workflows/${A
 crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.id' "${ASSISTANT_WORKFLOW_ID}"
 crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.nodes[] | select(.name == "Assistant Webhook") | .parameters.path' "${ASSISTANT_WEBHOOK_PATH}"
 crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.parentFolder.name' "${TARGET_FOLDER_NAME}"
-WORKFLOW_VERSION_ID="$(crispybrain_harness_json_get "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.versionId')"
-[[ -n "${WORKFLOW_VERSION_ID}" && "${WORKFLOW_VERSION_ID}" != "null" ]] || crispybrain_harness_fail "Workflow versionId was missing for ${ASSISTANT_WORKFLOW_ID}"
 
-ACTIVATION_PAYLOAD="$(jq -cn --arg versionId "${WORKFLOW_VERSION_ID}" '{versionId: $versionId}')"
-crispybrain_harness_activate_workflow "${ASSISTANT_WORKFLOW_ID}" "${AUTH_COOKIE}" "${ACTIVATION_PAYLOAD}"
+for workflow_id in "${REQUIRED_ACTIVE_WORKFLOW_IDS[@]}"; do
+  crispybrain_harness_get_json "${CRISPYBRAIN_HARNESS_REST_BASE_URL}/workflows/${workflow_id}" -H "Cookie: ${CRISPYBRAIN_HARNESS_COOKIE_NAME}=${AUTH_COOKIE}"
+  [[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail "Could not fetch workflow details for ${workflow_id}"
+  WORKFLOW_VERSION_ID="$(crispybrain_harness_json_get "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.versionId')"
+  [[ -n "${WORKFLOW_VERSION_ID}" && "${WORKFLOW_VERSION_ID}" != "null" ]] || crispybrain_harness_fail "Workflow versionId was missing for ${workflow_id}"
+  ACTIVATION_PAYLOAD="$(jq -cn --arg versionId "${WORKFLOW_VERSION_ID}" '{versionId: $versionId}')"
+  crispybrain_harness_activate_workflow "${workflow_id}" "${AUTH_COOKIE}" "${ACTIVATION_PAYLOAD}"
+done
 
 crispybrain_harness_get_json "${CRISPYBRAIN_HARNESS_REST_BASE_URL}/workflows/${ASSISTANT_WORKFLOW_ID}" -H "Cookie: ${CRISPYBRAIN_HARNESS_COOKIE_NAME}=${AUTH_COOKIE}"
 [[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail "Could not fetch workflow details for ${ASSISTANT_WORKFLOW_ID} after activation"
@@ -85,7 +90,14 @@ crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '
 crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.nodes[] | select(.name == "Assistant Webhook") | .parameters.path' "${ASSISTANT_WEBHOOK_PATH}"
 crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.parentFolder.name' "${TARGET_FOLDER_NAME}"
 
+for workflow_id in "${REQUIRED_ACTIVE_WORKFLOW_IDS[@]}"; do
+  crispybrain_harness_get_json "${CRISPYBRAIN_HARNESS_REST_BASE_URL}/workflows/${workflow_id}" -H "Cookie: ${CRISPYBRAIN_HARNESS_COOKIE_NAME}=${AUTH_COOKIE}"
+  [[ "${CRISPYBRAIN_HARNESS_LAST_HTTP_STATUS}" == "200" ]] || crispybrain_harness_fail "Could not fetch workflow details for ${workflow_id} after activation"
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.active' 'true'
+  crispybrain_harness_assert_json_equals "${CRISPYBRAIN_HARNESS_LAST_HTTP_BODY}" '.data.parentFolder.name' "${TARGET_FOLDER_NAME}"
+done
+
 crispybrain_harness_log "Imported workflows:"
 printf '%s\n' "${imported_workflow_ids[@]}"
 
-crispybrain_harness_pass "CrispyBrain v0.4 workflows imported into ${TARGET_FOLDER_NAME}, verified without legacy prefixed names, and activated at ${ENTRYPOINT_WEBHOOK_URL}"
+crispybrain_harness_pass "CrispyBrain workflows imported into ${TARGET_FOLDER_NAME}, verified without legacy prefixed names, and activated at ${ENTRYPOINT_WEBHOOK_URL}"

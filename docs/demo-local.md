@@ -54,15 +54,25 @@ You need the AI Lab runtime from the sibling `crispy-ai-lab` repo:
 - n8n
 - host-side Ollama reachable from n8n
 
-The demo currently assumes the core CrispyBrain workflow path exists in n8n:
+The verified canonical workflow set in n8n is:
+
+- required: `assistant`
+- required: `ingest`
+- required: `crispybrain-demo`
+- optional: `auto-ingest-watch`
+
+The live demo path depends directly on:
 
 - `assistant`
+- `crispybrain-demo`
 
-If `assistant` is not active in your local n8n instance, activate it and restart n8n:
+If the required workflows are not active in your local n8n instance, activate them and restart n8n:
 
 ```bash
 cd ../crispy-ai-lab
 docker compose exec -T n8n n8n update:workflow --id=assistant --active=true
+docker compose exec -T n8n n8n update:workflow --id=ingest --active=true
+docker compose exec -T n8n n8n update:workflow --id=crispybrain-demo --active=true
 docker compose restart n8n
 ```
 
@@ -93,7 +103,11 @@ CONFIRM_IMPORT=I_UNDERSTAND \
 scripts/workflows/import-exported-into-docker.sh
 ```
 
-That imports the current public workflow set, including `assistant` and `crispybrain-demo`.
+That imports the current public workflow set, including `assistant`, `ingest`, and `crispybrain-demo`.
+
+If you organize the workflows in n8n folders, the recommended home is `Personal -> CrispyBrain`.
+
+Folder placement is organizational only. The real live path is whichever workflows are active and which webhook paths your caller is configured to hit.
 
 ## Canonical Inbox Path
 
@@ -133,6 +147,11 @@ The wrapper forwards into:
 ```text
 http://localhost:5678/webhook/assistant
 ```
+
+To verify the current live path in n8n, confirm both of these are true:
+
+- `crispybrain-demo` is active and exposes `/webhook/crispybrain-demo`
+- the `Call Assistant Workflow` node inside `crispybrain-demo` targets `/webhook/assistant`
 
 ## Demo UI Themes
 
