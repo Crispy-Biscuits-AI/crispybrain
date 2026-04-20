@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/biscuit-emoji.png" alt="CrispyBrain biscuit emoji" width="96">
+  <img src="assets/crispybrain-biscuit.png" alt="CrispyBrain tea biscuit" width="220">
 </p>
 
 <h1 align="center">CrispyBrain</h1>
