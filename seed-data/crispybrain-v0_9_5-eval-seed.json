@@ -1,0 +1,200 @@
+{
+  "notes": [
+    {
+      "key": "anchor_exact",
+      "filename_prefix": "cb-v095-anchor",
+      "reviewed": true,
+      "content": "Anchor registry note. Anchor token CB-4096 resolves to quartz-bridge-77. Protocol code CB-4096 identifies the quartz bridge anchor."
+    },
+    {
+      "key": "general_single",
+      "filename_prefix": "cb-v095-delta",
+      "reviewed": true,
+      "content": "Delta guide says v0.9.1 retrieval trims generic runtime noise while preserving lexical fallback for identifiers."
+    },
+    {
+      "key": "general_agree_a",
+      "filename_prefix": "cb-v095-maple-a",
+      "reviewed": true,
+      "content": "Maple brief note A. Operators should check reviewed sources before trusting an answer from CrispyBrain."
+    },
+    {
+      "key": "general_agree_b",
+      "filename_prefix": "cb-v095-maple-b",
+      "reviewed": true,
+      "content": "Maple brief note B. Operators should inspect the grounding note and selected source list before trusting an answer."
+    },
+    {
+      "key": "conflict_a",
+      "filename_prefix": "cb-v095-conflict-a",
+      "reviewed": true,
+      "content": "Beacon protocol is amber-9."
+    },
+    {
+      "key": "conflict_b",
+      "filename_prefix": "cb-v095-conflict-b",
+      "reviewed": true,
+      "content": "Beacon protocol is cobalt-3."
+    },
+    {
+      "key": "short_fact",
+      "filename_prefix": "cb-v095-short",
+      "reviewed": true,
+      "content": "CB-2048 is frost-key-17."
+    },
+    {
+      "key": "weak_unreviewed",
+      "filename_prefix": "cb-v095-weak",
+      "reviewed": false,
+      "content": "Echo marker means review before trust."
+    },
+    {
+      "key": "noise_runtime",
+      "filename_prefix": "build-context-runtime-v095-noise",
+      "reviewed": true,
+      "content": "Build context runtime note. Generic retrieval context mentions protocol checks, ids, ranking, and local runtime fixes."
+    },
+    {
+      "key": "independence_conflict_a1",
+      "filename_prefix": "cb-v095-independence-a1",
+      "reviewed": true,
+      "content": "Signal dock protocol is amber-9."
+    },
+    {
+      "key": "independence_conflict_a2",
+      "filename_prefix": "cb-v095-independence-a2",
+      "reviewed": true,
+      "content": "Handoff audit confirms rollout. Signal dock protocol is amber-9."
+    },
+    {
+      "key": "independence_conflict_b1",
+      "filename_prefix": "cb-v095-independence-b1",
+      "reviewed": true,
+      "content": "Signal dock protocol is cobalt-3."
+    },
+    {
+      "key": "independence_conflict_b2",
+      "filename_prefix": "cb-v095-independence-b2",
+      "reviewed": true,
+      "content": "Repeated staging memo. Signal dock protocol is cobalt-3."
+    },
+    {
+      "key": "weighted_conflict_a",
+      "filename_prefix": "cb-v095-weighted-conflict-a",
+      "reviewed": true,
+      "content": "Harbor relay protocol is amber-9."
+    },
+    {
+      "key": "weighted_conflict_b",
+      "filename_prefix": "cb-v095-weighted-conflict-b",
+      "reviewed": true,
+      "content": "Independent cutover audit confirms rollout. Harbor relay protocol is amber-9."
+    },
+    {
+      "key": "weighted_conflict_c",
+      "filename_prefix": "cb-v095-weighted-conflict-c",
+      "reviewed": true,
+      "content": "Harbor relay protocol is cobalt-3."
+    },
+    {
+      "key": "tie_conflict_a1",
+      "filename_prefix": "cb-v095-tie-conflict-a1",
+      "reviewed": true,
+      "content": "Lantern mesh protocol is amber-9."
+    },
+    {
+      "key": "tie_conflict_a2",
+      "filename_prefix": "cb-v095-tie-conflict-a2",
+      "reviewed": true,
+      "content": "Cross-check operator note. Lantern mesh protocol is amber-9."
+    },
+    {
+      "key": "tie_conflict_b1",
+      "filename_prefix": "cb-v095-tie-conflict-b1",
+      "reviewed": true,
+      "content": "Lantern mesh protocol is cobalt-3."
+    },
+    {
+      "key": "tie_conflict_b2",
+      "filename_prefix": "cb-v095-tie-conflict-b2",
+      "reviewed": true,
+      "content": "Cross-check operator note. Lantern mesh protocol is cobalt-3."
+    },
+    {
+      "key": "duplicate_conflict_a1",
+      "filename_prefix": "build-context-v095-duplicate-conflict-a1",
+      "reviewed": true,
+      "content": "North gate protocol is amber-9."
+    },
+    {
+      "key": "duplicate_conflict_a2",
+      "filename_prefix": "build-context-v095-duplicate-conflict-a2",
+      "reviewed": true,
+      "content": "North gate protocol is amber-9."
+    },
+    {
+      "key": "duplicate_conflict_a3",
+      "filename_prefix": "build-context-v095-duplicate-conflict-a3",
+      "reviewed": true,
+      "content": "Runtime copy for operators. North gate protocol is amber-9."
+    },
+    {
+      "key": "duplicate_conflict_b1",
+      "filename_prefix": "cb-v095-duplicate-conflict-b1",
+      "reviewed": true,
+      "content": "North gate protocol is cobalt-3."
+    }
+  ],
+  "cases": [
+    {
+      "id": "eval-01",
+      "query": "Which note contains \"CB-4096\"?",
+      "expected_behavior": "exact anchor lookup stays in anchor mode and returns the anchor note first"
+    },
+    {
+      "id": "eval-02",
+      "query": "How does the delta guide improve retrieval for ids?",
+      "expected_behavior": "generalized single-note question returns a direct answer with a reviewed source"
+    },
+    {
+      "id": "eval-03",
+      "query": "What does maple brief say operators should check before trusting an answer?",
+      "expected_behavior": "generalized multi-note question preserves multiple agreeing notes into the answer"
+    },
+    {
+      "id": "eval-04",
+      "query": "What is the beacon protocol?",
+      "expected_behavior": "conflicting notes still surface an explicit strict conflict answer"
+    },
+    {
+      "id": "eval-05",
+      "query": "CB-2048",
+      "expected_behavior": "short factual note survives retrieval and returns a direct answer"
+    },
+    {
+      "id": "eval-06",
+      "query": "What does echo marker mean?",
+      "expected_behavior": "weak evidence falls back to the existing insufficient-memory response"
+    },
+    {
+      "id": "eval-07",
+      "query": "What is the signal dock protocol?",
+      "expected_behavior": "equal weighted support can still resolve through more independent corroboration"
+    },
+    {
+      "id": "eval-08",
+      "query": "What is the harbor relay protocol?",
+      "expected_behavior": "independence-adjusted dominance stays conflict-only and can disagree with recency"
+    },
+    {
+      "id": "eval-09",
+      "query": "What is the lantern mesh protocol?",
+      "expected_behavior": "independence-adjusted ties stay ties with low confidence"
+    },
+    {
+      "id": "eval-10",
+      "query": "What is the north gate protocol?",
+      "expected_behavior": "duplicate-heavy evidence loses its raw-count advantage after correlation handling"
+    }
+  ]
+}

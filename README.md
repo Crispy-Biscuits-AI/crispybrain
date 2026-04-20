@@ -29,9 +29,9 @@ CrispyBrain is still an early, real, build-in-public system.
 - `v0.5` added structured tracing, boundary validation, and ingest replay detection
 - `v0.6` is the quality and control release
 - `v0.7.1` is the current stability patch for anchor-aware deterministic retrieval
-- `v0.9.4` is the current source-quality and weighted-support release
+- `v0.9.5` is the current independence-aware trust release
 
-The validated `v0.9.4` state adds:
+The validated `v0.9.5` state adds:
 
 - short-note retrieval boosts for dense factual memory
 - lexical fallback for anchors, identifiers, and sparse factual queries
@@ -45,6 +45,9 @@ The validated `v0.9.4` state adds:
 - deterministic `low` / `medium` / `high` source-quality labels on visible conflict sources
 - weighted support and weighted-vs-deduped dominance basis hints without turning conflicts into a single truth answer
 - quality-aware conflict summaries that explain when stronger weighted support and recency disagree
+- source independence labels that distinguish independent, related, duplicate-like, and unclear support
+- evidence clustering and independence-adjusted support so correlated notes do not look unfairly strong
+- correlation-aware dominance basis hints and conflict summaries that explain when independent corroboration matters
 - isolated-project validation guidance and a repeatable isolated evaluation pack
 
 The earlier `v0.8` state added:
@@ -80,8 +83,9 @@ Today’s checked-in repo surface can:
 - surface conflicting stored notes explicitly instead of guessing
 - classify conflicts as `strong_conflict` or `possible_conflict`
 - show per-claim support counts plus most-supported and most-recent conflict hints
-- expose dominant/tie status, duplicate-aware support counts, weighted support, dominant basis, heuristic conflict confidence, and a summary hint
+- expose dominant/tie status, duplicate-aware support counts, weighted support, independence-adjusted support, dominant basis, heuristic conflict confidence, and a summary hint
 - attach deterministic source-quality labels to visible conflict sources
+- attach deterministic source-independence labels and evidence clusters to visible conflict sources
 - keep factual candidate lists cleaner when generic runtime/build-context notes are off-topic
 - expose trust and source metadata in responses
 - expose grounding status, supporting-source counts, and visible evidence fields in the demo path
@@ -210,8 +214,8 @@ Use these docs as the next stop depending on what you want to do:
 - [Ingesting Text](docs/ingest-text.md): drop plain text into the current ingest path safely
 - [Workflow Sync](docs/workflow-sync.md): keep checked-in workflow exports aligned with n8n
 - [CrispyBrain v0.8](docs/crispybrain-v0_8.md): trust and evaluation release notes, grounding behavior, and the 8-case harness
-- [Retrieval Notes](docs/retrieval.md): the v0.9.4 short-note, lexical fallback, candidate-trimming, and trust-layer weighting behavior
-- [Trust Output](docs/trust-output.md): `answer_mode`, source quality, weighted support, dominant basis, and candidate/source interpretation
+- [Retrieval Notes](docs/retrieval.md): the v0.9.5 short-note, lexical fallback, candidate-trimming, and correlation-aware trust-layer behavior
+- [Trust Output](docs/trust-output.md): `answer_mode`, source quality, source independence, weighted support, dominant basis, and candidate/source interpretation
 - [CrispyBrain v0.7](docs/crispybrain-v0_7.md): anchor-aware deterministic retrieval, harness coverage, and validation notes
 - [CrispyBrain v0.6](docs/crispybrain-v0_6.md): release summary, runtime validation notes, and known limitations
 
@@ -220,7 +224,7 @@ Use these docs as the next stop depending on what you want to do:
 `v0.6` introduced the first real quality-and-control layer in the public repo.
 `v0.7.1` keeps that layer in place and makes retrieval policy explicit.
 `v0.8` adds clearer operator-visible grounding and a repeatable evaluation pack.
-`v0.9.4` keeps the same workflow shape while adding source-quality weighting and weighted-support hints without weakening strict conflict handling.
+`v0.9.5` keeps the same workflow shape while adding source independence, evidence clustering, and correlation-aware support hints without weakening strict conflict handling.
 
 That includes:
 
