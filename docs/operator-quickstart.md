@@ -1,6 +1,6 @@
 # Operator Quickstart
 
-Use this if you want the fastest realistic path to a working CrispyBrain instance.
+Use this if you want the fastest realistic path to a working CrispyBrain instance with the current trust-and-evaluation release.
 
 ## 1. Prepare The Runtime
 
@@ -34,39 +34,87 @@ Postgres account
 
 The checked-in workflow exports expect that exact credential name.
 
-## 4. Import The Workflows
+## 4. Import The Repo-Owned Workflows
 
-Import the workflow JSON files in `workflows/` into n8n.
+The minimum public path for local operator validation is:
 
-Start with the stable public path:
+- `workflows/assistant.json`
+- `workflows/crispybrain-demo.json`
+- `workflows/ingest.json`
 
-- `assistant.json`
-- `ingest.json`
-- `search-by-embedding.json`
-- `build-context.json`
-- `project-memory.json`
-- `project-bootstrap.json`
-- `validation-and-errors.json`
+Recommended import path:
 
-## 5. Activate The Assistant
+```bash
+cd ../crispy-ai-lab
+WORKFLOW_DIR=../crispybrain/workflows \
+CONFIRM_IMPORT=I_UNDERSTAND \
+scripts/workflows/import-exported-into-docker.sh
+```
 
-Activate the `assistant` workflow and verify that the webhook is available at:
+## 5. Activate The Webhook Workflows
+
+Activate:
+
+- `assistant`
+- `crispybrain-demo`
+
+Verify the webhooks are available at:
 
 ```text
 http://localhost:5678/webhook/assistant
+http://localhost:5678/webhook/crispybrain-demo
 ```
 
-## 6. Smoke Test
+## 6. Smoke Test The Assistant Path
 
 ```bash
-curl -X POST "http://localhost:5678/webhook/assistant" \
+curl -sS \
   -H "Content-Type: application/json" \
-  -d '{"message":"What is CrispyBrain?"}'
+  -d '{"message":"How am I planning to build CrispyBrain?","project_slug":"alpha"}' \
+  http://localhost:5678/webhook/assistant | jq '{ok,grounding,retrieval,top_source:(.sources[0] // null),trace}'
 ```
 
-## 7. Optional Helpers
+Inspect:
 
-- `scripts/import-crispybrain-v0_4.sh` can automate import in a compatible local Docker setup
-- `scripts/test-crispybrain-v0_4.sh` can run a local validation pass in that same style of setup
+- `grounding.status`
+- `grounding.note`
+- `grounding.supporting_source_count`
+- `retrieval.memory_count`
+- the first source row if one exists
 
-Those scripts are maintainer conveniences, not the only supported onboarding path.
+## 7. Run The `v0.8` Evaluation Pack
+
+Use the repo-tracked harness:
+
+```bash
+./scripts/test-crispybrain-v0_8.sh
+```
+
+The harness runs exactly 8 evaluation cases covering:
+
+- semantic match
+- exact phrase match
+- ambiguity / weak query
+- no-strong-match query
+- near-neighbor / distractor query
+- multi-memory style query
+- grounding visibility check
+- regression-style query
+
+The terminal output prints, for each case:
+
+- case id
+- query
+- expected behavior
+- pass/fail
+- compact diagnostic JSON
+
+## 8. What `v0.8` Adds For Operators
+
+The current workflows now surface:
+
+- a top-level `grounding` block in assistant and demo responses
+- explicit `weak` and `none` grounding states when support is limited
+- source evidence fields already available in the workflow output, including memory ids, trust bands, review state, similarity, and chunk indexes when present
+
+`v0.8` does not invent confidence scores or hidden quality labels beyond the observable fields already present in the repo-owned path.

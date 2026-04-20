@@ -29,8 +29,9 @@ CrispyBrain is still an early, real, build-in-public system.
 - `v0.5` added structured tracing, boundary validation, and ingest replay detection
 - `v0.6` is the quality and control release
 - `v0.7.1` is the current stability patch for anchor-aware deterministic retrieval
+- `v0.8` is the current trust and evaluation release
 
-The validated `v0.7.1` state adds:
+The validated `v0.8` state adds:
 
 - trust visibility and source-quality indicators in responses
 - review-state controls and project health visibility
@@ -38,6 +39,8 @@ The validated `v0.7.1` state adds:
 - suspect review/export workflows and metrics snapshots
 - a validated multi-cycle runtime harness
 - conservative anchor-aware note lookup with deterministic reviewed/recency tie-breaking
+- explicit grounding notes and weak-grounding states in assistant and demo responses
+- a repeatable 8-case evaluation pack for operator inspection
 
 ## Why CrispyBrain Exists
 
@@ -58,9 +61,11 @@ Today’s checked-in repo surface can:
 - retrieve memory-backed answers instead of static demo text
 - answer exact note-name and strong anchor-style note lookups deterministically
 - expose trust and source metadata in responses
+- expose grounding status, supporting-source counts, and visible evidence fields in the demo path
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
 - update review state for stored memory rows through the memory inspector
+- run a repo-tracked 8-case retrieval evaluation pack with compact diagnostics
 
 ## High-Level Architecture
 
@@ -127,7 +132,7 @@ Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
-- the response includes an answer and source rows
+- the response includes an answer, a grounding note, and source rows
 - the `debug` block shows the request passed through the demo workflow path
 
 ## Demo, Workflow, Ingestion, and Operator Entry Points
@@ -138,6 +143,7 @@ Use these docs as the next stop depending on what you want to do:
 - [Operator Quickstart](docs/operator-quickstart.md): get the fastest realistic operator setup
 - [Ingesting Text](docs/ingest-text.md): drop plain text into the current ingest path safely
 - [Workflow Sync](docs/workflow-sync.md): keep checked-in workflow exports aligned with n8n
+- [CrispyBrain v0.8](docs/crispybrain-v0_8.md): trust and evaluation release notes, grounding behavior, and the 8-case harness
 - [CrispyBrain v0.7](docs/crispybrain-v0_7.md): anchor-aware deterministic retrieval, harness coverage, and validation notes
 - [CrispyBrain v0.6](docs/crispybrain-v0_6.md): release summary, runtime validation notes, and known limitations
 
@@ -145,6 +151,7 @@ Use these docs as the next stop depending on what you want to do:
 
 `v0.6` introduced the first real quality-and-control layer in the public repo.
 `v0.7.1` keeps that layer in place and makes retrieval policy explicit.
+`v0.8` adds clearer operator-visible grounding and a repeatable evaluation pack.
 
 That includes:
 
@@ -164,6 +171,9 @@ The main `v0.6` lesson is worth keeping explicit:
 - anchor mode prefers stronger title/token matches, then reviewed rows, then `created_at DESC`, then `id DESC`
 - non-anchor questions stay on the semantic path
 - semantic retrieval remains project-first and similarity-driven, with deterministic review/recency/id ordering when candidates remain eligible
+- the response now exposes a `grounding` block with status, note, reasons, supporting-source count, reviewed-source count, and the strongest observed similarity when available
+- weak or missing support is surfaced explicitly as `grounding.status = weak` or `grounding.status = none`
+- the current operator evaluation pack is `./scripts/test-crispybrain-v0_8.sh`
 
 Recency matters as a tie-breaker, not as a global override.
 
@@ -200,6 +210,7 @@ Current product limitations remain explicit:
 - there is no full operator UI yet
 - anchor detection is intentionally conservative and only activates on strong lexical evidence
 - broad semantic questions still rely on the current similarity-led retrieval path rather than a global newest-wins rule
+- visible evidence is limited to fields the current workflows already return, such as source labels, memory ids, chunk indexes, similarity, and trust/review metadata
 
 Compatibility caveats that remain true on purpose:
 
@@ -208,7 +219,7 @@ Compatibility caveats that remain true on purpose:
 
 ## Near-Term Roadmap
 
-The next conservative steps after `v0.7.1` are:
+The next conservative steps after `v0.8` are:
 
 - lightweight operator UI
 - broader anchor heuristics only if they stay inspectable and testable

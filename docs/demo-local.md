@@ -11,6 +11,7 @@ The primary supported runtime is the Compose-managed lab service `crispybrain-de
 - n8n orchestration is real
 - memory retrieval is real
 - teacher-style answer generation is real
+- grounding visibility is real
 
 ## Demo Architecture
 
@@ -19,7 +20,7 @@ The primary supported runtime is the Compose-managed lab service `crispybrain-de
 3. The proxy forwards to the n8n webhook `POST /webhook/crispybrain-demo`
 4. The `crispybrain-demo` workflow calls the repo-owned `assistant` webhook path
 5. CrispyBrain retrieves memory and returns a structured answer
-6. The UI renders the answer, sources, and compact debug info
+6. The UI renders the answer, grounding note, evidence rows, and compact debug info
 
 ## Primary Runtime
 
@@ -161,6 +162,21 @@ alpha
 
 That query currently retrieves `alpha` memory rows and produces a grounded answer reliably in the lab.
 
+## Grounding Visibility In `v0.8`
+
+The local demo keeps the existing layout but makes grounding easier to inspect.
+
+When retrieval support is available, the demo now shows:
+
+- a grounding note above the evidence list
+- visible source cards with fields already returned by the workflow, including `id`, `review_status`, `trust_band`, `similarity`, `chunk_index`, and `source_type` when present
+- compact debug fields for `grounding_status`, `weak_grounding`, `supporting_source_count`, and `reviewed_source_count`
+
+When support is weak or absent, the workflow stays explicit instead of implying confidence:
+
+- `grounding.status = weak` means the answer has some support but should be treated cautiously
+- `grounding.status = none` means no strong supporting memory was retrieved
+
 ## Curl Smoke Tests
 
 Direct to the n8n demo webhook:
@@ -195,16 +211,28 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
   "project_slug": "alpha",
   "question": "How am I planning to build CrispyBrain?",
   "answer": "...",
+  "grounding": {
+    "status": "weak",
+    "note": "...",
+    "supporting_source_count": 2,
+    "reviewed_source_count": 2
+  },
   "sources": [
     {
-      "title": "openbrain-alpha-plan.txt :: chunk 01"
+      "id": 123,
+      "title": "openbrain-alpha-plan.txt :: chunk 01",
+      "trust_band": "high",
+      "similarity": 0.74,
+      "chunk_index": 1
     }
   ],
   "debug": {
     "workflow": "crispybrain-demo",
     "upstream_workflow": "assistant",
     "teacher_used": true,
-    "retrieval_count": 2
+    "retrieval_count": 2,
+    "grounding_status": "weak",
+    "weak_grounding": true
   }
 }
 ```
@@ -214,7 +242,8 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 - empty question: the UI and proxy return `INVALID_QUESTION`
 - empty slug: the demo defaults it to `alpha`
 - n8n unavailable: the proxy returns `N8N_UNAVAILABLE`
-- no retrieval: the upstream assistant returns a structured error and the UI shows it
+- weak retrieval: the upstream assistant can return `grounding.status = weak` with a cautionary note
+- no strong retrieval: the upstream assistant can return `grounding.status = none` and no evidence rows
 - Ollama unavailable: the upstream assistant returns a structured generation/embedding error and the UI shows it
 
 ## Troubleshooting
