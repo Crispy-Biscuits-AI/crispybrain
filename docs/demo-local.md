@@ -132,14 +132,12 @@ mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 
 Place plain `.txt` notes in that folder before querying the demo with the matching `project_slug`.
 
-Current verified local blocker:
+Current verified local runtime:
 
 - `auto-ingest-watch` is active in n8n
-- it watches `/home/node/.n8n-files/crispybrain/inbox` inside the container
-- the current bind mount points there from `/Users/elric/repos/crispy-ai-lab/crispybrain/inbox`
-- a real file drop into `/Users/elric/repos/crispybrain/inbox/<project-slug>/` does not currently appear at the watched container path
-
-This repo-scoped change does not update protected runtime wiring outside this repo, so repo-path file-drop ingest remains blocked until that bind mount is updated.
+- it polls `/home/node/.n8n-files/crispybrain/inbox` inside the container
+- the current bind mount points there from `/Users/elric/repos/crispybrain/inbox`
+- a real file drop into `/Users/elric/repos/crispybrain/inbox/alpha/` now appears at the watched container path and flows into canonical `/webhook/ingest`
 
 Manual equivalent for the demo wrapper workflow only:
 

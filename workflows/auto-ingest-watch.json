@@ -3,25 +3,19 @@
   "nodes": [
     {
       "parameters": {
-        "triggerOn": "folder",
-        "path": "/home/node/.n8n-files/crispybrain/inbox",
-        "events": [
-          "add"
-        ],
-        "options": {
-          "awaitWriteFinish": true,
-          "followSymlinks": true,
-          "ignored": "**/.DS_Store",
-          "ignoreInitial": true,
-          "depth": 2,
-          "usePolling": true,
-          "ignoreMode": "match"
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 15
+            }
+          ]
         }
       },
-      "id": "trigger-auto-ingest-watch-local-file",
-      "name": "Watch CrispyBrain Inbox",
-      "type": "n8n-nodes-base.localFileTrigger",
-      "typeVersion": 1,
+      "id": "schedule-auto-ingest-watch",
+      "name": "Poll CrispyBrain Inbox",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
       "position": [
         260,
         300
@@ -29,10 +23,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const watchedRoot = '/home/node/.n8n-files/crispybrain/inbox';\nconst eventName = typeof $json.event === 'string' ? $json.event : '';\nconst containerPath = typeof $json.path === 'string' ? $json.path : '';\nconst slugPattern = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;\nif (eventName !== 'add') {\n  return [];\n}\nif (!containerPath.startsWith(watchedRoot + '/')) {\n  return [];\n}\nconst relativePath = containerPath.slice(watchedRoot.length + 1);\nconst segments = relativePath.split('/').filter(Boolean);\nif (segments.length < 2) {\n  return [];\n}\nconst projectSlug = segments[0];\nconst filename = segments[segments.length - 1];\nif (!slugPattern.test(projectSlug)) {\n  return [];\n}\nif (!/\\.txt$/i.test(filename)) {\n  return [];\n}\nconst runId = 'auto-ingest-watch-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);\nconst trace = {\n  run_id: runId,\n  correlation_id: runId,\n  workflow_name: 'auto-ingest-watch',\n  project_slug: projectSlug,\n  source_type: 'file_watch',\n  filename,\n  filepath: containerPath,\n  stage: 'detected',\n  status: 'accepted',\n  error_code: null,\n  error_message: null,\n  timestamp: new Date().toISOString(),\n  workflow_chain: ['auto-ingest-watch'],\n  stage_history: [\n    {\n      stage: 'detected',\n      status: 'accepted',\n      timestamp: new Date().toISOString(),\n      error_code: null,\n      error_message: null\n    }\n  ]\n};\nreturn [{\n  json: {\n    event: eventName,\n    container_path: containerPath,\n    relative_path: relativePath,\n    filename,\n    project_slug: projectSlug,\n    source_type: 'file_watch',\n    trace,\n  },\n}];"
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst watchedRoot = '/home/node/.n8n-files/crispybrain/inbox';\nconst statePath = '/home/node/.n8n/auto-ingest-watch-state.json';\nconst slugPattern = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;\nconst readState = () => {\n  try {\n    const parsed = JSON.parse(fs.readFileSync(statePath, 'utf8'));\n    if (parsed && typeof parsed === 'object' && parsed.files && typeof parsed.files === 'object') {\n      return { initialized: parsed.initialized === true, files: parsed.files };\n    }\n  } catch (error) {}\n  return { initialized: false, files: {} };\n};\nconst writeState = (state) => {\n  fs.writeFileSync(statePath, JSON.stringify(state, null, 2));\n};\nconst listTrackedFiles = () => {\n  const discovered = [];\n  if (!fs.existsSync(watchedRoot)) {\n    return discovered;\n  }\n  for (const entry of fs.readdirSync(watchedRoot, { withFileTypes: true })) {\n    if (!entry.isDirectory()) {\n      continue;\n    }\n    const projectSlug = entry.name;\n    if (!slugPattern.test(projectSlug)) {\n      continue;\n    }\n    const projectDir = path.join(watchedRoot, projectSlug);\n    for (const fileEntry of fs.readdirSync(projectDir, { withFileTypes: true })) {\n      if (!fileEntry.isFile()) {\n        continue;\n      }\n      if (!/\\.txt$/i.test(fileEntry.name)) {\n        continue;\n      }\n      const containerPath = path.join(projectDir, fileEntry.name);\n      const stat = fs.statSync(containerPath);\n      discovered.push({\n        projectSlug,\n        filename: fileEntry.name,\n        containerPath,\n        relativePath: `${projectSlug}/${fileEntry.name}`,\n        signature: `${stat.mtimeMs}:${stat.size}`,\n      });\n    }\n  }\n  return discovered.sort((a, b) => a.containerPath.localeCompare(b.containerPath));\n};\nconst state = readState();\nconst discovered = listTrackedFiles();\nconst currentPaths = new Set(discovered.map((item) => item.containerPath));\nlet stateChanged = false;\nfor (const trackedPath of Object.keys(state.files)) {\n  if (!currentPaths.has(trackedPath)) {\n    delete state.files[trackedPath];\n    stateChanged = true;\n  }\n}\nif (!state.initialized) {\n  for (const item of discovered) {\n    state.files[item.containerPath] = item.signature;\n  }\n  state.initialized = true;\n  writeState(state);\n  return [];\n}\nconst outputs = [];\nfor (const item of discovered) {\n  if (state.files[item.containerPath] === item.signature) {\n    continue;\n  }\n  const runId = 'auto-ingest-watch-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);\n  const timestamp = new Date().toISOString();\n  outputs.push({\n    json: {\n      container_path: item.containerPath,\n      relative_path: item.relativePath,\n      filename: item.filename,\n      project_slug: item.projectSlug,\n      source_type: 'file_watch',\n      file_signature: item.signature,\n      state_path: statePath,\n      trace: {\n        run_id: runId,\n        correlation_id: runId,\n        workflow_name: 'auto-ingest-watch',\n        project_slug: item.projectSlug,\n        source_type: 'file_watch',\n        filename: item.filename,\n        filepath: item.containerPath,\n        stage: 'detected',\n        status: 'accepted',\n        error_code: null,\n        error_message: null,\n        timestamp,\n        workflow_chain: ['auto-ingest-watch'],\n        stage_history: [\n          {\n            stage: 'detected',\n            status: 'accepted',\n            timestamp,\n            error_code: null,\n            error_message: null\n          }\n        ]\n      }\n    }\n  });\n}\nif (stateChanged) {\n  writeState(state);\n}\nreturn outputs;"
       },
-      "id": "code-auto-ingest-watch-normalize",
-      "name": "Normalize Watch Event",
+      "id": "code-auto-ingest-watch-discover",
+      "name": "Discover Pending Files",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -62,7 +56,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const base = $('Normalize Watch Event').first().json;\nconst buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst content = buffer.toString('utf8').replace(/\\r\\n/g, '\\n');\nconst withStage = (trace, stage, status, extra = {}) => {\n  const timestamp = new Date().toISOString();\n  const errorCode = Object.prototype.hasOwnProperty.call(extra, 'error_code') ? extra.error_code : (trace.error_code ?? null);\n  const errorMessage = Object.prototype.hasOwnProperty.call(extra, 'error_message') ? extra.error_message : (trace.error_message ?? null);\n  return {\n    ...trace,\n    ...extra,\n    stage,\n    status,\n    error_code: errorCode,\n    error_message: errorMessage,\n    timestamp,\n    stage_history: [\n      ...(Array.isArray(trace.stage_history) ? trace.stage_history : []),\n      { stage, status, timestamp, error_code: errorCode, error_message: errorMessage },\n    ],\n  };\n};\nreturn [{\n  json: {\n    filepath: base.container_path,\n    filename: base.filename,\n    content,\n    project_slug: base.project_slug,\n    source_type: base.source_type,\n    trace: withStage(base.trace, 'payload_ready', 'accepted'),\n  },\n}];"
+        "jsCode": "const base = $('Discover Pending Files').item.json;\nconst buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst content = buffer.toString('utf8').replace(/\\r\\n/g, '\\n');\nconst withStage = (trace, stage, status, extra = {}) => {\n  const timestamp = new Date().toISOString();\n  const errorCode = Object.prototype.hasOwnProperty.call(extra, 'error_code') ? extra.error_code : (trace.error_code ?? null);\n  const errorMessage = Object.prototype.hasOwnProperty.call(extra, 'error_message') ? extra.error_message : (trace.error_message ?? null);\n  return {\n    ...trace,\n    ...extra,\n    stage,\n    status,\n    error_code: errorCode,\n    error_message: errorMessage,\n    timestamp,\n    stage_history: [\n      ...(Array.isArray(trace.stage_history) ? trace.stage_history : []),\n      { stage, status, timestamp, error_code: errorCode, error_message: errorMessage },\n    ],\n  };\n};\nreturn {\n  json: {\n    filepath: base.container_path,\n    filename: base.filename,\n    content,\n    project_slug: base.project_slug,\n    source_type: base.source_type,\n    file_signature: base.file_signature,\n    state_path: base.state_path,\n    trace: withStage(base.trace, 'payload_ready', 'accepted'),\n  },\n};"
       },
       "id": "code-auto-ingest-watch-build-payload",
       "name": "Build Ingest Payload",
@@ -102,10 +96,11 @@
     },
     {
       "parameters": {
-        "jsCode": "const request = $('Build Ingest Payload').first().json;\nconst statusCode = $json.statusCode ?? 0;\nconst body = $json.body ?? {};\nconst ok = statusCode >= 200 && statusCode < 300 && body.ok === true;\nreturn [{\n  json: {\n    ok,\n    statusCode,\n    watched_path: request.filepath,\n    filename: request.filename,\n    project_slug: request.project_slug,\n    ingest_response_ok: body.ok ?? null,\n    ingest_workflow: body.trace?.workflow_name ?? null,\n    ingest_stage: body.trace?.stage ?? null,\n    error: ok ? null : (body.error ?? { code: 'UPSTREAM_HTTP_ERROR', message: 'Canonical ingest webhook failed' }),\n  },\n}];"
+        "mode": "runOnceForEachItem",
+        "jsCode": "const fs = require('fs');\nconst request = $('Build Ingest Payload').item.json;\nconst statusCode = $json.statusCode ?? 0;\nconst rawBody = $json.body ?? {};\nconst body = Array.isArray(rawBody) ? (rawBody[0] ?? {}) : rawBody;\nconst ok = statusCode >= 200 && statusCode < 300 && body.ok === true;\nlet state = { initialized: true, files: {} };\ntry {\n  const parsed = JSON.parse(fs.readFileSync(request.state_path, 'utf8'));\n  if (parsed && typeof parsed === 'object' && parsed.files && typeof parsed.files === 'object') {\n    state = { initialized: parsed.initialized === true, files: parsed.files };\n  }\n} catch (error) {}\nif (ok) {\n  state.files[request.filepath] = request.file_signature;\n  fs.writeFileSync(request.state_path, JSON.stringify(state, null, 2));\n}\nreturn {\n  json: {\n    ok,\n    statusCode,\n    watched_path: request.filepath,\n    filename: request.filename,\n    project_slug: request.project_slug,\n    ingest_response_ok: body.ok ?? null,\n    ingest_workflow: body.trace?.workflow_name ?? null,\n    ingest_stage: body.trace?.stage ?? null,\n    duplicate_detected: body.duplicate_detected ?? null,\n    error: ok ? null : (body.error ?? { code: 'UPSTREAM_HTTP_ERROR', message: 'Canonical ingest webhook failed' }),\n  },\n};"
       },
-      "id": "code-auto-ingest-watch-summarize",
-      "name": "Summarize Watch Result",
+      "id": "code-auto-ingest-watch-persist",
+      "name": "Persist Watch State",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -115,18 +110,18 @@
     }
   ],
   "connections": {
-    "Watch CrispyBrain Inbox": {
+    "Poll CrispyBrain Inbox": {
       "main": [
         [
           {
-            "node": "Normalize Watch Event",
+            "node": "Discover Pending Files",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize Watch Event": {
+    "Discover Pending Files": {
       "main": [
         [
           {
@@ -163,7 +158,7 @@
       "main": [
         [
           {
-            "node": "Summarize Watch Result",
+            "node": "Persist Watch State",
             "type": "main",
             "index": 0
           }
@@ -178,7 +173,7 @@
   },
   "staticData": null,
   "tags": [],
-  "versionId": "40de1208-1315-428b-b137-68f6b84ee2f6",
+  "versionId": "b508d32a-659b-4932-bc42-bcf0d84c6b3b",
   "meta": {
     "templateCredsSetupCompleted": true
   },

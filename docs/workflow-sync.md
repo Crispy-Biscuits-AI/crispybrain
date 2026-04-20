@@ -38,7 +38,7 @@ If you use n8n folders, keep that runtime grouped under `Personal -> CrispyBrain
 
 Folder placement is organizational only. Runtime behavior comes from the workflow `active` state plus the webhook or trigger path that callers hit.
 
-The canonical watcher is `auto-ingest-watch`. Its checked-in export uses a local file trigger on `/home/node/.n8n-files/crispybrain/inbox` and posts downstream to the canonical ingest webhook `/webhook/ingest`.
+The canonical watcher is `auto-ingest-watch`. Its checked-in export polls `/home/node/.n8n-files/crispybrain/inbox` every 15 seconds and posts downstream to the canonical ingest webhook `/webhook/ingest`.
 
 ## How To Verify The Active Runtime
 
@@ -49,7 +49,7 @@ Check at least these things in n8n:
 - `crispybrain-demo` still calls `/webhook/assistant`
 - `crispybrain-assistant`, `crispybrain-ingest`, and `crispybrain-auto-ingest-watch` are inactive
 - any remaining client still hitting `/webhook/crispybrain-assistant` or `/webhook/crispybrain-ingest` is updated to the canonical public endpoints
-- if you expect repo-path file drops to work, the n8n bind mount must expose `/Users/elric/repos/crispybrain/inbox` at `/home/node/.n8n-files/crispybrain/inbox`
+- the n8n bind mount exposes `/Users/elric/repos/crispybrain/inbox` at `/home/node/.n8n-files/crispybrain/inbox`
 
 The audit-friendly workflow list query used in this repo is:
 

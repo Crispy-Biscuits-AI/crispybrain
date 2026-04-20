@@ -71,13 +71,11 @@ mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 
 Put plain `.txt` notes in that folder if your local watch path is wired to the repo-owned inbox.
 
-Current verified local blocker:
+Current verified local runtime:
 
-- the active `auto-ingest-watch` workflow in n8n watches `/home/node/.n8n-files/crispybrain/inbox`
-- the current n8n bind mount points there from `/Users/elric/repos/crispy-ai-lab/crispybrain/inbox`
-- a real file drop into `/Users/elric/repos/crispybrain/inbox/<project-slug>/` does not currently reach that watched container path
-
-Until that runtime mount is updated, the repo inbox remains passive even though the canonical watcher is active.
+- the active `auto-ingest-watch` workflow in n8n polls `/home/node/.n8n-files/crispybrain/inbox`
+- the current n8n bind mount points there from `/Users/elric/repos/crispybrain/inbox`
+- a real file drop into `/Users/elric/repos/crispybrain/inbox/alpha/` is visible at that container path and can flow into canonical `/webhook/ingest`
 
 ## 6. Activate The Webhook Workflows
 
@@ -142,7 +140,7 @@ ls -la /Users/elric/repos/crispybrain/inbox/alpha
 docker exec crispy-ai-lab-n8n-1 ls -la /home/node/.n8n-files/crispybrain/inbox/alpha
 ```
 
-In a truly live repo-path file-drop setup, the same dropped file must be visible in both places before `auto-ingest-watch` can trigger.
+In a live repo-path file-drop setup, the same dropped file must be visible in both places before `auto-ingest-watch` can trigger.
 
 ## 7. Smoke Test The Assistant Path
 

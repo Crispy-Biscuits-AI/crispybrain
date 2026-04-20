@@ -5,12 +5,11 @@ In the current local setup, the canonical path is to drop a `.txt` file into the
 
 The canonical watcher workflow is `auto-ingest-watch`, and its downstream handoff is the canonical ingest webhook `POST /webhook/ingest`.
 
-Current verified blocker in this local lab runtime:
+In the current verified local lab runtime:
 
-- the active watcher is running in n8n
-- it watches `/home/node/.n8n-files/crispybrain/inbox` inside the container
-- a real file drop into `/Users/elric/repos/crispybrain/inbox/<project-slug>/` did not appear at that watched container path
-- as a result, the repo inbox is still passive in the current runtime until the container mount is updated
+- the n8n container mounts `/Users/elric/repos/crispybrain/inbox` at `/home/node/.n8n-files/crispybrain/inbox`
+- `auto-ingest-watch` polls that mounted inbox every 15 seconds
+- new `.txt` files are handed to canonical `POST /webhook/ingest`
 
 Retired endpoints that are no longer active:
 
@@ -40,15 +39,15 @@ Example:
 mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 ```
 
-Step 3 — Verify the runtime mount before expecting file-drop ingest
+Step 3 — Verify the runtime mount
 
-- In a truly live file-drop setup, the same file must also become visible to n8n under `/home/node/.n8n-files/crispybrain/inbox/<project-slug>/`.
-- If it does not appear there, the watcher cannot see the repo inbox yet.
+- In a live file-drop setup, the same file should also be visible to n8n under `/home/node/.n8n-files/crispybrain/inbox/<project-slug>/`.
+- That confirms the canonical repo inbox is the one the watcher is actually polling.
 
 Step 4 — Wait briefly
 
-- In a working local lab setup, give it about 60 seconds.
-- This gives `auto-ingest-watch` time to detect the file and hand it to `/webhook/ingest`.
+- In the current verified lab setup, give it about 15 to 30 seconds.
+- That gives `auto-ingest-watch` time to detect the file and hand it to `/webhook/ingest`.
 
 Step 5 — Ask a question in the UI
 
@@ -86,13 +85,13 @@ What is CrispyBrain designed to do?
 
 - If the answer uses the ideas from your file, it worked.
 - If you want a deeper check, look at recent n8n executions for both `auto-ingest-watch` and `ingest`.
-- If no watcher execution appears after a real repo-path file drop, the runtime mount is still the blocker.
+- If the file is visible inside the container but `ingest` does not move, inspect the latest `auto-ingest-watch` execution for a downstream error.
 
 ## Current Limitations
 
 - Plain text `.txt` files are the safest path today.
 - PDFs and other document formats are not the simple default path here.
 - This depends on the ingest/watch workflows being active in your local n8n setup.
-- In the current verified lab runtime, the active watcher sees `/home/node/.n8n-files/crispybrain/inbox`, not the host repo path directly.
-- Until the n8n bind mount is updated to expose `/Users/elric/repos/crispybrain/inbox`, a real repo-path file drop will not trigger ingest.
+- In the current verified lab runtime, the active watcher polls `/home/node/.n8n-files/crispybrain/inbox`, which is mounted from `/Users/elric/repos/crispybrain/inbox`.
+- The watcher is intentionally file-drop only here; it does not add PDF parsing or other document ingestion behavior.
 - The default demo setup is strongest with project slug `alpha` unless you have configured another project path.
