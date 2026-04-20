@@ -3,113 +3,195 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CrispyBrain Demo</title>
+  <title>CrispyBrain</title>
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <main class="shell">
-    <aside class="sidebar">
-      <img class="brand-mark" src="/assets/crispybrain-biscuit.png" alt="CrispyBrain biscuit">
-      <p class="eyebrow">Local demo</p>
-      <h1>CrispyBrain</h1>
-      <p class="lede">A narrow vertical slice: UI on 8787, one demo endpoint, real n8n retrieval, and a grounded answer back.</p>
-
-      <section class="panel">
-        <h2>Flow</h2>
-        <ol class="flow-list">
-          <li>Browser UI calls <code>/api/demo/ask</code>.</li>
-          <li>The local proxy forwards to the n8n <code>crispybrain-demo</code> webhook.</li>
-          <li>The demo workflow calls the repo-owned <code>assistant</code> path.</li>
-          <li>CrispyBrain retrieves memory and returns an answer.</li>
-        </ol>
-      </section>
-
-      <section class="panel panel-muted">
-        <h2>Good demo question</h2>
-        <button class="sample-question" type="button" data-question="How am I planning to build CrispyBrain?">Use the recommended question</button>
-      </section>
-    </aside>
-
     <section class="workspace">
-      <header class="workspace-header">
-        <div>
-          <p class="eyebrow">First believable demo surface</p>
-          <h2>Ask the alpha project</h2>
+      <header class="top-bar">
+        <div class="brand-lockup">
+          <p class="eyebrow">Transparent memory retrieval</p>
+          <h1>CrispyBrain</h1>
         </div>
-        <div class="header-controls">
+
+        <div class="top-controls">
           <label class="theme-control" for="theme-select">
             <span>Theme</span>
-            <select id="theme-select" aria-label="Choose demo theme">
+            <select id="theme-select" aria-label="Choose theme">
               <option value="light">light</option>
               <option value="dark">dark</option>
               <option value="crispy" selected>crispy</option>
             </select>
           </label>
+
           <div class="status-stack">
             <div class="theme-badge" id="theme-badge">Crispy</div>
-            <div class="status-pill" id="status-pill">Idle</div>
+            <div class="status-pill" id="status-pill" aria-live="polite">idle</div>
           </div>
         </div>
       </header>
 
-      <p class="theme-note">Theme control is an intentional supported feature of the demo UI. Crispy is the default demo identity, and your selection is stored in localStorage so it survives page reloads and container restarts.</p>
+      <form id="memory-form" class="query-card">
+        <input id="project-slug" name="project_slug" type="hidden" value="alpha">
+        <input id="session-id" name="session_id" type="hidden" value="">
 
-      <form id="demo-form" class="form-card">
-        <div class="field-row">
-          <label class="field">
-            <span>Project slug</span>
-            <input id="project-slug" name="project_slug" value="alpha" autocomplete="off">
-          </label>
-          <label class="field">
-            <span>Session ID</span>
-            <input id="session-id" name="session_id" placeholder="Optional; auto-generated if blank" autocomplete="off">
-          </label>
-        </div>
-
-        <label class="field">
-          <span>Question</span>
-          <textarea id="question" name="question" rows="5" placeholder="How am I planning to build CrispyBrain?" required></textarea>
+        <label class="query-field" for="question">
+          <span>Query</span>
+          <input
+            id="question"
+            name="question"
+            type="text"
+            placeholder="Query your stored memory…"
+            autocomplete="off"
+            required
+          >
         </label>
 
-        <div class="actions">
-          <button id="submit-button" type="submit">Ask CrispyBrain</button>
-          <p class="form-hint">Defaults to project <code>alpha</code> if you leave the slug empty.</p>
-        </div>
+        <button id="submit-button" type="submit">Run query</button>
       </form>
 
-      <section id="result-panel" class="result-grid">
+      <section class="results-layout" id="results-layout">
         <article class="panel answer-panel">
           <div class="panel-header">
-            <h3>Answer</h3>
-            <span id="answer-state" class="subtle">Waiting for a question</span>
+            <h2>Answer</h2>
+            <button
+              id="sources-toggle"
+              class="panel-toggle"
+              type="button"
+              aria-expanded="false"
+              data-toggle-sources
+            >
+              Sources (0)
+            </button>
           </div>
-          <pre id="answer-output" class="answer-output">Ask a question to see a grounded response here.</pre>
+
+          <div class="answer-meta">
+            <span id="answer-state" class="subtle">Ready for a query</span>
+            <button
+              id="sources-badge"
+              class="usage-badge"
+              type="button"
+              aria-expanded="false"
+              data-toggle-sources
+            >
+              0 sources used
+            </button>
+            <button
+              id="trace-shortcut"
+              class="usage-badge"
+              type="button"
+              aria-expanded="false"
+              data-toggle-trace
+            >
+              Trace
+            </button>
+          </div>
+
+          <pre id="answer-output" class="answer-output">Query memory to see an answer here.</pre>
         </article>
 
-        <article class="panel">
+        <aside class="panel sources-panel" id="sources-panel" aria-hidden="true">
           <div class="panel-header">
-            <h3>Sources</h3>
-            <span id="sources-count" class="subtle">0</span>
+            <h2>Sources</h2>
+            <button
+              id="sources-close"
+              class="panel-toggle"
+              type="button"
+              aria-expanded="true"
+              data-toggle-sources
+            >
+              Hide
+            </button>
           </div>
+
           <div id="sources-output" class="sources-output">
-            <p class="empty-state">Retrieved sources will appear here.</p>
+            <p class="empty-state">No supporting memory found.</p>
           </div>
-        </article>
+        </aside>
+      </section>
 
-        <article class="panel panel-wide">
-          <div class="panel-header">
-            <h3>Debug</h3>
-            <span class="subtle">Compact status and failure detail</span>
+      <section class="trace-shell">
+        <div class="trace-header">
+          <div>
+            <p class="eyebrow">Transparency</p>
+            <h2>Trace / Stats</h2>
           </div>
-          <div id="debug-output" class="debug-output">
-            <p class="empty-state">The request state, workflow info, and errors will appear here.</p>
+          <button
+            id="trace-toggle"
+            class="panel-toggle"
+            type="button"
+            aria-expanded="false"
+            data-toggle-trace
+          >
+            Trace
+          </button>
+        </div>
+
+        <div class="panel trace-drawer" id="trace-drawer" aria-hidden="true">
+          <div class="trace-grid">
+            <section class="trace-section">
+              <h3>Execution</h3>
+              <dl class="trace-list">
+                <div class="trace-row">
+                  <dt>Time elapsed</dt>
+                  <dd id="trace-elapsed">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Input tokens</dt>
+                  <dd id="trace-input-tokens">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Output tokens</dt>
+                  <dd id="trace-output-tokens">—</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="trace-section">
+              <h3>Retrieval</h3>
+              <dl class="trace-list">
+                <div class="trace-row">
+                  <dt>Sources retrieved</dt>
+                  <dd id="trace-source-count">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Top match score</dt>
+                  <dd id="trace-top-score">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Grounding</dt>
+                  <dd id="trace-grounding">—</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="trace-section">
+              <h3>Behavior</h3>
+              <dl class="trace-list">
+                <div class="trace-row">
+                  <dt>Retrieval mode</dt>
+                  <dd id="trace-mode">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Answer mode</dt>
+                  <dd id="trace-answer-mode">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Trace stage</dt>
+                  <dd id="trace-stage">—</dd>
+                </div>
+              </dl>
+            </section>
           </div>
-        </article>
+        </div>
       </section>
 
       <footer class="demo-footer">
         <p>
+          <span class="footer-version">v0.9.5</span>
+          <span aria-hidden="true">·</span>
           <a href="https://paypal.me/crispybrain" target="_blank" rel="noopener noreferrer">Support this project</a>
           <span aria-hidden="true">·</span>
           <a href="https://www.linkedin.com/in/berrysizemore/" target="_blank" rel="noopener noreferrer">Work with me</a>

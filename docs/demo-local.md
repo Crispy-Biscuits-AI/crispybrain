@@ -1,6 +1,6 @@
-# Local Demo
+# Local UI
 
-This is the first intentional local demo surface for CrispyBrain inside the AI Lab.
+This is the first intentional local UI surface for CrispyBrain inside the AI Lab.
 
 The primary supported runtime is the Compose-managed lab service `crispybrain-demo-ui` from the sibling `crispy-ai-lab` repo.
 
@@ -12,17 +12,17 @@ The canonical CrispyBrain ingest inbox now lives in this repo at `/Users/elric/r
 - the backend proxy on `8787` is real
 - n8n orchestration is real
 - memory retrieval is real
-- teacher-style answer generation is real
+- source-backed answer generation is real
 - grounding visibility is real
 
-## Demo Architecture
+## UI Architecture
 
 1. Browser opens `http://localhost:8787`
 2. The `crispybrain-demo-ui` container accepts `POST /api/demo/ask`
 3. The proxy forwards to the n8n webhook `POST /webhook/crispybrain-demo`
 4. The `crispybrain-demo` workflow calls the repo-owned `assistant` webhook path
 5. CrispyBrain retrieves memory and returns a structured answer
-6. The UI renders the answer, grounding note, evidence rows, and compact debug info
+6. The UI renders the answer, sources, and traceable retrieval signals
 
 ## Primary Runtime
 
@@ -34,7 +34,7 @@ cp .env.example .env
 docker compose up -d postgres n8n crispybrain-demo-ui
 ```
 
-Verify the demo container is running:
+Verify the UI container is running:
 
 ```bash
 docker compose ps crispybrain-demo-ui
@@ -68,7 +68,7 @@ Retired legacy endpoints after the hard cutover:
 
 Any remaining client still using `/webhook/crispybrain-assistant` or `/webhook/crispybrain-ingest` must be updated to the canonical public endpoints.
 
-The live demo path depends directly on:
+The live UI path depends directly on:
 
 - `assistant`
 - `crispybrain-demo`
@@ -83,11 +83,11 @@ docker compose exec -T n8n n8n update:workflow --id=crispybrain-demo --active=tr
 docker compose restart n8n
 ```
 
-The demo wrapper added in this pass is:
+The UI wrapper workflow added in this pass is:
 
 - `workflows/crispybrain-demo.json`
 
-The containerized demo UI service is defined in the sibling lab repo:
+The containerized UI service is defined in the sibling lab repo:
 
 - `../crispy-ai-lab/docker-compose.yml`
 
@@ -124,13 +124,13 @@ Use the repo-owned inbox path for local note drops:
 /Users/elric/repos/crispybrain/inbox/<project-slug>/
 ```
 
-For the default demo project:
+For the default UI project:
 
 ```bash
 mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 ```
 
-Place plain `.txt` notes in that folder before querying the demo with the matching `project_slug`.
+Place plain `.txt` notes in that folder before querying the UI with the matching `project_slug`.
 
 Current verified local runtime:
 
@@ -139,7 +139,7 @@ Current verified local runtime:
 - the current bind mount points there from `/Users/elric/repos/crispybrain/inbox`
 - a real file drop into `/Users/elric/repos/crispybrain/inbox/alpha/` now appears at the watched container path and flows into canonical `/webhook/ingest`
 
-Manual equivalent for the demo wrapper workflow only:
+Manual equivalent for the UI wrapper workflow only:
 
 ```bash
 cd ../crispy-ai-lab
@@ -148,7 +148,7 @@ docker compose exec -T n8n n8n import:workflow --input=/tmp/crispybrain-demo.jso
 docker compose restart n8n
 ```
 
-After restart, the demo webhook should be available at:
+After restart, the UI webhook should be available at:
 
 ```text
 http://localhost:5678/webhook/crispybrain-demo
@@ -167,9 +167,9 @@ To verify the current live path in n8n, confirm both of these are true:
 - `/webhook/crispybrain-assistant` and `/webhook/crispybrain-ingest` are no longer active
 - if you are testing automatic ingest, the same dropped file is visible at `/home/node/.n8n-files/crispybrain/inbox/<project-slug>/` inside the n8n container
 
-## Demo UI Themes
+## UI Themes
 
-Theme control is an intentional supported feature of the demo UI.
+Theme control is an intentional supported feature of the UI.
 
 Available themes:
 
@@ -182,7 +182,7 @@ Theme behavior:
 - first load defaults to `crispy`
 - the selector is visible in the UI header
 - the current theme is visible in a badge
-- the selected theme is stored in localStorage under the demo’s theme key
+- the selected theme is stored in localStorage under the existing theme key
 - missing or invalid stored values fall back to `crispy`
 - refresh keeps the selected theme
 - restarting the `crispybrain-demo-ui` container does not clear the theme because persistence is client-side
@@ -190,7 +190,7 @@ Theme behavior:
 
 ## Fallback / Dev Runtime
 
-If you need to run the demo proxy outside Docker for local debugging, you can still use the fallback script:
+If you need to run the UI proxy outside Docker for local debugging, you can still use the fallback script:
 
 ```bash
 cd ../crispybrain
@@ -199,7 +199,7 @@ python3 scripts/run_demo_server.py
 
 That script is now explicitly a fallback/dev utility. The main supported runtime is the Compose service.
 
-## Recommended Demo Question
+## Recommended Query
 
 Use:
 
@@ -215,15 +215,15 @@ alpha
 
 That query currently retrieves `alpha` memory rows and produces a grounded answer reliably in the lab.
 
-## Grounding Visibility In `v0.8`
+## Transparency In `v0.8`
 
-The local demo keeps the existing layout but makes grounding easier to inspect.
+The local UI now centers the answer while making sources and trace signals easier to inspect.
 
-When retrieval support is available, the demo now shows:
+When retrieval support is available, the UI now shows:
 
-- a grounding note above the evidence list
-- visible source cards with fields already returned by the workflow, including `id`, `review_status`, `trust_band`, `similarity`, `chunk_index`, and `source_type` when present
-- compact debug fields for `grounding_status`, `weak_grounding`, `supporting_source_count`, and `reviewed_source_count`
+- an answer panel with the current response
+- a collapsible sources panel with visible source cards and previews
+- a collapsible trace panel with execution, retrieval, and behavior signals
 
 When support is weak or absent, the workflow stays explicit instead of implying confidence:
 
@@ -232,7 +232,7 @@ When support is weak or absent, the workflow stays explicit instead of implying 
 
 ## Curl Smoke Tests
 
-Direct to the n8n demo webhook:
+Direct to the n8n UI webhook:
 
 ```bash
 curl -sS \
@@ -241,7 +241,7 @@ curl -sS \
   http://localhost:5678/webhook/crispybrain-demo | jq .
 ```
 
-Through the 8787 demo proxy:
+Through the 8787 UI proxy:
 
 ```bash
 curl -sS \
@@ -279,13 +279,10 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
       "chunk_index": 1
     }
   ],
-  "debug": {
-    "workflow": "crispybrain-demo",
-    "upstream_workflow": "assistant",
-    "teacher_used": true,
-    "retrieval_count": 2,
-    "grounding_status": "weak",
-    "weak_grounding": true
+  "trace": {
+    "stage": "answer_ready",
+    "status": "succeeded",
+    "grounding_status": "weak"
   }
 }
 ```
@@ -293,7 +290,7 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 ## Honest Failure Modes
 
 - empty question: the UI and proxy return `INVALID_QUESTION`
-- empty slug: the demo defaults it to `alpha`
+- empty slug: the UI defaults it to `alpha`
 - n8n unavailable: the proxy returns `N8N_UNAVAILABLE`
 - weak retrieval: the upstream assistant can return `grounding.status = weak` with a cautionary note
 - no strong retrieval: the upstream assistant can return `grounding.status = none` and no evidence rows
@@ -311,7 +308,7 @@ Re-import `workflows/crispybrain-demo.json` and restart the n8n service.
 
 ### The UI loads but every answer says there is not enough stored memory
 
-Use the recommended question and `alpha` project slug first. The current `alpha` memories are the most reliable demo dataset in this lab.
+Use the recommended query and `alpha` project slug first. The current `alpha` memories are the most reliable UI dataset in this lab.
 
 ## Smoke Test Checklist
 

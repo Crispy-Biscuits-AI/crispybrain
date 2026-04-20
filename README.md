@@ -8,9 +8,9 @@
   CrispyBrain is a local-first, self-hosted memory system that exposes what it knows, how it knows it, and where it conflicts — instead of pretending to produce a single correct answer.
 </p>
 
-`crispybrain` is the public product/demo repo for CrispyBrain: an open-source memory, retrieval, and agent lab built around real workflow exports and a real local demo path.
+`crispybrain` is the public product repo for CrispyBrain: an open-source memory, retrieval, and agent lab built around real workflow exports and a real local UI path.
 
-It is the place to understand the current demo surface, the workflow shape, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
+It is the place to understand the current browser surface, the workflow shape, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
 
 ## <img src="assets/biscuit-emoji.png" width="18" /> Latest Capabilities
 
@@ -35,7 +35,7 @@ It is a system that models evidence, conflict, and uncertainty explicitly.
 
 ## <img src="assets/biscuit-emoji.png" width="18" /> Start Here
 
-- [Local demo](docs/demo-local.md)
+- [Local UI](docs/demo-local.md)
 - [Ingest data](docs/ingest-text.md)
 - [Operator tools](docs/operator-quickstart.md)
 
@@ -57,7 +57,7 @@ CrispyBrain exists to make a local memory-backed assistant path visible and insp
 
 The repo is intentionally honest about the current slice:
 
-- a real demo UI
+- a real browser UI
 - a real n8n orchestration path
 - grounded retrieval instead of mocked answers
 - operator-facing inspection tools for memory quality
@@ -66,8 +66,8 @@ The repo is intentionally honest about the current slice:
 
 Today’s checked-in repo surface can:
 
-- run a real demo flow through `crispybrain-demo` and `assistant`
-- retrieve memory-backed answers instead of static demo text
+- run a real local UI flow through `crispybrain-demo` and `assistant`
+- retrieve memory-backed answers instead of static placeholder text
 - answer exact note-name and strong anchor-style note lookups deterministically
 - handle generalized questions across one or more agreeing notes more reliably
 - surface conflicting stored notes explicitly instead of guessing
@@ -78,7 +78,7 @@ Today’s checked-in repo surface can:
 - attach deterministic source-independence labels and evidence clusters to visible conflict sources
 - keep factual candidate lists cleaner when generic runtime/build-context notes are off-topic
 - expose trust and source metadata in responses
-- expose grounding status, supporting-source counts, and visible evidence fields in the demo path
+- expose grounding status, supporting-source counts, and visible evidence fields in the browser path
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
 - update review state for stored memory rows through the memory inspector
@@ -103,12 +103,12 @@ The canonical ingest inbox for CrispyBrain is now the repo-owned path `inbox/<pr
 
 ## Repository Structure
 
-- `demo/`: the current demo UI and local proxy server
+- `demo/`: the current browser UI and local proxy server
 - `workflows/`: exported n8n workflow JSON, including `assistant` and `crispybrain-demo`
 - `sql/`: checked-in SQL needed by the current assistant path
 - `scripts/`: maintainer and local helper scripts
-- `docs/`: setup, demo, scope, and technical notes
-- `assets/`: public artwork used by the demo and docs
+- `docs/`: setup, UI, scope, and technical notes
+- `assets/`: public artwork used by the UI and docs
 
 ## Canonical n8n Runtime
 
@@ -146,7 +146,7 @@ The current verified local lab runtime now mounts the repo inbox directly:
 - `auto-ingest-watch` polls that canonical inbox and hands new `.txt` files to `POST /webhook/ingest`
 - a real file drop into `/Users/elric/repos/crispybrain/inbox/alpha/` was ingested and retrieved through `POST /webhook/assistant`
 
-Today’s verified demo path is:
+Today’s verified UI path is:
 
 - `crispybrain-demo` -> `assistant`
 
@@ -181,7 +181,7 @@ scripts/workflows/import-exported-into-docker.sh
 
 5. Create the repo-owned inbox folder you want to ingest from, for example `mkdir -p /Users/elric/repos/crispybrain/inbox/alpha`, and place plain text notes under that project folder.
 
-6. Open the demo UI at `http://localhost:8787`.
+6. Open the local UI at `http://localhost:8787`.
 
 7. Use:
 
@@ -192,14 +192,14 @@ Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
-- the response includes an answer, a grounding note, and source rows
-- the `debug` block shows the request passed through the demo workflow path
+- the response includes an answer, sources, and traceable retrieval state
+- the trace panel shows execution and retrieval signals without depending on every backend field being present
 
-## Demo, Workflow, Ingestion, and Operator Entry Points
+## UI, Workflow, Ingestion, and Operator Entry Points
 
 Use these docs as the next stop depending on what you want to do:
 
-- [Local Demo](docs/demo-local.md): run the `8787` demo path and verify the UI/workflow flow
+- [Local UI](docs/demo-local.md): run the `8787` UI path and verify the UI/workflow flow
 - [Operator Quickstart](docs/operator-quickstart.md): get the fastest realistic operator setup
 - [Ingesting Text](docs/ingest-text.md): drop plain text into the current ingest path safely
 - [Workflow Sync](docs/workflow-sync.md): keep checked-in workflow exports aligned with n8n
@@ -219,7 +219,7 @@ Use these docs as the next stop depending on what you want to do:
 That includes:
 
 - project memory health visibility
-- source quality indicators in assistant and demo responses
+- source quality indicators in assistant and browser responses
 - source independence and evidence-cluster metadata on visible conflict sources
 - operator control through the upgraded memory inspector
 - suspect review/export workflows
@@ -246,9 +246,16 @@ The main `v0.6` lesson is worth keeping explicit:
 
 Recency matters as a tie-breaker, not as a global override.
 
-## Demo Surface and Themes
+## UI Overview
 
-The demo UI currently supports:
+The current browser surface keeps the existing theme system and footer while presenting retrieval more transparently:
+
+- Answer panel: the primary response area for grounded memory answers
+- Sources panel: a collapsible side panel that lists retrieved memory with previews and scores when available
+- Trace panel: a collapsible bottom drawer that exposes execution, retrieval, and behavior signals with graceful placeholders when fields are missing
+- Transparency-first design: source usage, status, and latency stay visible without forcing operators into a separate inspection screen
+
+The UI currently supports:
 
 - `light`
 - `dark`
@@ -258,8 +265,8 @@ The demo UI currently supports:
 
 The selected theme is stored client-side so it survives reloads and container restarts.
 
-Because CrispyBrain is being built in public, the demo also includes intentionally subtle support/contact links in the footer.
-They are optional and kept low-prominence so the UI still reads as a demo first.
+Because CrispyBrain is being built in public, the UI also includes intentionally subtle support/contact links in the footer.
+They remain low-prominence so the retrieval surface stays primary.
 
 ## Current Limitations
 
@@ -272,7 +279,7 @@ Current manual/runtime assumptions:
 - workflows must be imported into n8n
 - credentials must be created in n8n manually
 - the current workflow set still assumes a credential named `Postgres account`
-- the current demo dataset is strongest for project slug `alpha`
+- the current UI dataset is strongest for project slug `alpha`
 
 Current product limitations remain explicit:
 

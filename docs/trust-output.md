@@ -2,7 +2,7 @@
 
 ## v0.9.5 answer modes
 
-Assistant and demo responses now include `answer_mode`:
+Assistant and browser responses now include `answer_mode`:
 
 - `direct`: strong support was available, so the answer can be returned normally
 - `conflict`: retrieved notes disagree, so the assistant reports the disagreement instead of synthesizing a guess
