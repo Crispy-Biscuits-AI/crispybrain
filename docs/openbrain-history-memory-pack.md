@@ -149,6 +149,7 @@ What was validated after those fixes:
 - weakly grounded answers now include the grounding warning in the answer text itself instead of only exposing it through trace metadata
 - clearly unsupported questions now fall back instead of being carried by generic lexical/filepath matches inside the history corpus
 - adversarial prompts asking for undocumented mistakes now return an explicit lack-of-evidence answer instead of turning documented failures into new claims
+- the failures file now includes a retrieval-wording note so phrasing variants such as `issues`, `bugs`, `breakdowns`, `regressions`, `weak points`, and `went wrong` stay attached to the same repo-supported corpus without adding new historical claims
 
 Operational note:
 

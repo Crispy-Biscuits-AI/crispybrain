@@ -225,3 +225,11 @@ That keeps the stricter relevance penalties and generic-runtime filtering active
 
 The lexical side now also avoids counting query-unrelated filepath structure as evidence, and it ignores very short non-numeric lexical terms when building the visible candidate set.
 That reduces false-positive retrieval on unsupported questions while keeping anchor-style and history-specific phrasing usable.
+
+For phrasing drift on project-history questions, the assistant now adds a small canonical lexicon when the query clearly asks about:
+
+- failures, problems, issues, bugs, breakdowns, weak points, incidents, regressions, mistakes, or what went wrong
+- uncertainty, incompleteness, or what is not documented
+
+This does not hardcode an answer.
+It only helps the candidate set keep the intended history-pack files in play when the user changes wording.

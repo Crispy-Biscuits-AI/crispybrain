@@ -4,6 +4,10 @@ Scope note
 
 This file records repo-supported friction, failures, and unresolved weaknesses. It avoids inventing incidents that are not visible in docs, scripts, or git history.
 
+Retrieval wording note
+
+This file is the repo-supported source for questions about failures, problems, issues, bugs, breakdowns, regressions, weak points, incidents, mistakes, and what went wrong during development.
+
 Hidden boundary failures
 
 Confirmed by docs/crispybrain-v0_5.md:
