@@ -1,0 +1,360 @@
+Timeline From Early Concept To v0.9.5
+
+Scope note
+
+This timeline uses the best-supported milestones visible in repo docs, seed data, scripts, and git history. Exact version boundaries before v0.4 are incomplete.
+
+Undocumented pre-v0.2 / possible v0.1 phase
+
+Not explicitly documented:
+The filename for this memory file starts at v0.1 because the task asks for that range, but the repo does not contain a dedicated v0.1 note.
+
+Supported by docs/HISTORY.md:
+There were earlier local experiments before the standalone CrispyBrain repo identity. They established a webhook-driven assistant backed by Postgres, embeddings, and retrieval.
+
+What changed:
+Only the broad pattern is visible.
+
+Why it mattered:
+It established the architectural direction later carried into OpenBrain and CrispyBrain.
+
+What remained unresolved:
+Exact goals, naming, and scope for this earliest phase are not preserved in repo-visible detail.
+
+What was validated:
+No direct repo-visible v0.1 validation artifact was found.
+
+OpenBrain v0.2 phase, 2026-04-16 to 2026-04-17
+
+Supported by git history:
+Commits on 2026-04-16 and 2026-04-17 show project-aware auto-ingest watching, build-context and answer-from-memory workflows, smoke tests, and a reusable test harness.
+
+What changed:
+The system gained project-aware auto-ingest behavior and a more complete workflow path around ingest and answering.
+
+Why it mattered:
+This appears to be the first clearly visible step toward a usable memory pipeline instead of a loose experiment.
+
+What remained unresolved:
+Naming was still OpenBrain. Public product identity and the later CrispyBrain structure were not yet in place.
+
+What was validated:
+Supported by git history:
+Smoke-test and runtime webhook execution commits show that early validation was already part of the workflow.
+
+OpenBrain v0.3 phase, 2026-04-17
+
+Supported by git history:
+`openbrain-v0.3` added a unified assistant, session memory, and a local chat UI, then tightened UI endpoint defaults and import checks.
+
+What changed:
+The assistant path became more unified and got browser-facing interaction plus session continuity.
+
+Why it mattered:
+This made the system closer to an operator-usable memory assistant rather than only a background ingest/retrieval pipeline.
+
+What remained unresolved:
+The repo had not yet completed the CrispyBrain rebrand or documented the longer-term public identity.
+
+What was validated:
+Supported by git history:
+Import checks and smoke tests were added around this phase.
+
+CrispyBrain v0.4, 2026-04-17
+
+Confirmed by docs/crispybrain-v0.4.md and docs/HISTORY.md:
+`v0.4` is the first public-facing CrispyBrain release line in this repository.
+
+What changed:
+- OpenBrain naming was reworked into CrispyBrain naming for the public repo
+- the main webhook became `assistant`
+- local UI, session continuity, workflow exports, SQL, and helper scripts were documented as the public path
+
+Why it mattered:
+This is where the repo becomes the standalone public CrispyBrain product line.
+
+What remained unresolved:
+- runtime-sensitive legacy names such as `openbrain_chat_turns`
+- authentication and access control
+- turnkey packaging
+- cleanup of older workflow variants
+
+What was validated:
+Confirmed by docs/crispybrain-v0.4.md and scripts/test-crispybrain-v0_4.sh:
+UI contract checks, assistant webhook smoke tests, session continuity, invalid-input handling, and empty-retrieval behavior were all part of the validation story.
+
+CrispyBrain v0.5, 2026-04-19
+
+Confirmed by docs/crispybrain-v0_5.md:
+`v0.5` is a system-first hardening release focused on observability, reliability, and correctness.
+
+What changed:
+- trace contract and structured boundary metadata
+- duplicate and partial-ingest detection
+- safer and more explicit failures at workflow boundaries
+- offline validation against exported workflow JSON
+
+Why it mattered:
+The project explicitly prioritized hidden workflow failure over flashy features.
+
+What remained unresolved:
+- centralized log aggregation
+- a run-events table
+- automated repair for partial ingests
+- broader architecture rewrites
+
+What was validated:
+Confirmed by docs/crispybrain-v0_5.md:
+The repo added offline checks for ingest validation, duplicate handling, observability propagation, and boundary behavior.
+
+CrispyBrain v0.5.1, 2026-04-19
+
+Confirmed by docs/crispybrain-v0_5_1.md:
+`v0.5.1` is a narrow stability pass.
+
+What changed:
+- suspect-row exclusion in assistant retrieval and context assembly
+- repeated ingest-to-assistant cycle checks
+
+Why it mattered:
+Corrupted or garbled rows were treated as a practical retrieval problem, not just a data cleanup issue.
+
+What remained unresolved:
+Confirmed by docs/crispybrain-v0_5_1.md:
+The known `dbTime.getTime is not a function` issue stayed in the upstream/external bucket unless proven otherwise.
+
+What was validated:
+Repeated invalid-ingest, valid-ingest, duplicate-replay, trace propagation, and suspect-row exclusion behavior.
+
+CrispyBrain v0.5.2, 2026-04-19
+
+Confirmed by docs/crispybrain-v0_5_2.md:
+`v0.5.2` is an operator-visibility pass.
+
+What changed:
+- script-based memory inspection
+- export-suspect modes
+- configurable repeated-cycle harness
+
+Why it mattered:
+Operators got a clearer way to inspect whether repeated runs revealed new instability.
+
+What remained unresolved:
+No destructive cleanup and no speculative upstream fix for the known n8n time issue.
+
+What was validated:
+Repeated-cycle checks across ingest, duplicate protection, assistant retrieval, trace propagation, and suspect-row exclusion.
+
+CrispyBrain v0.6, 2026-04-19
+
+Confirmed by docs/crispybrain-v0_6.md:
+`v0.6` is the knowledge-quality and operator-control release.
+
+What changed:
+- review-state model in metadata
+- trust fields and uncertainty indicators
+- project health summaries
+- suspect export and snapshot tooling
+- visible demo pass-through for retrieval and trust
+
+Why it mattered:
+This is the first release where memory quality and operator control become part of the checked-in repo story.
+
+What remained unresolved:
+- no full operator UI
+- review state affects suppression more than ranking
+- retrieval ranking is still not quality-aware
+
+What was validated:
+Runtime harness checks for review-state updates, suppression, trust indicators, health summary generation, exports, metrics snapshots, and deterministic reviewed-row propagation.
+
+CrispyBrain v0.7 / v0.7.1, 2026-04-19
+
+Confirmed by docs/crispybrain-v0_7.md:
+`v0.7` is a stability and observability hardening pass, and `v0.7.1` resolves retrieval-policy ambiguity.
+
+What changed:
+- anchor-aware deterministic retrieval
+- clearer semantic vs anchor routing
+- exact row inspection in the memory inspector
+- repeated-pass consistency checks
+
+Why it mattered:
+The repo made retrieval policy more inspectable and less ambiguous, especially for exact note lookups.
+
+What remained unresolved:
+Broad semantic questions still remain similarity-led, with recency only as a tie-breaker.
+
+What was validated:
+Repeated anchor, exact-filename, and semantic consistency checks, plus review-status propagation and suppression control.
+
+CrispyBrain v0.8, 2026-04-20
+
+Confirmed by docs/crispybrain-v0_8.md:
+`v0.8` is the trust and evaluation release.
+
+What changed:
+- dedicated 8-case evaluation pack
+- explicit `grounding` block
+- weak and none grounding states
+- clearer visible evidence fields in UI and responses
+
+Why it mattered:
+The system stopped implying confidence when support was weak.
+
+What remained unresolved:
+No invented confidence scores and no promise to surface fields that the workflow does not already expose.
+
+What was validated:
+The 8-case harness covered semantic match, phrase match, ambiguity, weak/no strong match, distractors, multi-memory behavior, grounding visibility, and regression behavior.
+
+Canonical runtime and repo-owned inbox cutover, 2026-04-20
+
+Confirmed by README, docs/demo-local.md, docs/operator-quickstart.md, docs/workflow-sync.md, and git history:
+The project standardized on the canonical workflow family and the repo-owned inbox under `inbox/<project-slug>/`.
+
+What changed:
+- retired duplicate `crispybrain-*` webhook families
+- watcher standardized to `auto-ingest-watch`
+- verified local file-drop ingest into the repo-owned inbox
+
+Why it mattered:
+The repo path itself became the auditable ingest source of truth for the local lab.
+
+What remained unresolved:
+This still depends on the external runtime being wired correctly. The repo does not rewrite protected runtime infrastructure here.
+
+What was validated:
+README and operator docs say a real file drop into the repo inbox was ingested and later retrievable through `POST /webhook/assistant`.
+
+CrispyBrain v0.9, 2026-04-20
+
+Supported by git history and README:
+`v0.9` added retrieval improvements and conflict-aware answering.
+
+What changed:
+- wider candidate preservation
+- better support for generalized answers across multiple notes
+- conflict-aware answering instead of silent collapse
+
+Why it mattered:
+The answer layer began exposing disagreement instead of pretending the top retrieved note was always enough.
+
+What remained unresolved:
+The trust surface still needed better operator hints for tie handling, weighting, and source correlation.
+
+What was validated:
+Supported by scripts/test-crispybrain-v0_9.sh and seed-data/crispybrain-v0_9-eval-seed.json:
+A 6-case pack covered anchor lookup, generalized queries, conflict mode, short factual retrieval, and weak-evidence fallback.
+
+CrispyBrain v0.9.1, 2026-04-20
+
+Confirmed by git history, README, and docs/retrieval.md:
+`v0.9.1` added trust calibration and conservative candidate trimming.
+
+What changed:
+- generic runtime/build-context notes could be trimmed from factual candidate lists
+- lexical fallback stayed in place for identifiers and anchors
+- conflict clarity improved
+
+Why it mattered:
+Retrieved candidate lists became more readable and less noisy without redesigning retrieval.
+
+What remained unresolved:
+The system remained heuristic and explicitly avoided hard truth ranking.
+
+What was validated:
+Supported by seed-data/crispybrain-v0_9_1-eval-seed.json and scripts/test-crispybrain-v0_9_1.sh:
+The evaluation pack checked strong conflicts, candidate trimming, and preserved weak-evidence fallback behavior.
+
+CrispyBrain v0.9.2, 2026-04-20
+
+Supported by git history, seed data, and scripts:
+`v0.9.2` added conflict usefulness hints.
+
+What changed:
+- more explicit support-count and recency hints in conflicts
+
+Why it mattered:
+Operators could inspect split evidence without forcing the system to choose a winner.
+
+What remained unresolved:
+Hints were still non-authoritative and not truth scores.
+
+What was validated:
+The visible 7-case pack included a weighted-conflict scenario for harbor relay.
+
+CrispyBrain v0.9.3, 2026-04-20
+
+Confirmed by git history and scripts/test-crispybrain-v0_9_3.sh:
+`v0.9.3` added confidence-surface and tie-handling refinements.
+
+What changed:
+- stronger tie handling
+- clearer dominant-claim status and low-confidence surfacing
+
+Why it mattered:
+The system could explain unresolved ties more cleanly.
+
+What remained unresolved:
+Conflict mode still intentionally refused winner selection.
+
+What was validated:
+The 9-case pack checked tie conflicts and duplicate-heavy conflicts.
+
+CrispyBrain v0.9.4, 2026-04-20
+
+Confirmed by git history and docs/trust-output.md:
+`v0.9.4` added source quality and weighted support.
+
+What changed:
+- deterministic source-quality labels
+- weighted support totals
+- stronger hints when deduplicated counts tied but source quality differed
+
+Why it mattered:
+Not all visible sources counted equally anymore.
+
+What remained unresolved:
+Weighted support was still heuristic and not truth determination.
+
+What was validated:
+Confirmed by scripts/test-crispybrain-v0_9_4.sh:
+The 10-case pack verified weighted support, quality-weighted dominance, weighted ties, and duplicate-heavy weighted conflicts.
+
+CrispyBrain v0.9.5, 2026-04-20
+
+Confirmed by README, docs/retrieval.md, docs/trust-output.md, git history, and scripts/test-crispybrain-v0_9_5.sh:
+`v0.9.5` added independence-aware evidence reasoning.
+
+What changed:
+- source independence labels
+- evidence clustering
+- independence-adjusted support
+- dominance basis routing that prefers independence-adjusted support before weighted and deduped support
+
+Why it mattered:
+The trust layer could discount correlated notes instead of letting many near-duplicates look like independent corroboration.
+
+What remained unresolved:
+The system still does not collapse conflicts into a single truth answer and still treats these signals as operator-facing heuristics.
+
+What was validated:
+The repo-tracked 10-case pack verified anchor retrieval, generalized answers, strict conflict mode, weak evidence fallback, independence dominance, independence-vs-recency disagreement, tie handling, and correlation-heavy duplicate handling.
+
+Current repo head after v0.9.5, 2026-04-20
+
+Supported by git history and README:
+After the v0.9.5 backend/trust work, same-day UI commits added a transparency-first layout, sources and trace panels, real trace data, and the `localhost:8787` public browser surface.
+
+What changed:
+The browser presentation became more inspectable without a new version tag.
+
+Why it mattered:
+The current repo state presents the trust-layer work more directly to operators.
+
+What remained unresolved:
+No explicit v0.9.6 or v1.0 marker is documented yet.
+
+What was validated:
+README and docs/demo-local.md describe the verified local UI path and trace visibility.

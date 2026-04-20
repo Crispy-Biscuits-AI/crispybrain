@@ -1,0 +1,83 @@
+Glossary And Project Names
+
+OpenBrain
+
+Meaning 1:
+Confirmed by README attribution:
+OpenBrain is the external work that directly inspired CrispyBrain. The repo says CrispyBrain is an independent, build-in-public exploration of similar ideas and is not affiliated with or endorsed by the original project.
+
+Meaning 2:
+Supported by git history, docs/MIGRATION.md, and docs/legacy-naming-debt.md:
+`openbrain-*` also appears as the earlier internal naming lineage inside this repo before the CrispyBrain rebrand at v0.4.
+
+Important caution:
+Do not blur those two meanings. The README attribution refers to inspiration. The migration docs and legacy naming notes refer to this repo’s own older naming and compatibility debt.
+
+CrispyBrain
+
+Confirmed by docs/HISTORY.md and docs/crispybrain-v0.4.md:
+CrispyBrain is the public product identity of this repository from v0.4 onward.
+
+Confirmed by README:
+It is described as a local-first, self-hosted memory, retrieval, and agent lab built around real workflow exports and a real local UI path.
+
+OpenBrain to CrispyBrain transition
+
+Supported by git history:
+2026-04-17 commits explicitly mention forking OpenBrain and completing the CrispyBrain rebrand.
+
+Confirmed by docs/MIGRATION.md:
+Workflow names, webhook paths, folder names, and localStorage keys were migrated from `openbrain-*` to CrispyBrain-native names.
+
+Confirmed by docs/legacy-naming-debt.md:
+Some runtime-sensitive names still remain for compatibility.
+
+inbox
+
+Confirmed by README, docs/demo-local.md, docs/ingest-text.md, and docs/operator-quickstart.md:
+The canonical local ingest path is the repo-owned folder `inbox/<project-slug>/`.
+
+For this memory pack:
+`inbox/openbrain-history/` means the effective project slug is `openbrain-history` if the watcher treats that folder as a normal project folder.
+
+ingest
+
+Confirmed by docs/ingest-text.md and docs/workflow-sync.md:
+`ingest` is both:
+- the canonical workflow/webhook that stores memory
+- the act of dropping text into the watched inbox so the workflow can process it
+
+memory
+
+Confirmed by docs/setup-minimal.md and version docs:
+Memory refers to stored rows in the `memories` table and the assistant’s use of that stored context when answering questions.
+
+Important nuance:
+Confirmed by docs/crispybrain-v0_6.md and docs/trust-output.md:
+Not all memory rows are equally trusted, and stored memory can conflict.
+
+retrieval
+
+Confirmed by docs/retrieval.md:
+Retrieval is the stage that gathers candidate memory rows for a question.
+
+Current behavior:
+- semantic retrieval remains the main path
+- lexical fallback can assist anchor-like or sparse factual queries
+- anchor mode exists for strong lexical lookups
+- candidate trimming can remove generic runtime noise from factual queries
+
+trust / eval
+
+Confirmed by docs/crispybrain-v0_8.md and docs/trust-output.md:
+`trust` refers to the visible metadata that explains support strength, grounding, source quality, source independence, and conflict handling.
+
+`eval` refers to the repo-tracked validation packs and harnesses used to prove those behaviors against the checked-in workflows.
+
+demo / UI / sources
+
+Confirmed by README and docs/demo-local.md:
+The current demo/UI path is the browser surface on `localhost:8787` that calls `crispybrain-demo` and then `assistant`.
+
+Confirmed by docs/trust-output.md:
+`sources` and `selected_sources` are the visible evidence rows carried into the answer process. They are evidence surfaces, not a claim that one source is absolute truth.

@@ -1,0 +1,142 @@
+Problems And Failures
+
+Scope note
+
+This file records repo-supported friction, failures, and unresolved weaknesses. It avoids inventing incidents that are not visible in docs, scripts, or git history.
+
+Hidden boundary failures
+
+Confirmed by docs/crispybrain-v0_5.md:
+`v0.5` exists because hidden failure at workflow boundaries was a serious enough concern to justify a system-first hardening release.
+
+Observed problem:
+- malformed inputs could fail weakly
+- external and upstream failures were not explicit enough
+- operators needed a clearer trace of what stage had failed
+
+Repo response:
+- structured `trace`
+- failure classification
+- explicit reject-with-reason behavior
+
+Ingestion weakness and replay risk
+
+Confirmed by docs/crispybrain-v0_5.md and docs/observability.md:
+Duplicate and partial-ingest detection had to be added against stored metadata.
+
+Observed problem:
+- replayed ingest work could be processed again
+- partial-ingest state needed explicit operator cleanup instead of silent continuation
+
+Repo response:
+- duplicate detection
+- partial-ingest detection
+- more structured ingest metadata
+
+Corrupted or low-signal memory rows
+
+Confirmed by docs/crispybrain-v0_5_1.md and docs/crispybrain-v0_5_2.md:
+Assistant retrieval needed a suspect-row rule to keep obviously garbled rows out of retrieval and context assembly.
+
+Observed problem:
+- short binary-looking or corrupted fragments could pollute retrieval
+
+Repo response:
+- narrow suspect-row filtering based on content quality heuristics
+
+Debugging difficulty and observability gaps
+
+Confirmed by docs/observability.md:
+The repo still does not claim centralized log shipping or a dedicated execution event table.
+
+Observed problem:
+- debugging depended on structured responses, metadata, and offline tools rather than a full logging platform
+
+Repo response:
+- trace contract
+- metadata propagation
+- `summarize-crispybrain-run.js`
+
+Remaining limitation:
+- observability is still intentionally lightweight
+
+Upstream runtime issue left unresolved
+
+Confirmed by docs/crispybrain-v0_5_1.md and docs/crispybrain-v0_5_2.md:
+The known `dbTime.getTime is not a function` issue remained in the upstream/external bucket unless repo-owned evidence proved otherwise.
+
+Observed problem:
+- at least one real runtime issue was known but not safely attributable to repo-owned code
+
+Repo response:
+- do not patch speculatively
+
+Retrieval correctness versus metadata correctness
+
+Confirmed by docs/crispybrain-v0_6.md:
+The project learned that retrieval ranking correctness and metadata correctness are separate concerns.
+
+Observed problem:
+- a reviewed row could surface with correct metadata but still not become the top-ranked result for a broad semantic query
+
+Repo response:
+- make that limitation explicit
+- keep ranking claims honest
+
+Retrieval-policy ambiguity
+
+Confirmed by docs/crispybrain-v0_7.md:
+`v0.7.1` exists partly to resolve retrieval-policy ambiguity.
+
+Observed problem:
+- operators could misread the system as if recency or review status overrode the whole ranking policy
+
+Repo response:
+- make anchor vs semantic routing explicit
+- keep recency as a tie-breaker, not a global winner rule
+
+Weak grounding and sparse evidence
+
+Confirmed by docs/crispybrain-v0_8.md:
+`v0.8` made weak or absent support explicit.
+
+Observed problem:
+- the system needed a way to say "support is weak" without sounding confident
+
+Repo response:
+- `grounding.status = grounded | weak | none`
+
+Generic runtime-note noise in candidate lists
+
+Confirmed by docs/retrieval.md:
+Generic build-context or runtime notes could crowd factual candidate lists.
+
+Observed problem:
+- retrieved candidate lists could include off-topic or generic runtime material
+
+Repo response:
+- conservative candidate trimming in `v0.9.1`
+- lightweight entity/topic focus
+
+Conflict handling remained intentionally unresolved
+
+Confirmed by docs/trust-output.md:
+Even after weighted and independence-aware support were added, conflict mode does not choose a winner.
+
+Observed problem:
+- the system can expose richer split-evidence hints, but it still cannot truth-rank conflicting notes safely enough to collapse them
+
+Repo response:
+- keep disagreement explicit
+
+Testing and product limits that remain
+
+Confirmed by README and docs/setup-minimal.md:
+- the repo is public-ready, not fully turnkey
+- there is no full operator UI yet
+- the checked-in SQL does not fully provision `memories` and `projects`
+- broad semantic questions are still similarity-led
+- visible evidence is limited to what the workflows already return
+
+Inference from surrounding repo context:
+The project consistently prefers honest limitations over inflated capability claims.

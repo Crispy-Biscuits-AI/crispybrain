@@ -1,0 +1,80 @@
+Current State Around v0.9.5
+
+Scope note
+
+This snapshot describes what the repo appears to include at or immediately after the `v0.9.5` milestone. It avoids treating same-day UI polish as a separate formal version unless the repo names one.
+
+What v0.9.5 appears to include
+
+Confirmed by README:
+The current repo state includes:
+- semantic plus lexical retrieval
+- conflict detection with no forced answer
+- raw and deduplicated support counts
+- weighted support
+- independence-aware reasoning
+- structured trust output
+- deterministic evaluation aligned with runtime behavior
+
+Confirmed by docs/retrieval.md and docs/trust-output.md:
+The answer path now exposes:
+- `answer_mode`
+- `retrieved_candidates`
+- `selected_sources`
+- conflict severity and details
+- weighted, independent, and independence-adjusted support
+- source quality and source independence summaries
+- evidence clusters
+- entity focus and filtered candidate counts
+
+Confirmed by README and docs/demo-local.md:
+The current local browser path runs through `localhost:8787`, `crispybrain-demo`, and `assistant`.
+
+Supported by 2026-04-20 git history:
+Same-day UI commits added a transparency-first layout with visible sources and trace panels.
+
+What is likely stable
+
+Inference from surrounding repo context:
+The most stable-looking parts of the current slice are the things that are both documented and exercised by named harnesses:
+- `assistant`, `ingest`, and `crispybrain-demo` as canonical workflow entrypoints
+- optional `auto-ingest-watch`
+- repo-owned inbox ingest
+- exact or strongly anchored note lookup behavior
+- explicit weak/no grounding states
+- explicit conflict behavior that refuses winner selection
+- the v0.9.5 independence-aware eval pack
+
+What is still open heading toward v1.0
+
+Confirmed by README and version docs:
+- full operator UI remains absent
+- broad semantic retrieval is still similarity-led
+- stronger feedback loops into ingestion are still a near-term direction, not a delivered feature
+- broader anchor heuristics are still future-facing
+- migration away from `openbrain_chat_turns` remains unfinished
+- auth/access control is still deferred
+- turnkey provisioning is still incomplete
+
+What should not be overstated
+
+Confirmed by README and docs/setup-minimal.md:
+- this repo is public-ready, not fully turnkey
+- the checked-in SQL does not fully provision `memories` and `projects`
+- the current UI dataset is strongest for project slug `alpha`
+- visible evidence is limited to what current workflows return
+
+Confirmed by docs/trust-output.md:
+- weighted and independence-aware support are heuristic operator aids, not truth scores
+- conflict mode still does not pick a winner
+
+Confirmed by docs/crispybrain-v0_8.md:
+- if a field is not already exposed by the workflow path, the repo does not pretend it exists
+
+Naming and version caution
+
+Supported by git history and README:
+The repo head after `v0.9.5` includes UI and README work on the same day.
+
+Not explicitly documented:
+There is no formal `v0.9.6` or `v1.0` note in the visible sources inspected for this task.

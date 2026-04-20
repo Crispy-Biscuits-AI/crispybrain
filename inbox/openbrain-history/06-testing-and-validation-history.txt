@@ -1,0 +1,216 @@
+Testing And Validation History
+
+Scope note
+
+This file records repo-visible validation, not private recollection. When a version has a named harness or seed file, that is treated as the strongest evidence.
+
+v0.4 validation
+
+Confirmed by docs/crispybrain-v0.4.md and scripts/test-crispybrain-v0_4.sh:
+The v0.4 harness checked:
+- UI contract expectations
+- assistant webhook smoke tests
+- session continuity across turns
+- invalid-input handling
+- empty-retrieval handling
+
+What passed:
+Supported by the script pass message:
+The harness was expected to pass all of the checks above in the checked-in workflow set.
+
+What was only partially proven:
+Not explicitly documented:
+This proves the documented local path, not every possible deployment shape.
+
+v0.5 offline hardening checks
+
+Confirmed by docs/crispybrain-v0_5.md and scripts/test-crispybrain-v0_5.sh:
+The repo added offline checks against exported workflow JSON.
+
+What was tested:
+- ingest validation
+- duplicate and partial-ingest detection
+- observability propagation
+- search boundary validation
+- safe retry configuration
+
+What passed:
+Supported by the script output contract:
+The script reports a pass count when checks succeed.
+
+What failed or needed follow-up:
+Supported by git history:
+`workflows: fix ingest runtime verification failures` landed the same day, which implies earlier verification issues were real enough to require a fix.
+
+v0.5.1 and v0.5.2 repeated-cycle validation
+
+Confirmed by docs/crispybrain-v0_5_1.md, docs/crispybrain-v0_5_2.md, and scripts/test-crispybrain-v0_5_1_cycles.sh:
+The project started validating repeated ingest-to-assistant behavior rather than only single runs.
+
+What was tested:
+- invalid ingest rejection
+- valid ingest success
+- duplicate replay rejection
+- trace propagation
+- suspect-row exclusion
+- latency drift and noise trends across bounded repeated cycles
+
+What passed:
+Supported by the script pass message:
+Tracing, duplicate protection, invalid rejection, and suspect-row filtering were expected to hold across repeated cycles.
+
+What still needed verification:
+Confirmed by docs/crispybrain-v0_5_2.md:
+Longer cycle counts mostly reconfirm stability unless they reveal new failures or suspect rows.
+
+v0.6 runtime validation
+
+Confirmed by docs/crispybrain-v0_6.md:
+The v0.6 harness exercised the live runtime path more deeply.
+
+What was tested:
+- duplicate rejection
+- review-state updates
+- suppression control
+- trust indicators
+- project health summary
+- suspect export generation
+- metrics snapshots
+- deterministic reviewed-row propagation
+
+What failed or needed follow-up:
+Supported by git history:
+`Hotfix v0.6 harness review-status validation` shows at least one validation issue needed immediate correction.
+
+Key validation lesson:
+Confirmed by docs/crispybrain-v0_6.md:
+Retrieval ranking and metadata correctness are separate questions and should be tested separately.
+
+v0.7 / v0.7.1 consistency validation
+
+Confirmed by docs/crispybrain-v0_7.md and scripts/test-crispybrain-v0_7.sh:
+The project moved from one-shot checks toward repeated consistency passes.
+
+What was tested:
+- anchor-aware retrieval
+- exact filename lookup
+- semantic retrieval consistency
+- review-status propagation against the database
+- suppression control
+- suspect export and metrics snapshots
+- demo workflow pass-through
+
+What passed:
+Supported by the script pass message:
+The pack verified anchor-aware retrieval, semantic routing, reviewed-row propagation, trust visibility, suspect export, and metrics snapshots.
+
+What still needs care:
+Inference from surrounding repo context:
+Consistency hashes are only as trustworthy as the controlled local runtime and seed conditions.
+
+v0.8 evaluation release
+
+Confirmed by docs/crispybrain-v0_8.md and scripts/test-crispybrain-v0_8.sh:
+The repo added a dedicated 8-case evaluation pack.
+
+What was tested:
+- semantic match
+- exact phrase match
+- ambiguity / weak query
+- no-strong-match query
+- near-neighbor / distractor query
+- multi-memory style query
+- grounding visibility
+- regression behavior
+
+What passed:
+Supported by the docs and harness contract:
+The operator-facing pack is expected to print pass/fail with compact diagnostics for each case.
+
+What was only partially proven:
+Confirmed by docs/crispybrain-v0_8.md:
+The release does not invent missing evidence fields and does not pretend every answer can claim strong support.
+
+v0.9 through v0.9.5 evaluation packs
+
+Supported by scripts and seed-data:
+The v0.9.x line moved to targeted eval seed packs that exercised retrieval, conflict, weighting, and correlation behavior.
+
+v0.9
+
+Evidence:
+scripts/test-crispybrain-v0_9.sh and seed-data/crispybrain-v0_9-eval-seed.json.
+
+What was tested:
+- exact anchor lookup
+- generalized single-note query
+- generalized multi-note query
+- strict conflict answer
+- short factual query
+- weak-evidence fallback
+
+v0.9.1
+
+Evidence:
+scripts/test-crispybrain-v0_9_1.sh and seed-data/crispybrain-v0_9_1-eval-seed.json.
+
+What was added to validation:
+- candidate trimming of generic runtime noise
+- conflict severity and structured conflict answer checks
+
+v0.9.2
+
+Evidence:
+scripts/test-crispybrain-v0_9_2.sh and seed-data/crispybrain-v0_9_2-eval-seed.json.
+
+What was added to validation:
+- support-count and recency hints in weighted-conflict scenarios
+
+v0.9.3
+
+Evidence:
+scripts/test-crispybrain-v0_9_3.sh and seed-data/crispybrain-v0_9_3-eval-seed.json.
+
+What was added to validation:
+- tie conflicts
+- duplicate-heavy conflicts
+- clearer confidence surface behavior
+
+v0.9.4
+
+Evidence:
+scripts/test-crispybrain-v0_9_4.sh and seed-data/crispybrain-v0_9_4-eval-seed.json.
+
+What was added to validation:
+- quality-weighted dominance
+- weighted ties
+- duplicate-heavy conflicts after source-quality weighting
+
+What passed:
+Supported by the script pass message:
+The pack verified weighted-support and source-quality behavior across 10 cases.
+
+v0.9.5
+
+Evidence:
+scripts/test-crispybrain-v0_9_5.sh and seed-data/crispybrain-v0_9_5-eval-seed.json.
+
+What was added to validation:
+- equal weighted support resolved by more independent corroboration
+- independence-adjusted dominance vs recency disagreement
+- independence-adjusted ties
+- duplicate-heavy evidence after correlation handling
+
+What passed:
+Supported by the script pass message:
+The pack verified the 10-case independence-aware behavior.
+
+What still needs verification
+
+Confirmed by README and docs/setup-minimal.md:
+- the repo does not fully provision `memories` and `projects`
+- the system still depends on local runtime wiring
+- the repo is not fully turnkey
+
+Inference from surrounding repo context:
+The validation story is strongest for the documented local lab, not for arbitrary external environments.

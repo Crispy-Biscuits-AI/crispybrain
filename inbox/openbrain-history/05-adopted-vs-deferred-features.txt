@@ -1,0 +1,273 @@
+Adopted Vs Deferred Features
+
+Scope note
+
+This file separates features that the repo clearly adopted from features it clearly deferred, dropped, or postponed. Reasons are marked as confirmed or inferred.
+
+Adopted / included
+
+Project-aware auto-ingest watcher
+
+Status:
+Adopted early in the OpenBrain phase.
+
+Evidence:
+Supported by 2026-04-16 and 2026-04-17 git history.
+
+Why this status appears to have happened:
+Inference from surrounding repo context:
+Project-aware ingest was needed for a practical memory system rather than an unscoped note dump.
+
+Unified assistant webhook and session memory
+
+Status:
+Adopted by OpenBrain v0.3 and carried into CrispyBrain v0.4.
+
+Evidence:
+Supported by git history. Confirmed by docs/crispybrain-v0.4.md.
+
+Why this status appears to have happened:
+Confirmed by v0.4 docs:
+The assistant path and session continuity were part of the first public-facing release line.
+
+Local UI and later localhost:8787 demo path
+
+Status:
+Adopted.
+
+Evidence:
+Supported by git history for the OpenBrain v0.3 local chat UI. Confirmed by docs/demo-local.md and README for the current `localhost:8787` browser path.
+
+Why this status appears to have happened:
+Confirmed by README and docs/demo-local.md:
+The project wants a real, inspectable browser path, not a fake product mock.
+
+Observability trace contract
+
+Status:
+Adopted in v0.5.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_5.md and docs/observability.md.
+
+Why this status appears to have happened:
+Confirmed by v0.5 docs:
+Boundary failures were too hidden.
+
+Suspect-row filtering and memory inspection
+
+Status:
+Adopted in v0.5.1 and v0.5.2.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_5_1.md and docs/crispybrain-v0_5_2.md.
+
+Why this status appears to have happened:
+Confirmed:
+Corrupted or obviously low-signal rows were hurting retrieval quality and operator confidence.
+
+Review-state model, health summaries, and exports
+
+Status:
+Adopted in v0.6.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_6.md.
+
+Why this status appears to have happened:
+Confirmed:
+The repo wanted honest memory-quality visibility and operator control without a destructive schema change.
+
+Anchor-aware retrieval and deterministic repeated-pass checks
+
+Status:
+Adopted in v0.7 / v0.7.1.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_7.md.
+
+Why this status appears to have happened:
+Confirmed:
+Exact note lookup behavior and retrieval-policy clarity needed hardening.
+
+Grounding block and evaluation pack
+
+Status:
+Adopted in v0.8.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_8.md.
+
+Why this status appears to have happened:
+Confirmed:
+Weak support needed an explicit output surface and a repeatable validation pack.
+
+Canonical repo-owned inbox and standardized workflow family
+
+Status:
+Adopted on 2026-04-20.
+
+Evidence:
+Confirmed by README, docs/demo-local.md, docs/operator-quickstart.md, docs/workflow-sync.md, and git history.
+
+Why this status appears to have happened:
+Inference from surrounding repo context:
+The project wanted one auditable ingest path and fewer duplicated workflow families.
+
+Lexical fallback, short-note boost, candidate preservation, and candidate trimming
+
+Status:
+Adopted in the v0.9 and v0.9.1 retrieval work.
+
+Evidence:
+Confirmed by docs/retrieval.md and README.
+
+Why this status appears to have happened:
+Confirmed:
+Sparse factual queries, anchors, identifiers, and generic runtime-note noise needed more careful retrieval behavior.
+
+Conflict mode, weighted support, source quality, and source independence
+
+Status:
+Adopted across v0.9 through v0.9.5.
+
+Evidence:
+Confirmed by docs/trust-output.md, README, seed-data eval packs, and v0.9.x test harnesses.
+
+Why this status appears to have happened:
+Confirmed:
+The project prefers explicit disagreement and inspectable evidence hints over silent winner selection.
+
+Deferred / dropped / postponed
+
+Renaming `openbrain_chat_turns`
+
+Status:
+Deferred.
+
+Evidence:
+Confirmed by docs/crispybrain-v0.4.md and docs/legacy-naming-debt.md.
+
+Why this status appears to have happened:
+Confirmed:
+The table is runtime-sensitive and renaming it casually could break live session continuity.
+
+Authentication and access control
+
+Status:
+Deferred.
+
+Evidence:
+Confirmed by docs/crispybrain-v0.4.md.
+
+Why this status appears to have happened:
+Inference from surrounding repo context:
+The project prioritized local operator reality and workflow hardening before access-control features.
+
+Turnkey packaging for every environment
+
+Status:
+Deferred.
+
+Evidence:
+Confirmed by docs/crispybrain-v0.4.md and README.
+
+Why this status appears to have happened:
+Confirmed and inferred:
+The repo is explicit that it is public-ready, not fully turnkey, and it keeps local-runtime assumptions visible instead of hiding them behind incomplete packaging.
+
+Centralized log aggregation and run-events table
+
+Status:
+Deferred.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_5.md and docs/observability.md.
+
+Why this status appears to have happened:
+Confirmed:
+The v0.5 pass intentionally stayed additive and avoided new infrastructure.
+
+Automated repair for partial ingests
+
+Status:
+Deferred.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_5.md.
+
+Why this status appears to have happened:
+Confirmed:
+The hardening pass preferred explicit detection over speculative repair logic.
+
+Full operator UI
+
+Status:
+Deferred.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_6.md and README.
+
+Why this status appears to have happened:
+Confirmed:
+There was not a safe editable operator UI surface in the allowed paths for the v0.6 work.
+
+Quality-aware retrieval ranking as the main policy
+
+Status:
+Partially deferred.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_6.md.
+
+Why this status appears to have happened:
+Confirmed:
+Review state mainly affected suppression, not ranking, and the repo kept that limitation explicit instead of overstating a solved ranking system.
+
+Full entity linking, ontology-driven topic classification, and hard truth ranking
+
+Status:
+Deferred / non-goal for the current retrieval layer.
+
+Evidence:
+Confirmed by docs/retrieval.md.
+
+Why this status appears to have happened:
+Confirmed:
+The retrieval calibration layer is intentionally heuristic and conservative.
+
+Aggressive conflict winner selection
+
+Status:
+Deferred by design.
+
+Evidence:
+Confirmed by docs/trust-output.md.
+
+Why this status appears to have happened:
+Confirmed:
+Even strong dominance hints do not authorize the system to choose a winner in conflict mode.
+
+PDF or broader document parsing as the simple default path
+
+Status:
+Deferred.
+
+Evidence:
+Confirmed by docs/ingest-text.md.
+
+Why this status appears to have happened:
+Confirmed:
+Plain `.txt` files are the safest ingest path today, and the watcher is intentionally file-drop only in the documented path.
+
+Large architecture rewrite
+
+Status:
+Deferred.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_5.md.
+
+Why this status appears to have happened:
+Confirmed:
+The repo repeatedly chose bounded hardening over speculative rewrites.

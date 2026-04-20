@@ -311,6 +311,7 @@ Those are the most obvious follow-ons to the current validated repo state, not p
 
 ## More Docs
 
+- [OpenBrain History Memory Pack](docs/openbrain-history-memory-pack.md): auditable historical corpus for self-query ingest, derived from repo-visible evidence only
 - [Observability Model](docs/observability.md)
 - [Minimal Setup](docs/setup-minimal.md)
 - [Public Scope](docs/public-scope.md)

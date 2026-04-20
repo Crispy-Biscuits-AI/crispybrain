@@ -1,0 +1,133 @@
+Architecture Decisions
+
+Scope note
+
+This file records major architecture choices visible in the repo and explains why they appear to have been adopted. Each rationale is marked as confirmed or inferred.
+
+Local-first and self-hosted
+
+Decision:
+Keep the product local-first and self-hosted.
+
+Evidence:
+Confirmed by README, docs/public-release-recommendation.md, docs/public-scope.md, and docs/operator-quickstart.md.
+
+Why it appears adopted:
+Confirmed by README:
+The project explicitly wants a memory-backed assistant path that is visible and inspectable instead of magical.
+
+Confirmed by operator docs:
+The runtime is described as n8n plus Postgres plus Ollama under local control, with a browser surface on localhost and a repo-owned inbox path.
+
+n8n orchestration
+
+Decision:
+Use exported n8n workflows as the canonical application logic.
+
+Evidence:
+Confirmed by docs/crispybrain-v0.4.md, docs/workflow-sync.md, docs/setup-minimal.md, and README.
+
+Why it appears adopted:
+Confirmed by docs/workflow-sync.md:
+The canonical workflow exports live in `workflows/`, and product changes should be exported back into that directory.
+
+Inference from surrounding repo context:
+This lets the repo preserve the exact logic that operators import into n8n instead of treating workflow behavior as undocumented runtime state.
+
+Postgres plus pgvector plus Ollama
+
+Decision:
+Store memory in Postgres, use embeddings for retrieval, and call Ollama directly for generation and embedding.
+
+Evidence:
+Confirmed by docs/crispybrain-v0.4.md, docs/setup-minimal.md, README, and docs/operator-quickstart.md.
+
+Why it appears adopted:
+Confirmed by docs/setup-minimal.md:
+The workflows assume `memories`, `projects`, and `openbrain_chat_turns`, and they call Ollama at `http://host.docker.internal:11434`.
+
+Inference from surrounding repo context:
+This is a pragmatic local stack choice aligned with the self-hosted goal and the repo’s emphasis on inspectable behavior.
+
+Repo-owned inbox and file-drop ingest
+
+Decision:
+Use a repo-owned inbox at `inbox/<project-slug>/` and a watcher-to-webhook ingest path.
+
+Evidence:
+Confirmed by README, docs/demo-local.md, docs/ingest-text.md, docs/operator-quickstart.md, docs/workflow-sync.md, and 2026-04-20 git history.
+
+Why it appears adopted:
+Confirmed by README and docs:
+The project standardized on the repo inbox as the canonical ingest path, with `auto-ingest-watch` polling the mounted folder and handing off to `/webhook/ingest`.
+
+Inference from surrounding repo context:
+This reduces ambiguity about where file-based memory should enter the system and makes ingest easier to audit.
+
+Retrieval strategy: semantic first, then conservative lexical and anchor help
+
+Decision:
+Keep semantic retrieval as the main path, but add anchor-aware ordering, lexical fallback, short-note boosts, and candidate trimming.
+
+Evidence:
+Confirmed by docs/crispybrain-v0_7.md, docs/retrieval.md, README, and the v0.9.x test harnesses.
+
+Why it appears adopted:
+Confirmed by docs/crispybrain-v0_7.md:
+Exact or strong lexical note lookups need deterministic anchor behavior.
+
+Confirmed by docs/retrieval.md:
+Sparse factual queries and identifiers were being missed or crowded out, so lexical fallback and short-note support were added conservatively rather than by redesigning retrieval wholesale.
+
+Trust and evaluation direction
+
+Decision:
+Expose grounding, trust, conflict, weighted support, and independence hints instead of collapsing all evidence into one opaque answer.
+
+Evidence:
+Confirmed by README, docs/crispybrain-v0_6.md, docs/crispybrain-v0_8.md, docs/trust-output.md, and the v0.9.x test harnesses.
+
+Why it appears adopted:
+Confirmed by README:
+The product description explicitly emphasizes exposing what the system knows, how it knows it, and where it conflicts.
+
+Confirmed by docs/trust-output.md:
+Even when one side has stronger support hints, conflict mode remains conflict mode and the assistant does not choose a winner.
+
+Demo and UI direction
+
+Decision:
+Provide a real local browser path rather than a fake demo surface.
+
+Evidence:
+Confirmed by README and docs/demo-local.md. Supported by 2026-04-20 UI commits.
+
+Why it appears adopted:
+Confirmed by docs/demo-local.md:
+The UI on `localhost:8787`, its backend proxy, n8n orchestration, retrieval, and source-backed answer generation are all described as things the demo is meant to prove.
+
+Inference from surrounding repo context:
+The UI is meant to surface retrieval and trust state directly, not hide the workflow behind a simplified chat illusion.
+
+Doc-first and repo-first operating practice
+
+Decision:
+Treat checked-in exports and docs as the durable truth for the product path.
+
+Evidence:
+Confirmed by docs/workflow-sync.md, docs/crispybrain-v0_5_1.md, README, and the versioned release notes.
+
+Why it appears adopted:
+Confirmed by docs/crispybrain-v0_5_1.md:
+The repo remains the source of truth and workflow updates should be applied through exported JSON plus n8n CLI import.
+
+Confirmed by docs/workflow-sync.md:
+Stable filenames matter, workflow docs must be kept in sync, and core workflow names should not casually fork into `-v2` variants.
+
+Codex-assisted workflow practice
+
+Evidence level:
+Not explicitly documented.
+
+Note:
+The repo-visible sources in this task do not establish Codex as a formal operating principle. This memory pack does not claim a documented Codex workflow beyond the repo-first documentation and test discipline that are explicitly present.

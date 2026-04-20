@@ -1,0 +1,89 @@
+Operator Notes
+
+Scope note
+
+This file summarizes how the project is actually operated and maintained according to repo-visible sources.
+
+Repo as source of truth
+
+Confirmed by docs/crispybrain-v0_5_1.md and docs/workflow-sync.md:
+The repo is treated as the source of truth for workflow behavior that should become part of the product.
+
+Operational implication:
+- make changes in n8n if needed
+- export the updated workflow JSON back into `workflows/`
+- keep stable filenames for core workflows
+
+Docs sync discipline
+
+Confirmed by docs/workflow-sync.md:
+If the operator story changes, update `README.md` or setup docs together with the workflow export.
+
+Confirmed by docs/legacy-naming-debt.md:
+Runtime-sensitive legacy names should be documented, not renamed casually.
+
+Operational implication:
+Docs are part of release discipline, not an afterthought.
+
+Import / test / inspect style
+
+Confirmed by README, docs/demo-local.md, docs/operator-quickstart.md, and versioned harness docs:
+The project prefers import-the-checked-in-export, activate the canonical workflows, then validate with versioned scripts.
+
+Common operator moves visible in the repo:
+- import workflows from `workflows/`
+- activate `assistant`, `ingest`, and `crispybrain-demo`
+- optionally activate `auto-ingest-watch`
+- use the repo-owned inbox under `inbox/<project-slug>/`
+- query the assistant or demo webhook directly
+- inspect stored memory with `scripts/inspect-crispybrain-memory.js`
+- summarize saved responses with `scripts/summarize-crispybrain-run.js`
+
+Test-before-claim habits
+
+Confirmed by the version docs and scripts:
+Every major capability phase from v0.4 onward has a named harness, validation script, or eval seed pack.
+
+Operational implication:
+Claims in the docs are usually tied to:
+- a checked-in workflow export
+- a named script
+- a documented evaluation scope
+
+Guardrails against drift and false claims
+
+Confirmed by docs/crispybrain-v0_8.md and docs/trust-output.md:
+The system does not invent confidence scores or hidden evidence fields.
+
+Confirmed by docs/trust-output.md:
+Conflict mode does not choose a winner even when one side has stronger heuristic support.
+
+Confirmed by docs/workflow-sync.md:
+Avoid casual `-v2` workflow variants for core paths.
+
+Supported by scripts/inspect-crispybrain-memory.js:
+The memory inspector refuses to write outside the repo root.
+
+Operational implication:
+The project consistently prefers bounded, inspectable behavior over silent guesswork.
+
+Runtime organization notes
+
+Confirmed by README, docs/demo-local.md, docs/operator-quickstart.md, and docs/workflow-sync.md:
+- canonical workflows belong to the CrispyBrain folder in n8n if folders are used
+- folder placement is organizational only
+- what matters is active state and webhook path
+- retired duplicate `crispybrain-*` families should remain inactive after the cutover
+
+Naming and migration caution
+
+Confirmed by docs/MIGRATION.md and docs/legacy-naming-debt.md:
+OpenBrain-era names still exist in some workflow names, storage keys, and database objects for compatibility reasons.
+
+Operational implication:
+Do not equate "still present in runtime" with "still the public product identity."
+
+Codex-assisted workflow note
+
+Not explicitly documented:
+The repo-visible sources for this task do not define a formal Codex operating model. This memory pack therefore keeps the operator notes focused on the documented repo, workflow, docs, and validation practices.

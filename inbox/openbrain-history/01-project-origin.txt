@@ -1,0 +1,61 @@
+OpenBrain / CrispyBrain Project Origin
+
+Scope
+
+This file summarizes the earliest repo-visible evidence about why the project exists and what it was trying to do. It does not rely on private chat history or undocumented intentions.
+
+Original problem
+
+Confirmed by README:
+CrispyBrain is framed as a local-first, self-hosted memory system that exposes what it knows, how it knows it, and where it conflicts, instead of pretending to produce a single correct answer.
+
+Confirmed by README and docs/public-release-recommendation.md:
+The project is trying to make a local memory-backed assistant path visible and inspectable. The practical stack is n8n orchestration, Postgres-backed memory, Ollama generation and embeddings, and a real local UI path.
+
+Supported by docs/HISTORY.md:
+Before this standalone repo identity, earlier local experiments had already established a webhook-driven assistant pattern backed by Postgres, embeddings, and retrieval.
+
+Early framing and intended use
+
+Supported by git history:
+The earliest named phases visible in this repo are OpenBrain-era commits on 2026-04-16 and 2026-04-17. Those commits mention:
+- project-aware auto-ingest watching
+- build-context and answer-from-memory workflows
+- smoke tests and a reusable test harness
+- a unified assistant, session memory, and a local chat UI
+
+Inference from surrounding repo context:
+The intended use appears to have been a project-aware assistant that can ingest local notes, retrieve stored memory later, and answer questions from that stored context without requiring a hosted SaaS control plane.
+
+Local-first / self-hosted motivation
+
+Confirmed by README:
+The repo explicitly describes CrispyBrain as local-first and self-hosted.
+
+Confirmed by docs/public-release-recommendation.md and docs/public-scope.md:
+The public story is a self-hosted memory assistant built around n8n, Postgres, and Ollama.
+
+Confirmed by docs/demo-local.md and docs/ingest-text.md:
+The verified local path uses a repo-owned inbox, a local n8n runtime, and a browser surface on localhost. The design goal is not hidden cloud magic.
+
+Earliest clearly documented goals
+
+Supported by git history and docs/crispybrain-v0.4.md:
+By the time the repo becomes CrispyBrain v0.4, the clearly documented goals include:
+- a stable assistant webhook
+- local UI support
+- session continuity
+- workflow exports checked into the repo
+- helper scripts for import and testing
+- compatibility preservation where risky migrations would threaten the live path
+
+Important ambiguity
+
+Not explicitly documented:
+There is no clean repo-visible v0.1 design note that explains the first concept in detail.
+
+Supported by git history:
+The earliest strongly labeled history begins at OpenBrain v0.2 and v0.3, then the CrispyBrain v0.4 rebrand/fork.
+
+Inference from surrounding repo context:
+Any claim about the exact original spark before those commits would be weaker than the repo evidence. Treat pre-v0.2 origin detail as partial unless another checked-in source is added later.
