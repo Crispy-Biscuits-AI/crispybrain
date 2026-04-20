@@ -233,3 +233,17 @@ For phrasing drift on project-history questions, the assistant now adds a small 
 
 This does not hardcode an answer.
 It only helps the candidate set keep the intended history-pack files in play when the user changes wording.
+
+## Uncertainty versus conflict
+
+The assistant now separates incomplete history from true contradiction more explicitly.
+
+- `answer_mode = direct` with `grounding.status = weak` is used when the retrieved notes are compatible but partial, incomplete, or differently scoped
+- `answer_mode = conflict` is reserved for mutually exclusive claims that cannot both be true
+- generic absence-style statements such as different notes saying something is not fully documented no longer count as a contradiction by themselves
+
+For uncertainty-focused questions, the answer now stays on the direct synthesis path and explains:
+
+- what the repo does support
+- what remains incomplete or not explicitly documented
+- that the evidence is limited

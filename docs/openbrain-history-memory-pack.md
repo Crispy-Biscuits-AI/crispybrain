@@ -150,6 +150,7 @@ What was validated after those fixes:
 - clearly unsupported questions now fall back instead of being carried by generic lexical/filepath matches inside the history corpus
 - adversarial prompts asking for undocumented mistakes now return an explicit lack-of-evidence answer instead of turning documented failures into new claims
 - the failures file now includes a retrieval-wording note so phrasing variants such as `issues`, `bugs`, `breakdowns`, `regressions`, `weak points`, and `went wrong` stay attached to the same repo-supported corpus without adding new historical claims
+- uncertainty prompts now stay on a weak direct-synthesis path when multiple sources are compatible but incomplete, instead of flipping into conflict mode just because different notes describe different missing pieces
 
 Operational note:
 
