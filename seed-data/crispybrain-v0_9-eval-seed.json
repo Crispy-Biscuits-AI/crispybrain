@@ -1,0 +1,84 @@
+{
+  "notes": [
+    {
+      "key": "anchor_exact",
+      "filename_prefix": "cb-v090-anchor",
+      "reviewed": true,
+      "content": "Anchor registry note. Anchor token CB-4096 resolves to quartz-bridge-77. Protocol code CB-4096 identifies the quartz bridge anchor."
+    },
+    {
+      "key": "general_single",
+      "filename_prefix": "cb-v090-delta",
+      "reviewed": true,
+      "content": "Delta guide says v0.9 retrieval keeps more close candidates alive and adds lexical fallback for identifiers when semantic support is sparse."
+    },
+    {
+      "key": "general_agree_a",
+      "filename_prefix": "cb-v090-maple-a",
+      "reviewed": true,
+      "content": "Maple brief note A. Operators should check reviewed sources before trusting an answer from CrispyBrain."
+    },
+    {
+      "key": "general_agree_b",
+      "filename_prefix": "cb-v090-maple-b",
+      "reviewed": true,
+      "content": "Maple brief note B. Operators should inspect the grounding note and selected source list before trusting an answer."
+    },
+    {
+      "key": "conflict_a",
+      "filename_prefix": "cb-v090-conflict-a",
+      "reviewed": true,
+      "content": "Beacon protocol is amber-9."
+    },
+    {
+      "key": "conflict_b",
+      "filename_prefix": "cb-v090-conflict-b",
+      "reviewed": true,
+      "content": "Beacon protocol is cobalt-3."
+    },
+    {
+      "key": "short_fact",
+      "filename_prefix": "cb-v090-short",
+      "reviewed": true,
+      "content": "CB-2048 is frost-key-17."
+    },
+    {
+      "key": "weak_unreviewed",
+      "filename_prefix": "cb-v090-weak",
+      "reviewed": false,
+      "content": "Echo marker means review before trust."
+    }
+  ],
+  "cases": [
+    {
+      "id": "eval-01",
+      "query": "Which note contains \"CB-4096\"?",
+      "expected_behavior": "exact anchor lookup stays in anchor mode and returns the anchor note first"
+    },
+    {
+      "id": "eval-02",
+      "query": "How does the delta guide improve retrieval for ids?",
+      "expected_behavior": "generalized single-note question returns a direct answer with a reviewed source"
+    },
+    {
+      "id": "eval-03",
+      "query": "What does maple brief say operators should check before trusting an answer?",
+      "expected_behavior": "generalized multi-note question preserves multiple agreeing notes into the answer"
+    },
+    {
+      "id": "eval-04",
+      "query": "What is the beacon protocol?",
+      "expected_behavior": "conflicting notes surface an explicit conflict answer instead of a synthesized guess"
+    },
+    {
+      "id": "eval-05",
+      "query": "CB-2048",
+      "expected_behavior": "short factual note survives retrieval and returns a direct answer"
+    },
+    {
+      "id": "eval-06",
+      "query": "What does echo marker mean?",
+      "expected_behavior": "weak evidence falls back to the existing insufficient-memory response"
+    }
+  ]
+}
