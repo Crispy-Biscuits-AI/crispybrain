@@ -1,67 +1,54 @@
 <p align="center">
-  <img src="assets/crispybrain-biscuit.png" alt="CrispyBrain tea biscuit" width="220">
+  <img src="assets/biscuit-emoji.png" alt="CrispyBrain biscuit emoji" width="96">
 </p>
 
 <h1 align="center">CrispyBrain</h1>
 
 <p align="center">
-  CrispyBrain is a local-first AI memory system focused on knowledge quality, trust visibility, and operator control — with a real demo UI, n8n workflow pipeline, and self-hosted lab runtime.
+  CrispyBrain is a local-first, self-hosted memory and retrieval system built around checked-in n8n workflows, a real demo UI, and operator-visible trust output.
 </p>
 
-`crispybrain` is the public product/demo repo for CrispyBrain: an open-source, self-hosted memory, retrieval, and agent lab built around real n8n workflow exports and a real local demo path.
+`crispybrain` is the public product/demo repo for CrispyBrain: an open-source memory, retrieval, and agent lab built around real workflow exports and a real local demo path.
 
-It is the place to understand the current demo surface, the workflow shape, the public product direction, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
+It is the place to understand the current demo surface, the workflow shape, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
 
-## Start Here
+CrispyBrain does not claim ground truth from stored notes. It retrieves evidence, keeps disagreement visible when notes conflict, and makes weak support explicit through `answer_mode`, `grounding`, and trust metadata instead of collapsing everything into a single confident answer.
+
+<img src="assets/biscuit-emoji.png" width="18" alt="" /> What makes it different:
+
+- <img src="assets/biscuit-emoji.png" width="18" alt="" /> conflict stays explicit instead of being rewritten into a guessed "truth"
+- <img src="assets/biscuit-emoji.png" width="18" alt="" /> visible sources, support counts, and trust fields stay attached to the answer path
+- <img src="assets/biscuit-emoji.png" width="18" alt="" /> weak or missing evidence stays inspectable and can still resolve to `answer_mode = insufficient`
+
+## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Start Here
 
 - [Local demo](docs/demo-local.md)
 - [Ingest data](docs/ingest-text.md)
 - [Operator tools](docs/operator-quickstart.md)
 
-## Current Status
+## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Current Status (v0.9.5)
 
-CrispyBrain is still an early, real, build-in-public system.
+CrispyBrain is still an early, real, build-in-public system, but the checked-in `v0.9.5` path is specific and inspectable.
 
 - local-first and self-hosted
-- good for showing the current product slice honestly
-- not production-ready
-- not a turnkey hosted platform
-- `v0.5` added structured tracing, boundary validation, and ingest replay detection
-- `v0.6` is the quality and control release
-- `v0.7.1` is the current stability patch for anchor-aware deterministic retrieval
-- `v0.9.5` is the current independence-aware trust release
+- not production-ready and not a turnkey hosted platform
+- retrieval uses semantic ranking with lexical fallback for anchors, identifiers, and sparse factual queries
+- conflict handling keeps disagreement explicit instead of collapsing to a winner
+- support is exposed as raw, deduped, weighted, and independence-adjusted counts
+- source quality, source independence, evidence clusters, and trust output stay visible to operators
+- the repo-tracked `v0.9.5` evaluation harness is aligned with the checked-in workflow/runtime shape
 
-The validated `v0.9.5` state adds:
+## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Latest Capabilities
 
-- short-note retrieval boosts for dense factual memory
-- lexical fallback for anchors, identifiers, and sparse factual queries
-- generalized-query handling across multiple agreeing notes
-- conflict-aware answering that surfaces disagreement instead of hiding it
-- richer source output with candidate visibility and explicit answer modes
-- cleaner candidate lists for factual/entity queries through conservative runtime-noise trimming
-- conflict severity metadata and clearer conflict formatting
-- support counts plus most-supported and most-recent conflict hints without collapsing the disagreement
-- dominant vs tie vs unclear conflict status, duplicate-aware support counting, and conservative confidence hints
-- deterministic `low` / `medium` / `high` source-quality labels on visible conflict sources
-- weighted support and weighted-vs-deduped dominance basis hints without turning conflicts into a single truth answer
-- quality-aware conflict summaries that explain when stronger weighted support and recency disagree
-- source independence labels that distinguish independent, related, duplicate-like, and unclear support
-- evidence clustering and independence-adjusted support so correlated notes do not look unfairly strong
-- correlation-aware dominance basis hints and conflict summaries that explain when independent corroboration matters
-- isolated-project validation guidance and a repeatable isolated evaluation pack
+- Evidence-aware retrieval: short-note boosts, lexical fallback, candidate preservation, and conservative trimming for factual or entity-focused queries.
+- Conflict detection and structured output: `answer_mode`, `conflict_flag`, `conflict_severity`, `conflict_details`, and support summaries are returned without claiming a single truth.
+- Source quality weighting: visible conflict sources carry deterministic `low` / `medium` / `high` quality labels and fixed weighting.
+- Independence-aware reasoning: support can be compared as raw, deduped, weighted, cluster-counted, and independence-adjusted evidence.
+- Correlation handling: duplicate-like and related notes are discounted so correlated evidence does not look unfairly strong.
+- Trust and inspection layer: `sources`, `selected_sources`, `retrieved_candidates`, `grounding`, `trust`, and operator tooling stay aligned with what the workflows actually return.
+- Deterministic evaluation system: `./scripts/test-crispybrain-v0_9_5.sh` validates the same checked-in `assistant`, `ingest`, and `crispybrain-demo` workflow path documented here.
 
-The earlier `v0.8` state added:
-
-- trust visibility and source-quality indicators in responses
-- review-state controls and project health visibility
-- upgraded memory inspection and operator tooling
-- suspect review/export workflows and metrics snapshots
-- a validated multi-cycle runtime harness
-- conservative anchor-aware note lookup with deterministic reviewed/recency tie-breaking
-- explicit grounding notes and weak-grounding states in assistant and demo responses
-- a repeatable 8-case evaluation pack for operator inspection
-
-## Why CrispyBrain Exists
+## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Why CrispyBrain Exists
 
 CrispyBrain exists to make a local memory-backed assistant path visible and inspectable instead of magical.
 
@@ -72,7 +59,7 @@ The repo is intentionally honest about the current slice:
 - grounded retrieval instead of mocked answers
 - operator-facing inspection tools for memory quality
 
-## What It Can Do Today
+## <img src="assets/biscuit-emoji.png" width="18" alt="" /> What It Can Do Today
 
 Today’s checked-in repo surface can:
 
@@ -92,7 +79,7 @@ Today’s checked-in repo surface can:
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
 - update review state for stored memory rows through the memory inspector
-- run a repo-tracked conflict-confidence evaluation pack with compact diagnostics
+- run the repo-tracked `v0.9.5` independence-aware evaluation pack with compact diagnostics
 
 ## High-Level Architecture
 
@@ -219,17 +206,18 @@ Use these docs as the next stop depending on what you want to do:
 - [CrispyBrain v0.7](docs/crispybrain-v0_7.md): anchor-aware deterministic retrieval, harness coverage, and validation notes
 - [CrispyBrain v0.6](docs/crispybrain-v0_6.md): release summary, runtime validation notes, and known limitations
 
-## Memory Quality and Trust
+## <img src="assets/biscuit-emoji.png" width="18" alt="" /> Memory Quality and Trust
 
 `v0.6` introduced the first real quality-and-control layer in the public repo.
 `v0.7.1` keeps that layer in place and makes retrieval policy explicit.
 `v0.8` adds clearer operator-visible grounding and a repeatable evaluation pack.
-`v0.9.5` keeps the same workflow shape while adding source independence, evidence clustering, and correlation-aware support hints without weakening strict conflict handling.
+`v0.9.5` keeps the same workflow shape while adding source independence, evidence clustering, source-quality weighting, and correlation-aware support hints without weakening strict conflict handling.
 
 That includes:
 
 - project memory health visibility
 - source quality indicators in assistant and demo responses
+- source independence and evidence-cluster metadata on visible conflict sources
 - operator control through the upgraded memory inspector
 - suspect review/export workflows
 - file-based metrics snapshots over time
@@ -246,12 +234,12 @@ The main `v0.6` lesson is worth keeping explicit:
 - semantic retrieval remains project-first and similarity-driven, with deterministic review/recency/id ordering when candidates remain eligible
 - the response now exposes a `grounding` block with status, note, reasons, supporting-source count, reviewed-source count, and the strongest observed similarity when available
 - weak or missing support is surfaced explicitly as `grounding.status = weak` or `grounding.status = none`
-- `v0.9.3` keeps `answer_mode`, `retrieved_candidates`, `selected_sources`, and explicit `conflict_flag` output
-- `v0.9.3` adds conservative candidate trimming, `conflict_severity`, `entity_focus`, `filtered_candidate_count`, dominant/tie handling, and heuristic conflict-confidence hints
+- `v0.9.5` keeps `answer_mode`, `retrieved_candidates`, `selected_sources`, explicit `conflict_flag` output, and visible `sources` / `trust` / `grounding` blocks
+- `v0.9.5` adds conservative candidate trimming, `conflict_severity`, `entity_focus`, `filtered_candidate_count`, weighted support, independence-aware support, dominant basis routing, and structured conflict hints
 - generalized queries can preserve multiple agreeing notes instead of collapsing too early
 - factual anchor and identifier queries can fall back to a simple lexical pass when semantic support is sparse
-- conflict responses can expose raw vs deduped support counts, dominant status, heuristic confidence, and summary hints without choosing a winner
-- the current operator evaluation pack is `./scripts/test-crispybrain-v0_9_3.sh`
+- conflict responses can expose raw, deduped, weighted, independent, and independence-adjusted support counts without choosing a winner
+- the current operator evaluation pack is `./scripts/test-crispybrain-v0_9_5.sh`
 
 Recency matters as a tie-breaker, not as a global override.
 
