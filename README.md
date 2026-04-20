@@ -105,17 +105,20 @@ The canonical CrispyBrain entrypoint set is:
 Current retired duplicate in the audited local n8n runtime:
 
 - `crispybrain-auto-ingest-watch`, now inactive in `Personal -> CrispyBrain Archive`
-
-Still-active alternate families intentionally left untouched in this pass:
-
-- `crispybrain-assistant`
-- `crispybrain-ingest`
-
-They were not retired because recent executions were still present in the runtime audit.
+- `crispybrain-assistant`, now inactive in `Personal -> CrispyBrain Archive`
+- `crispybrain-ingest`, now inactive in `Personal -> CrispyBrain Archive`
 
 If you organize them into folders in n8n, the recommended home is `Personal -> CrispyBrain`.
 
 Folder placement is organizational only. What is actually live is determined by the workflow `active` state and the webhook or trigger path that your caller hits.
+
+Canonical public webhooks after the hard cutover are:
+
+- `POST /webhook/assistant`
+- `POST /webhook/ingest`
+- `POST /webhook/crispybrain-demo`
+
+Any remaining client still calling `POST /webhook/crispybrain-assistant` or `POST /webhook/crispybrain-ingest` must be updated.
 
 Today’s verified demo path is:
 

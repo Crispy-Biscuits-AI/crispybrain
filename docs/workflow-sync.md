@@ -31,11 +31,8 @@ The canonical runtime entrypoints are:
 Retired duplicate in the current audited runtime:
 
 - `crispybrain-auto-ingest-watch`, moved to `Personal -> CrispyBrain Archive` and left inactive
-
-Still-active alternates that were not safe to retire in that audit:
-
-- `crispybrain-assistant`
-- `crispybrain-ingest`
+- `crispybrain-assistant`, moved to `Personal -> CrispyBrain Archive` and left inactive
+- `crispybrain-ingest`, moved to `Personal -> CrispyBrain Archive` and left inactive
 
 If you use n8n folders, keep that runtime grouped under `Personal -> CrispyBrain`.
 
@@ -47,7 +44,8 @@ Check at least these things in n8n:
 
 - `assistant`, `ingest`, and `crispybrain-demo` are active
 - `crispybrain-demo` still calls `/webhook/assistant`
-- any duplicate family you plan to retire has either no recent executions or no active callers
+- `crispybrain-assistant`, `crispybrain-ingest`, and `crispybrain-auto-ingest-watch` are inactive
+- any remaining client still hitting `/webhook/crispybrain-assistant` or `/webhook/crispybrain-ingest` is updated to the canonical public endpoints
 
 The audit-friendly workflow list query used in this repo is:
 

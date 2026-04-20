@@ -61,6 +61,13 @@ The verified canonical workflow set in n8n is:
 - required: `crispybrain-demo`
 - optional: `auto-ingest-watch`
 
+Retired legacy endpoints after the hard cutover:
+
+- `crispybrain-assistant`
+- `crispybrain-ingest`
+
+Any remaining client still using `/webhook/crispybrain-assistant` or `/webhook/crispybrain-ingest` must be updated to the canonical public endpoints.
+
 The live demo path depends directly on:
 
 - `assistant`
@@ -152,6 +159,7 @@ To verify the current live path in n8n, confirm both of these are true:
 
 - `crispybrain-demo` is active and exposes `/webhook/crispybrain-demo`
 - the `Call Assistant Workflow` node inside `crispybrain-demo` targets `/webhook/assistant`
+- `/webhook/crispybrain-assistant` and `/webhook/crispybrain-ingest` are no longer active
 
 ## Demo UI Themes
 

@@ -118,6 +118,13 @@ http://localhost:5678/webhook/ingest
 http://localhost:5678/webhook/crispybrain-demo
 ```
 
+Retired legacy endpoints after the hard cutover:
+
+- `http://localhost:5678/webhook/crispybrain-assistant`
+- `http://localhost:5678/webhook/crispybrain-ingest`
+
+Any remaining client still using those retired endpoints must be updated to the canonical public webhooks above.
+
 ## 7. Smoke Test The Assistant Path
 
 ```bash
