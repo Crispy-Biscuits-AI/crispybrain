@@ -199,6 +199,16 @@ When a note is retrieved but the support remains weak, the assistant can still r
 
 That means the response can answer cautiously from visible evidence instead of collapsing to the generic fallback message.
 
+The answer text itself now mirrors that trust state:
+
+- `grounded`: the answer is prefixed with a short "based on available project memory" lead instead of silently looking fully unqualified
+- `weak`: the answer is prefixed with the deterministic `grounding.note`, so limited support is visible even outside the trace or sources panes
+- `none`: the assistant keeps the existing insufficient-memory fallback and does not synthesize an answer
+
+This keeps weak support visible in both the structured response and the human-readable answer.
+It also keeps clearly unsupported questions from receiving a weakly phrased answer just because a generic history file was nearby in semantic space.
+If a user asks for undocumented or not-recorded project mistakes, the answer now explicitly says that repo-visible memory cannot support that claim instead of re-labeling documented failures as undocumented facts.
+
 The retrieval remains inspectable through:
 
 - `retrieved_candidates`
@@ -206,3 +216,12 @@ The retrieval remains inspectable through:
 - `trust`
 
 So operators can see that something partial was found without the assistant overstating confidence.
+
+## Query phrasing and ranking
+
+`v0.9.5` also treats broader history prompts such as `List...`, `Walk me through...`, `Explain...`, and `Summarize...` as fact-seeking queries for ranking purposes.
+
+That keeps the stricter relevance penalties and generic-runtime filtering active even when the user does not phrase the question as `what`, `which`, or `find`.
+
+The lexical side now also avoids counting query-unrelated filepath structure as evidence, and it ignores very short non-numeric lexical terms when building the visible candidate set.
+That reduces false-positive retrieval on unsupported questions while keeping anchor-style and history-specific phrasing usable.

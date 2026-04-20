@@ -142,6 +142,14 @@ What was fixed in the runtime path:
 - `assistant` needed a weak-grounding fix so broad history queries with reviewed supporting sources return cautious grounded answers instead of the generic insufficient-memory failure
 - `ingest` now auto-marks this repo-controlled `openbrain-history` corpus as `reviewed` when the ingest request carries the matching project slug and trusted repo inbox filepath, so the pack does not require manual review promotion after clean re-ingest
 
+What was validated after those fixes:
+
+- failures, problems, bugs, and issues prompts retrieve and select `04-problems-and-failures.txt` instead of substituting a more generic history file
+- broad history prompts such as `List...` and `Walk me through...` are treated as fact-seeking retrieval requests for ranking purposes
+- weakly grounded answers now include the grounding warning in the answer text itself instead of only exposing it through trace metadata
+- clearly unsupported questions now fall back instead of being carried by generic lexical/filepath matches inside the history corpus
+- adversarial prompts asking for undocumented mistakes now return an explicit lack-of-evidence answer instead of turning documented failures into new claims
+
 Operational note:
 
 - if `openbrain-history` rows already exist from an earlier broken watcher pass, clear those rows and re-ingest the pack after re-importing the updated watcher workflow
