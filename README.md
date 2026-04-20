@@ -29,9 +29,9 @@ CrispyBrain is still an early, real, build-in-public system.
 - `v0.5` added structured tracing, boundary validation, and ingest replay detection
 - `v0.6` is the quality and control release
 - `v0.7.1` is the current stability patch for anchor-aware deterministic retrieval
-- `v0.9.2` is the current conflict-usefulness release
+- `v0.9.3` is the current confidence-surface and tie-handling release
 
-The validated `v0.9.2` state adds:
+The validated `v0.9.3` state adds:
 
 - short-note retrieval boosts for dense factual memory
 - lexical fallback for anchors, identifiers, and sparse factual queries
@@ -41,6 +41,7 @@ The validated `v0.9.2` state adds:
 - cleaner candidate lists for factual/entity queries through conservative runtime-noise trimming
 - conflict severity metadata and clearer conflict formatting
 - support counts plus most-supported and most-recent conflict hints without collapsing the disagreement
+- dominant vs tie vs unclear conflict status, duplicate-aware support counting, and conservative confidence hints
 - isolated-project validation guidance and a repeatable isolated evaluation pack
 
 The earlier `v0.8` state added:
@@ -76,13 +77,14 @@ Today’s checked-in repo surface can:
 - surface conflicting stored notes explicitly instead of guessing
 - classify conflicts as `strong_conflict` or `possible_conflict`
 - show per-claim support counts plus most-supported and most-recent conflict hints
+- expose dominant/tie status, duplicate-aware support counts, heuristic conflict confidence, and a summary hint
 - keep factual candidate lists cleaner when generic runtime/build-context notes are off-topic
 - expose trust and source metadata in responses
 - expose grounding status, supporting-source counts, and visible evidence fields in the demo path
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
 - update review state for stored memory rows through the memory inspector
-- run a repo-tracked conflict-hints evaluation pack with compact diagnostics
+- run a repo-tracked conflict-confidence evaluation pack with compact diagnostics
 
 ## High-Level Architecture
 
@@ -204,8 +206,8 @@ Use these docs as the next stop depending on what you want to do:
 - [Ingesting Text](docs/ingest-text.md): drop plain text into the current ingest path safely
 - [Workflow Sync](docs/workflow-sync.md): keep checked-in workflow exports aligned with n8n
 - [CrispyBrain v0.8](docs/crispybrain-v0_8.md): trust and evaluation release notes, grounding behavior, and the 8-case harness
-- [Retrieval Notes](docs/retrieval.md): the v0.9.2 short-note, lexical fallback, candidate-trimming, and entity-focus behavior
-- [Trust Output](docs/trust-output.md): `answer_mode`, conflict severity, support-count hints, and candidate/source interpretation
+- [Retrieval Notes](docs/retrieval.md): the v0.9.3 short-note, lexical fallback, candidate-trimming, and entity-focus behavior
+- [Trust Output](docs/trust-output.md): `answer_mode`, conflict severity, tie handling, confidence hints, and candidate/source interpretation
 - [CrispyBrain v0.7](docs/crispybrain-v0_7.md): anchor-aware deterministic retrieval, harness coverage, and validation notes
 - [CrispyBrain v0.6](docs/crispybrain-v0_6.md): release summary, runtime validation notes, and known limitations
 
@@ -214,7 +216,7 @@ Use these docs as the next stop depending on what you want to do:
 `v0.6` introduced the first real quality-and-control layer in the public repo.
 `v0.7.1` keeps that layer in place and makes retrieval policy explicit.
 `v0.8` adds clearer operator-visible grounding and a repeatable evaluation pack.
-`v0.9.2` keeps the same workflow shape while making conflicting answers more useful to inspect without weakening strict conflict handling.
+`v0.9.3` keeps the same workflow shape while making conflicting answers easier to inspect without weakening strict conflict handling.
 
 That includes:
 
@@ -236,12 +238,12 @@ The main `v0.6` lesson is worth keeping explicit:
 - semantic retrieval remains project-first and similarity-driven, with deterministic review/recency/id ordering when candidates remain eligible
 - the response now exposes a `grounding` block with status, note, reasons, supporting-source count, reviewed-source count, and the strongest observed similarity when available
 - weak or missing support is surfaced explicitly as `grounding.status = weak` or `grounding.status = none`
-- `v0.9.2` keeps `answer_mode`, `retrieved_candidates`, `selected_sources`, and explicit `conflict_flag` output
-- `v0.9.2` adds conservative candidate trimming, `conflict_severity`, `entity_focus`, `filtered_candidate_count`, and conflict usefulness hints
+- `v0.9.3` keeps `answer_mode`, `retrieved_candidates`, `selected_sources`, and explicit `conflict_flag` output
+- `v0.9.3` adds conservative candidate trimming, `conflict_severity`, `entity_focus`, `filtered_candidate_count`, dominant/tie handling, and heuristic conflict-confidence hints
 - generalized queries can preserve multiple agreeing notes instead of collapsing too early
 - factual anchor and identifier queries can fall back to a simple lexical pass when semantic support is sparse
-- conflict responses can expose support counts plus most-supported and most-recent hints without choosing a winner
-- the current operator evaluation pack is `./scripts/test-crispybrain-v0_9_2.sh`
+- conflict responses can expose raw vs deduped support counts, dominant status, heuristic confidence, and summary hints without choosing a winner
+- the current operator evaluation pack is `./scripts/test-crispybrain-v0_9_3.sh`
 
 Recency matters as a tie-breaker, not as a global override.
 

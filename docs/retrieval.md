@@ -1,8 +1,8 @@
 # Retrieval
 
-## v0.9.2 calibration
+## v0.9.3 calibration
 
-`v0.9.2` keeps the existing `assistant` retrieval path and the `v0.9.1` calibration layer on top of `v0.9`:
+`v0.9.3` keeps the existing `assistant` retrieval path and the `v0.9.1` calibration layer on top of `v0.9`:
 
 - short factual notes get a ranking boost instead of being filtered out as low-signal by default
 - lexical fallback candidates are collected alongside semantic candidates for identifiers, anchors, codes, and sparse factual queries
@@ -10,8 +10,8 @@
 - obviously generic runtime/build-context notes can be trimmed back out of factual candidate lists before final answer selection
 - a lightweight entity/topic focus can boost clearly on-topic notes and trim off-topic generic noise when the query names a subject
 
-`v0.9.2` does not redesign retrieval further.
-Its main follow-on work is in conflict usefulness: the preserved conflicting candidates now carry enough grouped source support and recency metadata for the answer layer to expose better hints.
+`v0.9.3` does not redesign retrieval further.
+Its main follow-on work is still in the answer layer: the preserved conflicting candidates now carry enough grouped source support, duplicate-aware support identities, and recency metadata for the trust surface to expose better hints.
 
 ## Short-note boost
 
@@ -60,7 +60,7 @@ That preservation is what enables:
 
 ## Candidate trimming
 
-`v0.9.1` adds a conservative cleanup pass after raw candidate scoring, and `v0.9.2` keeps that behavior.
+`v0.9.1` adds a conservative cleanup pass after raw candidate scoring, and `v0.9.3` keeps that behavior.
 
 It does not redesign retrieval and it does not remove lexical fallback.
 Instead it only trims candidates when all of these are true:
@@ -115,3 +115,4 @@ The retrieval stage provides enough context for that by preserving:
 - lexical and structured-token diagnostics
 
 The answer layer then checks those retrieved notes for incompatible claims instead of guessing.
+In `v0.9.3`, that preserved evidence is also used to compute duplicate-aware support counts and tie handling without changing retrieval itself.
