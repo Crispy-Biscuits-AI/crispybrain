@@ -16,6 +16,12 @@ const sourceToggleButtons = document.querySelectorAll("[data-toggle-sources]");
 const traceDrawer = document.getElementById("trace-drawer");
 const traceToggleButtons = document.querySelectorAll("[data-toggle-trace]");
 const answerState = document.getElementById("answer-state");
+const explanationSummary = document.getElementById("explanation-summary");
+const confidenceIndicator = document.getElementById("confidence-indicator");
+const explanationSourceCount = document.getElementById("explanation-source-count");
+const explanationGroundingStatus = document.getElementById("explanation-grounding-status");
+const explanationDetail = document.getElementById("explanation-detail");
+const explanationUncertainty = document.getElementById("explanation-uncertainty");
 const answerOutput = document.getElementById("answer-output");
 const sourceSummary = document.getElementById("source-summary");
 const sourcesOutput = document.getElementById("sources-output");
@@ -129,6 +135,9 @@ function setBusy(isBusy) {
 
 function resetPanels() {
   updateSourceLabels(0);
+  renderExplanation({}, [], [], {
+    isBusy: statusPill.classList.contains("busy"),
+  });
   renderSourceSummary({}, [], []);
   renderSources([]);
   renderTrace({}, { elapsedMs: null }, [], []);
@@ -146,6 +155,7 @@ function renderSuccess(body, meta = {}) {
   answerState.textContent = buildAnswerState(body, selectedSources);
 
   updateSourceLabels(selectedSources.length);
+  renderExplanation(body, selectedSources, retrievedCandidates);
   renderSourceSummary(body, selectedSources, retrievedCandidates);
   renderSources(selectedSources);
   renderTrace(body, meta, selectedSources, retrievedCandidates);
@@ -158,9 +168,39 @@ function renderError(error, body = {}, meta = {}) {
   answerOutput.textContent = body.answer || error.message || "The memory query failed.";
 
   updateSourceLabels(selectedSources.length);
+  renderExplanation({ ...body, error }, selectedSources, retrievedCandidates);
   renderSourceSummary({ ...body, error }, selectedSources, retrievedCandidates);
   renderSources(selectedSources);
   renderTrace({ ...body, error }, meta, selectedSources, retrievedCandidates);
+}
+
+function renderExplanation(body, selectedSources, retrievedCandidates, options = {}) {
+  const grounding = asObject(body.grounding);
+  const error = asObject(body.error);
+  const sourceCount = selectedSources.length;
+  const candidateCount = retrievedCandidates.length;
+  const isBusy = options.isBusy === true;
+  const status = deriveGroundingStatus(body, grounding, error);
+  const confidence = determineConfidence(status, error, isBusy);
+
+  explanationSummary.textContent = buildExplanationSummary(status, sourceCount, isBusy, error);
+  explanationDetail.textContent = buildExplanationDetail(body, status, sourceCount, candidateCount, isBusy, error);
+  explanationSourceCount.textContent = `${sourceCount} ${sourceCount === 1 ? "source" : "sources"} used`;
+  explanationGroundingStatus.textContent = status === "idle"
+    ? "Grounding unavailable"
+    : `Grounding ${status}`;
+  confidenceIndicator.textContent = confidence.label;
+  confidenceIndicator.className = `confidence-pill ${confidence.className}`;
+
+  const uncertaintyText = buildUncertaintyText(status, grounding);
+  if (uncertaintyText) {
+    explanationUncertainty.hidden = false;
+    explanationUncertainty.textContent = uncertaintyText;
+    return;
+  }
+
+  explanationUncertainty.hidden = true;
+  explanationUncertainty.textContent = "";
 }
 
 function renderSourceSummary(body, selectedSources, retrievedCandidates) {
@@ -226,12 +266,60 @@ function renderSources(sources) {
     const card = document.createElement("article");
     card.className = "source-card";
 
+    const header = document.createElement("div");
+    header.className = "source-card-header";
+
     const title = document.createElement("h3");
-    title.textContent = source.title || "Untitled source";
-    card.appendChild(title);
+    title.textContent = source.filename || source.title || "Untitled source";
+    header.appendChild(title);
+
+    if (source.chunkLabel) {
+      const chunk = document.createElement("span");
+      chunk.className = "source-badge";
+      chunk.textContent = source.chunkLabel;
+      header.appendChild(chunk);
+    }
+
+    card.appendChild(header);
+
+    const badges = document.createElement("div");
+    badges.className = "source-badges";
+
+    if (typeof source.score === "number") {
+      const relevance = document.createElement("span");
+      relevance.className = "source-badge";
+      relevance.textContent = `Relevance ${source.score.toFixed(3)}`;
+      badges.appendChild(relevance);
+    }
+
+    if (source.reviewStatus) {
+      const review = document.createElement("span");
+      review.className = "source-badge";
+      review.textContent = source.reviewStatus;
+      badges.appendChild(review);
+    }
+
+    if (source.sourceQuality) {
+      const quality = document.createElement("span");
+      quality.className = "source-badge";
+      quality.textContent = `Quality ${source.sourceQuality}`;
+      badges.appendChild(quality);
+    }
+
+    if (source.sourceIndependence) {
+      const independence = document.createElement("span");
+      independence.className = "source-badge";
+      independence.textContent = source.sourceIndependence;
+      badges.appendChild(independence);
+    }
+
+    if (badges.childElementCount > 0) {
+      card.appendChild(badges);
+    }
 
     const snippet = document.createElement("p");
-    snippet.textContent = source.snippet || "No preview available.";
+    snippet.className = "source-preview";
+    snippet.textContent = source.preview ? `"${source.preview}"` : "No preview available.";
     card.appendChild(snippet);
 
     if (source.pathLabel) {
@@ -245,13 +333,6 @@ function renderSources(sources) {
     meta.className = "source-meta";
     const parts = [];
 
-    if (typeof source.score === "number") {
-      parts.push(`score ${source.score.toFixed(3)}`);
-    }
-
-    if (source.reviewStatus) parts.push(source.reviewStatus);
-    if (source.sourceQuality) parts.push(`quality ${source.sourceQuality}`);
-    if (source.sourceIndependence) parts.push(source.sourceIndependence);
     if (source.projectSlug) parts.push(`project ${source.projectSlug}`);
     if (source.identifier) parts.push(source.identifier);
 
@@ -373,12 +454,15 @@ function normalizeSources(value) {
 
   return value.map((source) => {
     const record = asObject(source);
+    const label = cleanText(record.source_label) || cleanText(record.title) || cleanText(record.source);
     return {
-      title: cleanText(record.title) || cleanText(record.source_label) || cleanText(record.source) || "Untitled source",
+      title: cleanText(record.title) || label || "Untitled source",
+      filename: cleanText(record.filename) || extractFilenameFromLabel(label) || "Untitled source",
+      chunkLabel: buildChunkLabel(record, label),
       snippet: cleanText(record.snippet) || cleanText(record.content),
-      score: firstNumber(record.similarity, record.score, record.retrieval_score),
+      preview: buildSnippetPreview(cleanText(record.snippet) || cleanText(record.content)),
+      score: firstNumber(record.retrieval_score, record.similarity, record.score),
       identifier: presentValue(
-        cleanText(record.filename),
         cleanText(record.source_type),
         firstNumber(record.memory_id, record.id),
       ),
@@ -428,6 +512,131 @@ function determineMemoryState(body, sources) {
   if (retrieval.empty === true) return "miss";
 
   return "—";
+}
+
+function deriveGroundingStatus(body, grounding, error) {
+  if (grounding.status) return grounding.status;
+  if (body.answer_mode === "insufficient") return "none";
+  if (error.code) return "error";
+  return "idle";
+}
+
+function determineConfidence(status, error, isBusy) {
+  if (isBusy) {
+    return {
+      label: "Checking evidence",
+      className: "is-busy",
+    };
+  }
+
+  if (status === "grounded") {
+    return {
+      label: "High confidence",
+      className: "is-grounded",
+    };
+  }
+
+  if (status === "weak") {
+    return {
+      label: "Limited confidence",
+      className: "is-weak",
+    };
+  }
+
+  if (status === "none") {
+    return {
+      label: "No evidence",
+      className: "is-none",
+    };
+  }
+
+  if (error.code) {
+    return {
+      label: "Unavailable",
+      className: "is-error",
+    };
+  }
+
+  return {
+    label: "Awaiting query",
+    className: "is-idle",
+  };
+}
+
+function buildExplanationSummary(status, sourceCount, isBusy, error) {
+  if (isBusy) {
+    return "Searching stored memory for supporting evidence.";
+  }
+
+  if (status === "grounded") {
+    return `This answer is based on ${formatSourceCount(sourceCount, "relevant project memory source")}.`;
+  }
+
+  if (status === "weak") {
+    if (sourceCount > 0) {
+      return `This answer is based on limited evidence from ${formatSourceCount(sourceCount, "project memory source")}. Some details may be incomplete.`;
+    }
+
+    return "This answer is based on limited evidence from project memory. Some details may be incomplete.";
+  }
+
+  if (status === "none") {
+    return "No supporting project memory was retrieved for this answer.";
+  }
+
+  if (error.code) {
+    return "The request did not complete, so the evidence summary is unavailable.";
+  }
+
+  return "Run a query to see how CrispyBrain grounded the answer.";
+}
+
+function buildExplanationDetail(body, status, sourceCount, candidateCount, isBusy, error) {
+  if (isBusy) {
+    return "This layer explains what sources were used, how strong the evidence is, and where uncertainty remains.";
+  }
+
+  if (error.code) {
+    return cleanText(error.message) || "The explanation layer could not inspect supporting evidence because the request failed.";
+  }
+
+  if (body.answer_mode === "conflict" || body.conflict_flag === true) {
+    return "The visible sources disagree, so CrispyBrain surfaced that conflict instead of guessing at a single answer.";
+  }
+
+  if (status === "grounded") {
+    if (candidateCount > sourceCount && sourceCount > 0) {
+      return `CrispyBrain selected ${formatSourceCount(sourceCount, "source")} from ${formatSourceCount(candidateCount, "retrieved candidate")} and answered from the strongest matching project memory.`;
+    }
+
+    return "CrispyBrain answered directly from the strongest matching project memory it retrieved.";
+  }
+
+  if (status === "weak") {
+    if (candidateCount > 0 && sourceCount > 0) {
+      return `CrispyBrain found related project memory and selected ${formatSourceCount(sourceCount, "source")}, but the support still looks partial, borderline, or correlated.`;
+    }
+
+    return "CrispyBrain found some related memory, but the visible support is still limited.";
+  }
+
+  if (status === "none") {
+    return "CrispyBrain fell back because it could not find visible project memory strong enough to support a grounded answer.";
+  }
+
+  return "This layer explains what sources were used, how strong the evidence is, and where uncertainty remains.";
+}
+
+function buildUncertaintyText(status, grounding) {
+  if (status !== "weak") return "";
+
+  const note = cleanText(grounding.note);
+  const prefix = "Some aspects of this answer are uncertain or not fully documented.";
+  return note ? `${prefix} ${note}` : prefix;
+}
+
+function formatSourceCount(count, noun) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 function determineElapsedMs(trace, debug, meta) {
@@ -527,6 +736,37 @@ function presentValue(...values) {
   }
 
   return "";
+}
+
+function extractFilenameFromLabel(label) {
+  if (!label) return "";
+
+  return label.split("::")[0]?.trim() || label;
+}
+
+function buildChunkLabel(record, label) {
+  const chunkIndex = firstNumber(record.chunk_index, record.chunkIndex);
+  const totalChunks = firstNumber(record.total_chunks, record.totalChunks);
+
+  if (typeof chunkIndex === "number") {
+    const chunkText = `chunk ${String(Math.round(chunkIndex)).padStart(2, "0")}`;
+    if (typeof totalChunks === "number" && totalChunks > 1) {
+      return `${chunkText} of ${String(Math.round(totalChunks)).padStart(2, "0")}`;
+    }
+
+    return chunkText;
+  }
+
+  const chunkMatch = label.match(/chunk\s+\d+/i);
+  return chunkMatch ? chunkMatch[0].toLowerCase() : "";
+}
+
+function buildSnippetPreview(text) {
+  if (!text) return "";
+
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= 120) return collapsed;
+  return `${collapsed.slice(0, 117).trimEnd()}...`;
 }
 
 function formatMilliseconds(value) {

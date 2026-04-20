@@ -38,6 +38,34 @@ Assistant and browser responses now include `answer_mode`:
 
 `sources` remains present for UI compatibility and continues to represent the visible sources for the answer.
 
+## v0.9.9 explanation layer
+
+The demo UI now adds a human-readable explanation layer above the existing answer text and keeps the raw trace drawer intact underneath it.
+
+The explanation layer reads directly from existing response fields:
+
+- `grounding.status` drives the visible confidence indicator
+- `selected_sources` drives the visible source count and source cards
+- `retrieved_candidates` still informs the operator-facing source summary and trace counts
+- `grounding.note` is surfaced as the visible uncertainty note whenever grounding is weak
+
+The confidence label is intentionally literal:
+
+- `grounding.status = grounded` renders `High confidence`
+- `grounding.status = weak` renders `Limited confidence`
+- `grounding.status = none` renders `No evidence`
+
+The UI does not invent a numeric score.
+It only translates the existing trust state into faster-to-scan language for a first-time user.
+
+The sources panel remains inspectable, but the visible source cards are now easier to read:
+
+- filename shown as the card title
+- chunk label shown explicitly when available
+- preview shortened to a quick readable excerpt
+- relevance shown directly from the available retrieval score when present
+- existing review, quality, and independence metadata kept visible as badges
+
 ## Conflict behavior
 
 When `answer_mode = conflict`:

@@ -96,6 +96,28 @@
             </button>
           </div>
 
+          <section class="explanation-shell" aria-live="polite">
+            <div class="explanation-topline">
+              <div class="explanation-copy">
+                <h3>Why this answer</h3>
+                <p id="explanation-summary" class="explanation-summary">
+                  Run a query to see how CrispyBrain grounded the answer.
+                </p>
+              </div>
+              <span id="confidence-indicator" class="confidence-pill is-idle">Awaiting query</span>
+            </div>
+
+            <div class="explanation-facts">
+              <span id="explanation-source-count" class="explanation-chip">0 sources used</span>
+              <span id="explanation-grounding-status" class="explanation-chip">Grounding unavailable</span>
+            </div>
+
+            <p id="explanation-detail" class="explanation-detail">
+              This layer explains what sources were used, how strong the evidence is, and where uncertainty remains.
+            </p>
+            <p id="explanation-uncertainty" class="explanation-uncertainty" hidden></p>
+          </section>
+
           <pre id="answer-output" class="answer-output">Query memory to see an answer here.</pre>
         </article>
 
@@ -114,7 +136,7 @@
           </div>
 
           <section class="source-summary-shell">
-            <h3>Why this answer</h3>
+            <h3>Source summary</h3>
             <div id="source-summary" class="source-summary">
               <p class="empty-state">No supporting trace summary yet.</p>
             </div>
@@ -225,7 +247,7 @@
 
       <footer class="demo-footer">
         <p>
-          <span class="footer-version">v0.9.5</span>
+          <span class="footer-version">v0.9.9</span>
           <span aria-hidden="true">·</span>
           <a href="https://paypal.me/crispybrain" target="_blank" rel="noopener noreferrer">Support this project</a>
           <span aria-hidden="true">·</span>

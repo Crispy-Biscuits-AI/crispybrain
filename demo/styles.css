@@ -365,6 +365,106 @@ select {
   margin: 0;
 }
 
+.explanation-shell {
+  margin-bottom: 18px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+}
+
+.explanation-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.explanation-copy {
+  min-width: 0;
+}
+
+.explanation-summary,
+.explanation-detail,
+.explanation-uncertainty {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.explanation-summary {
+  margin-top: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.explanation-facts,
+.source-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.explanation-facts {
+  margin-top: 12px;
+}
+
+.explanation-chip,
+.confidence-pill,
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  background: var(--panel-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.confidence-pill {
+  background: var(--panel-strong);
+}
+
+.confidence-pill.is-grounded {
+  border-color: rgba(15, 118, 110, 0.24);
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--accent);
+}
+
+.confidence-pill.is-weak,
+.confidence-pill.is-busy {
+  border-color: rgba(217, 119, 6, 0.24);
+  background: rgba(217, 119, 6, 0.14);
+  color: var(--warm);
+}
+
+.confidence-pill.is-none,
+.confidence-pill.is-error {
+  border-color: rgba(194, 65, 12, 0.22);
+  background: rgba(194, 65, 12, 0.12);
+  color: var(--error);
+}
+
+.confidence-pill.is-idle {
+  color: var(--muted);
+}
+
+.explanation-detail {
+  margin-top: 12px;
+  color: var(--muted);
+}
+
+.explanation-uncertainty {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(217, 119, 6, 0.24);
+  background: var(--panel-muted);
+  color: var(--ink);
+}
+
 .answer-output {
   margin: 0;
   min-height: 240px;
@@ -443,13 +543,32 @@ select {
   background: var(--panel-strong);
 }
 
+.source-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .source-card h3 {
-  margin: 0 0 8px;
+  margin: 0;
+  min-width: 0;
+  line-height: 1.4;
+  word-break: break-word;
 }
 
 .source-card p {
   margin: 0;
   line-height: 1.55;
+}
+
+.source-badges {
+  margin: 10px 0;
+}
+
+.source-preview {
+  font-size: 0.96rem;
 }
 
 .source-meta {

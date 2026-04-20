@@ -219,25 +219,32 @@ With project slug:
 alpha
 ```
 
-That query currently retrieves `alpha` memory rows and produces a grounded answer reliably in the lab.
+That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 
-## Transparency In `v0.8`
+## Transparency In `v0.9.9`
 
 The local UI now centers the answer while making sources and trace signals easier to inspect.
+`v0.9.9` adds a human-readable explanation layer above the raw trace without removing the existing panes or changing the layout grid.
 
 When retrieval support is available, the UI now shows:
 
 - an answer panel with the current response
+- an explanation layer at the top of the answer panel titled `Why this answer`
+- a visible confidence indicator that maps directly from `grounding.status`
 - an open-by-default sources panel with visible source cards and previews
 - an open-by-default trace panel with live execution, retrieval, and behavior signals when the backend returns them
-- the sources panel now includes a `Why this answer` summary with project slug, answer mode, grounding status, selected-source count, candidate count, and the current grounding note when present
-- source cards now prefer the assistant's `selected_sources` list and expose file/path labels plus visible review, quality, and project metadata when those fields are present in the response
+- the sources panel now includes a `Source summary` block with project slug, answer mode, grounding status, selected-source count, candidate count, and the current grounding note when present
+- source cards now prefer the assistant's `selected_sources` list and expose the filename clearly, a chunk label, a short preview, a visible relevance badge, and the existing review/quality/independence metadata when those fields are present in the response
 - the trace panel now shows project slug, selected-source count, candidate count, grounding status, answer mode, and the current grounding note without hiding the existing layout or footer
 
 When support is weak or absent, the workflow stays explicit instead of implying confidence:
 
 - `grounding.status = weak` means the answer has some support but should be treated cautiously
 - `grounding.status = none` means no strong supporting memory was retrieved
+- `grounding.status = grounded` renders `High confidence`
+- `grounding.status = weak` renders `Limited confidence`
+- `grounding.status = none` renders `No evidence`
+- weak answers also render a visible uncertainty note in the answer panel; when `grounding.note` is present, the UI appends that exact note after the plain-language caution
 
 ## Curl Smoke Tests
 
