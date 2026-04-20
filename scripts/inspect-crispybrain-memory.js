@@ -725,19 +725,20 @@ function renderRowsTable(rows, heading) {
   }
 
   for (const row of rows) {
+    const reasons = Array.isArray(row.reason_flagged) ? row.reason_flagged : [];
     lines.push(
       [
         `[${row.id}] ${row.title || row.filename || '(untitled)'}`,
         `  project_slug: ${row.project_slug || '(none)'}`,
-        `  source_type: ${row.source_type}`,
-        `  review_status: ${row.review_status}`,
-        `  trust_band: ${row.trust_band}`,
+        `  source_type: ${row.source_type || '(unknown)'}`,
+        `  review_status: ${row.review_status || 'unreviewed'}`,
+        `  trust_band: ${row.trust_band || '(unknown)'}`,
         `  filename: ${row.filename || '(none)'}`,
         `  filepath: ${row.filepath || '(none)'}`,
         `  preview: ${row.content_preview || '(empty)'}`,
-        `  reason_flagged: ${row.reason_flagged.length > 0 ? row.reason_flagged.join(', ') : '(none)'}`,
-        `  duplicate_candidate: ${row.duplicate_candidate}`,
-        `  content_length: ${row.content_length}`,
+        `  reason_flagged: ${reasons.length > 0 ? reasons.join(', ') : '(none)'}`,
+        `  duplicate_candidate: ${row.duplicate_candidate ?? false}`,
+        `  content_length: ${row.content_length ?? '(unknown)'}`,
         `  created_at: ${row.created_at || '(unknown)'}`,
         `  run_id: ${row.run_id || '(none)'}`,
         `  correlation_id: ${row.correlation_id || '(none)'}`,
