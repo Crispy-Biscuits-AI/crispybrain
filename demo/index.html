@@ -12,8 +12,15 @@
     <section class="workspace">
       <header class="top-bar">
         <div class="brand-lockup">
-          <p class="eyebrow">Transparent memory retrieval</p>
-          <h1>CrispyBrain</h1>
+          <img
+            class="brand-mark-inline"
+            src="/assets/crispybrain-biscuit.png"
+            alt="CrispyBrain biscuit"
+          >
+          <div class="brand-copy">
+            <p class="eyebrow">Transparent memory retrieval</p>
+            <h1>CrispyBrain</h1>
+          </div>
         </div>
 
         <div class="top-controls">
@@ -52,7 +59,7 @@
         <button id="submit-button" type="submit">Run query</button>
       </form>
 
-      <section class="results-layout" id="results-layout">
+      <section class="results-layout sources-open" id="results-layout">
         <article class="panel answer-panel">
           <div class="panel-header">
             <h2>Answer</h2>
@@ -60,7 +67,7 @@
               id="sources-toggle"
               class="panel-toggle"
               type="button"
-              aria-expanded="false"
+              aria-expanded="true"
               data-toggle-sources
             >
               Sources (0)
@@ -73,7 +80,7 @@
               id="sources-badge"
               class="usage-badge"
               type="button"
-              aria-expanded="false"
+              aria-expanded="true"
               data-toggle-sources
             >
               0 sources used
@@ -82,7 +89,7 @@
               id="trace-shortcut"
               class="usage-badge"
               type="button"
-              aria-expanded="false"
+              aria-expanded="true"
               data-toggle-trace
             >
               Trace
@@ -92,7 +99,7 @@
           <pre id="answer-output" class="answer-output">Query memory to see an answer here.</pre>
         </article>
 
-        <aside class="panel sources-panel" id="sources-panel" aria-hidden="true">
+        <aside class="panel sources-panel" id="sources-panel" aria-hidden="false">
           <div class="panel-header">
             <h2>Sources</h2>
             <button
@@ -122,14 +129,14 @@
             id="trace-toggle"
             class="panel-toggle"
             type="button"
-            aria-expanded="false"
+            aria-expanded="true"
             data-toggle-trace
           >
             Trace
           </button>
         </div>
 
-        <div class="panel trace-drawer" id="trace-drawer" aria-hidden="true">
+        <div class="panel trace-drawer trace-open" id="trace-drawer" aria-hidden="false">
           <div class="trace-grid">
             <section class="trace-section">
               <h3>Execution</h3>
@@ -177,6 +184,14 @@
                 <div class="trace-row">
                   <dt>Answer mode</dt>
                   <dd id="trace-answer-mode">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Fallback path</dt>
+                  <dd id="trace-fallback">—</dd>
+                </div>
+                <div class="trace-row">
+                  <dt>Memory state</dt>
+                  <dd id="trace-memory-state">—</dd>
                 </div>
                 <div class="trace-row">
                   <dt>Trace stage</dt>

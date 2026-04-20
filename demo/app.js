@@ -28,15 +28,17 @@ const traceFields = {
   grounding: document.getElementById("trace-grounding"),
   mode: document.getElementById("trace-mode"),
   answerMode: document.getElementById("trace-answer-mode"),
+  fallback: document.getElementById("trace-fallback"),
+  memoryState: document.getElementById("trace-memory-state"),
   stage: document.getElementById("trace-stage"),
 };
 
-let sourcesOpen = false;
-let traceOpen = false;
+let sourcesOpen = true;
+let traceOpen = true;
 
 themeManager.mountThemeControls(themeSelect, themeBadge);
-setSourcesOpen(false);
-setTraceOpen(false);
+setSourcesOpen(true);
+setTraceOpen(true);
 resetPanels();
 
 for (const button of sourceToggleButtons) {
@@ -197,38 +199,31 @@ function renderTrace(body, meta = {}) {
   const trace = asObject(body.trace);
   const debug = asObject(body.debug);
   const error = asObject(body.error);
+  const usage = extractUsage(body, trace, debug);
+  const elapsed = determineElapsedMs(trace, debug, meta);
 
-  setTraceField("elapsed", formatMilliseconds(firstNumber(
-    debug.proxy_duration_ms,
-    trace.proxy_duration_ms,
-    meta.elapsedMs,
-  )));
-  setTraceField("inputTokens", formatTokenCount(firstNumber(
-    body.usage?.input_tokens,
-    body.usage?.prompt_tokens,
-    trace.input_tokens,
-    debug.input_tokens,
-  )));
-  setTraceField("outputTokens", formatTokenCount(firstNumber(
-    body.usage?.output_tokens,
-    body.usage?.completion_tokens,
-    trace.output_tokens,
-    debug.output_tokens,
-  )));
+  setTraceField("elapsed", formatMilliseconds(elapsed));
+  setTraceField("inputTokens", formatTokenCount(usage.inputTokens));
+  setTraceField("outputTokens", formatTokenCount(usage.outputTokens));
   setTraceField("sourceCount", formatPlain(firstNumber(
-    retrieval.memory_count,
-    grounding.supporting_source_count,
     sources.length,
+    grounding.supporting_source_count,
+    debug.supporting_source_count,
+    retrieval.memory_count,
+    debug.retrieval_count,
   )));
   setTraceField("topScore", formatScore(firstNumber(
+    strongestSourceScore(sources),
     retrieval.strongest_similarity,
-    sources[0]?.score,
+    grounding.strongest_similarity,
   )));
   setTraceField("grounding", formatPlain(
     grounding.status || error.code || "—"
   ));
-  setTraceField("mode", determineRetrievalMode(body, sources));
+  setTraceField("mode", determineRetrievalMode(body));
   setTraceField("answerMode", formatPlain(body.answer_mode));
+  setTraceField("fallback", determineFallbackState(body));
+  setTraceField("memoryState", determineMemoryState(body, sources));
   setTraceField("stage", formatPlain(
     trace.stage || debug.trace_stage || debug.workflow || "—"
   ));
@@ -296,20 +291,103 @@ function normalizeSources(value) {
   });
 }
 
-function determineRetrievalMode(body, sources) {
+function determineRetrievalMode(body) {
   const retrieval = asObject(body.retrieval);
   const trace = asObject(body.trace);
   const rankingMode = cleanText(trace.ranking_mode)?.toLowerCase();
   const strategy = cleanText(retrieval.strategy)?.toLowerCase();
 
-  if (trace.lexical_fallback_used === true) return "keyword";
-  if (rankingMode && /anchor|lexical|keyword/.test(rankingMode)) return "keyword";
-  if ((retrieval.empty === true || sources.length === 0) && body.answer_mode === "insufficient") return "fallback";
-  if (typeof retrieval.strongest_similarity === "number") return "semantic";
-  if (rankingMode === "semantic") return "semantic";
+  if (rankingMode) return rankingMode;
+  if (strategy && /anchor/.test(strategy)) return "anchor";
+  if (strategy && /lexical|keyword/.test(strategy)) return "keyword";
   if (strategy && /semantic|project-first|scope|all-memories|general/.test(strategy)) return "semantic";
 
   return "—";
+}
+
+function determineFallbackState(body) {
+  const retrieval = asObject(body.retrieval);
+  const trace = asObject(body.trace);
+
+  if (trace.lexical_fallback_used === true) return "yes";
+  if (trace.lexical_fallback_used === false) return "no";
+  if (retrieval.empty === true && body.answer_mode === "insufficient") return "yes";
+
+  return "—";
+}
+
+function determineMemoryState(body, sources) {
+  const retrieval = asObject(body.retrieval);
+  const grounding = asObject(body.grounding);
+
+  if (body.answer_mode === "conflict" || body.conflict_flag === true) return "conflict";
+  if (grounding.status === "grounded") return "hit";
+  if (grounding.status === "weak") return sources.length > 0 ? "weak hit" : "weak";
+  if (grounding.status === "none") return "miss";
+  if (sources.length > 0) return "hit";
+  if (retrieval.empty === true) return "miss";
+
+  return "—";
+}
+
+function determineElapsedMs(trace, debug, meta) {
+  const directValue = firstNumber(
+    debug.proxy_duration_ms,
+    trace.proxy_duration_ms,
+    meta.elapsedMs,
+  );
+
+  if (typeof directValue === "number") {
+    return directValue;
+  }
+
+  const stageHistory = Array.isArray(trace.stage_history) ? trace.stage_history : [];
+  if (stageHistory.length >= 2) {
+    const startedAt = Date.parse(stageHistory[0].timestamp || "");
+    const lastStage = stageHistory[stageHistory.length - 1] || {};
+    const endedAt = Date.parse(lastStage.timestamp || "");
+
+    if (Number.isFinite(startedAt) && Number.isFinite(endedAt) && endedAt >= startedAt) {
+      return endedAt - startedAt;
+    }
+  }
+
+  return null;
+}
+
+function extractUsage(body, trace, debug) {
+  return {
+    inputTokens: firstNumber(
+      body.usage?.input_tokens,
+      body.usage?.prompt_tokens,
+      body.usage?.inputTokens,
+      trace.input_tokens,
+      trace.prompt_tokens,
+      debug.input_tokens,
+      debug.prompt_tokens,
+    ),
+    outputTokens: firstNumber(
+      body.usage?.output_tokens,
+      body.usage?.completion_tokens,
+      body.usage?.outputTokens,
+      trace.output_tokens,
+      trace.completion_tokens,
+      debug.output_tokens,
+      debug.completion_tokens,
+    ),
+  };
+}
+
+function strongestSourceScore(sources) {
+  let topScore = null;
+
+  for (const source of sources) {
+    if (typeof source.score === "number" && (topScore === null || source.score > topScore)) {
+      topScore = source.score;
+    }
+  }
+
+  return topScore;
 }
 
 function asObject(value) {

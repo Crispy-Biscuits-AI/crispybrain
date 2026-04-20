@@ -228,8 +228,8 @@ The local UI now centers the answer while making sources and trace signals easie
 When retrieval support is available, the UI now shows:
 
 - an answer panel with the current response
-- a collapsible sources panel with visible source cards and previews
-- a collapsible trace panel with execution, retrieval, and behavior signals
+- an open-by-default sources panel with visible source cards and previews
+- an open-by-default trace panel with live execution, retrieval, and behavior signals when the backend returns them
 
 When support is weak or absent, the workflow stays explicit instead of implying confidence:
 

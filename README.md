@@ -257,8 +257,8 @@ Recency matters as a tie-breaker, not as a global override.
 The current browser surface keeps the existing theme system and footer while presenting retrieval more transparently:
 
 - Answer panel: the primary response area for grounded memory answers
-- Sources panel: a collapsible side panel that lists retrieved memory with previews and scores when available
-- Trace panel: a collapsible bottom drawer that exposes execution, retrieval, and behavior signals with graceful placeholders when fields are missing
+- Sources panel: an open-by-default side panel that lists retrieved memory with previews and scores when available
+- Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, and behavior signals with graceful placeholders when fields are missing
 - Transparency-first design: source usage, status, and latency stay visible without forcing operators into a separate inspection screen
 
 The UI currently supports:
