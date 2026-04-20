@@ -4,12 +4,20 @@ Scope note
 
 This timeline uses the best-supported milestones visible in repo docs, seed data, scripts, and git history. Exact version boundaries before v0.4 are incomplete.
 
+Version note
+
+Confirmed by README, docs/retrieval.md, docs/trust-output.md, and git history:
+The repo evidence consistently uses `v0.9.5`, not `v0.95`.
+
+Not explicitly documented:
+The filenames in this memory pack keep `v0.95` only because that wording was part of the task request. The body text is normalized to `v0.9.5` wherever the repo provides a documented version string.
+
 Undocumented pre-v0.2 / possible v0.1 phase
 
 Not explicitly documented:
 The filename for this memory file starts at v0.1 because the task asks for that range, but the repo does not contain a dedicated v0.1 note.
 
-Supported by docs/HISTORY.md:
+Confirmed by docs/HISTORY.md:
 There were earlier local experiments before the standalone CrispyBrain repo identity. They established a webhook-driven assistant backed by Postgres, embeddings, and retrieval.
 
 What changed:
@@ -282,6 +290,7 @@ What remained unresolved:
 Hints were still non-authoritative and not truth scores.
 
 What was validated:
+Supported by scripts/test-crispybrain-v0_9_2.sh and seed-data/crispybrain-v0_9_2-eval-seed.json:
 The visible 7-case pack included a weighted-conflict scenario for harbor relay.
 
 CrispyBrain v0.9.3, 2026-04-20
@@ -300,6 +309,7 @@ What remained unresolved:
 Conflict mode still intentionally refused winner selection.
 
 What was validated:
+Supported by scripts/test-crispybrain-v0_9_3.sh and seed-data/crispybrain-v0_9_3-eval-seed.json:
 The 9-case pack checked tie conflicts and duplicate-heavy conflicts.
 
 CrispyBrain v0.9.4, 2026-04-20

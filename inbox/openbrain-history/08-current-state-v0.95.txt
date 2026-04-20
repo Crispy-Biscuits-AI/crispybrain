@@ -4,6 +4,14 @@ Scope note
 
 This snapshot describes what the repo appears to include at or immediately after the `v0.9.5` milestone. It avoids treating same-day UI polish as a separate formal version unless the repo names one.
 
+Version note
+
+Confirmed by README, docs/retrieval.md, docs/trust-output.md, and git history:
+The repo evidence uses `v0.9.5` as the documented version string.
+
+Not explicitly documented:
+This file keeps `v0.95` in its filename for task compatibility only. The body text is normalized to `v0.9.5`.
+
 What v0.9.5 appears to include
 
 Confirmed by README:
@@ -35,7 +43,7 @@ Same-day UI commits added a transparency-first layout with visible sources and t
 
 What is likely stable
 
-Inference from surrounding repo context:
+Inference from repo context:
 The most stable-looking parts of the current slice are the things that are both documented and exercised by named harnesses:
 - `assistant`, `ingest`, and `crispybrain-demo` as canonical workflow entrypoints
 - optional `auto-ingest-watch`

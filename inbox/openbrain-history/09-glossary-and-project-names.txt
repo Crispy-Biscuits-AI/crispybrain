@@ -21,6 +21,14 @@ CrispyBrain is the public product identity of this repository from v0.4 onward.
 Confirmed by README:
 It is described as a local-first, self-hosted memory, retrieval, and agent lab built around real workflow exports and a real local UI path.
 
+Version naming note
+
+Confirmed by README, docs/retrieval.md, docs/trust-output.md, and git history:
+The repo-visible version string is `v0.9.5`.
+
+Not explicitly documented:
+`v0.95` appears in this memory-pack task wording and in two retained filenames, but it was not found as the canonical version spelling in the repo sources reviewed for this pack.
+
 OpenBrain to CrispyBrain transition
 
 Supported by git history:

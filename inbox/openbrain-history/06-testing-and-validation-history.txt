@@ -105,7 +105,7 @@ Supported by the script pass message:
 The pack verified anchor-aware retrieval, semantic routing, reviewed-row propagation, trust visibility, suspect export, and metrics snapshots.
 
 What still needs care:
-Inference from surrounding repo context:
+Inference from repo context:
 Consistency hashes are only as trustworthy as the controlled local runtime and seed conditions.
 
 v0.8 evaluation release
@@ -212,5 +212,5 @@ Confirmed by README and docs/setup-minimal.md:
 - the system still depends on local runtime wiring
 - the repo is not fully turnkey
 
-Inference from surrounding repo context:
+Inference from repo context:
 The validation story is strongest for the documented local lab, not for arbitrary external environments.

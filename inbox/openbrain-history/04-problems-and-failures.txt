@@ -138,5 +138,5 @@ Confirmed by README and docs/setup-minimal.md:
 - broad semantic questions are still similarity-led
 - visible evidence is limited to what the workflows already return
 
-Inference from surrounding repo context:
+Inference from repo context:
 The project consistently prefers honest limitations over inflated capability claims.

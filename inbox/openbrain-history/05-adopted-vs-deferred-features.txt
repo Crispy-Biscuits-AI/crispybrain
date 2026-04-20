@@ -15,7 +15,7 @@ Evidence:
 Supported by 2026-04-16 and 2026-04-17 git history.
 
 Why this status appears to have happened:
-Inference from surrounding repo context:
+Inference from repo context:
 Project-aware ingest was needed for a practical memory system rather than an unscoped note dump.
 
 Unified assistant webhook and session memory
@@ -111,7 +111,7 @@ Evidence:
 Confirmed by README, docs/demo-local.md, docs/operator-quickstart.md, docs/workflow-sync.md, and git history.
 
 Why this status appears to have happened:
-Inference from surrounding repo context:
+Inference from repo context:
 The project wanted one auditable ingest path and fewer duplicated workflow families.
 
 Lexical fallback, short-note boost, candidate preservation, and candidate trimming
@@ -161,7 +161,7 @@ Evidence:
 Confirmed by docs/crispybrain-v0.4.md.
 
 Why this status appears to have happened:
-Inference from surrounding repo context:
+Inference from repo context:
 The project prioritized local operator reality and workflow hardening before access-control features.
 
 Turnkey packaging for every environment

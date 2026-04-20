@@ -12,7 +12,7 @@ CrispyBrain is framed as a local-first, self-hosted memory system that exposes w
 Confirmed by README and docs/public-release-recommendation.md:
 The project is trying to make a local memory-backed assistant path visible and inspectable. The practical stack is n8n orchestration, Postgres-backed memory, Ollama generation and embeddings, and a real local UI path.
 
-Supported by docs/HISTORY.md:
+Confirmed by docs/HISTORY.md:
 Before this standalone repo identity, earlier local experiments had already established a webhook-driven assistant pattern backed by Postgres, embeddings, and retrieval.
 
 Early framing and intended use
@@ -24,7 +24,7 @@ The earliest named phases visible in this repo are OpenBrain-era commits on 2026
 - smoke tests and a reusable test harness
 - a unified assistant, session memory, and a local chat UI
 
-Inference from surrounding repo context:
+Inference from repo context:
 The intended use appears to have been a project-aware assistant that can ingest local notes, retrieve stored memory later, and answer questions from that stored context without requiring a hosted SaaS control plane.
 
 Local-first / self-hosted motivation
@@ -57,5 +57,5 @@ There is no clean repo-visible v0.1 design note that explains the first concept 
 Supported by git history:
 The earliest strongly labeled history begins at OpenBrain v0.2 and v0.3, then the CrispyBrain v0.4 rebrand/fork.
 
-Inference from surrounding repo context:
+Inference from repo context:
 Any claim about the exact original spark before those commits would be weaker than the repo evidence. Treat pre-v0.2 origin detail as partial unless another checked-in source is added later.

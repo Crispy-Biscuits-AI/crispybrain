@@ -87,7 +87,7 @@ The pack intentionally uses confidence markers such as:
 - `Confirmed by README`
 - `Confirmed by docs`
 - `Supported by git history`
-- `Inference from surrounding repo context`
+- `Inference from repo context`
 - `Not explicitly documented`
 
 Known limits:
@@ -96,6 +96,34 @@ Known limits:
 - the pre-`v0.4` timeline is more dependent on commit history than on polished release notes
 - `v0.9.x` evolution is strongly supported by commit messages, eval seeds, README notes, and test harnesses, but not by one single long-form history document
 - the pack reflects repo-visible state only; it is not a claim that every real-world decision or conversation has been preserved
+
+## Validation Pass (v0.95 consistency and grounding)
+
+This refinement pass checked the full memory pack for:
+
+- version consistency between `v0.95` task wording and `v0.9.5` repo wording
+- repeated facts that were making multiple files sound more alike than necessary
+- evidence-label consistency across confirmed facts, git-supported history, and inference
+- timeline, architecture, problems, testing, and current-state alignment
+- retrieval-friendly headings and shorter section openings
+
+What was fixed:
+
+- normalized body text to `v0.9.5` where the repo provides a documented version string
+- added explicit version notes to the timeline, current-state, and glossary files
+- kept the existing `v0.95` filenames for task compatibility instead of renaming files
+- standardized several `Inference from repo context` labels
+- tightened a few validation lines so later `v0.9.x` phases cite scripts or seed files more explicitly
+
+Version normalization decision:
+
+- use `v0.9.5` in prose because that is the dominant repo-visible version spelling
+- keep `v0.95` only where the task fixed the filename or where a retrieval query may still use that wording
+
+Remaining ambiguity:
+
+- the repo does not document `v0.95` as a canonical release tag
+- the task wording may use `v0.95` as shorthand for `v0.9.5`, but the pack does not upgrade that shorthand into a repo-confirmed fact
 
 ## How To Use The Memory Pack In The Lab
 

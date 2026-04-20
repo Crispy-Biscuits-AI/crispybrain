@@ -31,7 +31,7 @@ Why it appears adopted:
 Confirmed by docs/workflow-sync.md:
 The canonical workflow exports live in `workflows/`, and product changes should be exported back into that directory.
 
-Inference from surrounding repo context:
+Inference from repo context:
 This lets the repo preserve the exact logic that operators import into n8n instead of treating workflow behavior as undocumented runtime state.
 
 Postgres plus pgvector plus Ollama
@@ -46,7 +46,7 @@ Why it appears adopted:
 Confirmed by docs/setup-minimal.md:
 The workflows assume `memories`, `projects`, and `openbrain_chat_turns`, and they call Ollama at `http://host.docker.internal:11434`.
 
-Inference from surrounding repo context:
+Inference from repo context:
 This is a pragmatic local stack choice aligned with the self-hosted goal and the repo’s emphasis on inspectable behavior.
 
 Repo-owned inbox and file-drop ingest
@@ -61,7 +61,7 @@ Why it appears adopted:
 Confirmed by README and docs:
 The project standardized on the repo inbox as the canonical ingest path, with `auto-ingest-watch` polling the mounted folder and handing off to `/webhook/ingest`.
 
-Inference from surrounding repo context:
+Inference from repo context:
 This reduces ambiguity about where file-based memory should enter the system and makes ingest easier to audit.
 
 Retrieval strategy: semantic first, then conservative lexical and anchor help
@@ -106,7 +106,7 @@ Why it appears adopted:
 Confirmed by docs/demo-local.md:
 The UI on `localhost:8787`, its backend proxy, n8n orchestration, retrieval, and source-backed answer generation are all described as things the demo is meant to prove.
 
-Inference from surrounding repo context:
+Inference from repo context:
 The UI is meant to surface retrieval and trust state directly, not hide the workflow behind a simplified chat illusion.
 
 Doc-first and repo-first operating practice
