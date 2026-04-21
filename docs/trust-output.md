@@ -38,6 +38,17 @@ Assistant and browser responses now include `answer_mode`:
 
 `sources` remains present for UI compatibility and continues to represent the visible sources for the answer.
 
+## Token and trace visibility
+
+`usage` now travels beside `sources`, `trust`, `grounding`, and `trace` in the current assistant and demo responses.
+
+- generated answers with provider counts return `usage.available = true` and numeric token fields
+- those same token counts are mirrored into `trace.input_tokens`, `trace.output_tokens`, and `trace.total_tokens`
+- insufficient/no-answer responses keep `answer_mode = insufficient`, `usage.available = false`, and `usage.reason = answer_not_generated`
+- the demo wrapper also preserves the explicit `upstream_usage_missing` state when a successful upstream answer omits generation counts
+
+Token usage reflects real model execution when available. When unavailable, CrispyBrain explicitly reports that state instead of estimating.
+
 ## v0.9.9 explanation layer
 
 The demo UI now adds a human-readable explanation layer above the existing answer text and keeps the raw trace drawer intact underneath it.
@@ -48,6 +59,7 @@ The explanation layer reads directly from existing response fields:
 - `selected_sources` drives the visible source count and source cards
 - `retrieved_candidates` still informs the operator-facing source summary and trace counts
 - `grounding.note` is surfaced as the visible uncertainty note whenever grounding is weak
+- `usage` and `trace.*_tokens` drive the visible token row when generation counts are available
 
 The confidence label is intentionally literal:
 
@@ -57,6 +69,7 @@ The confidence label is intentionally literal:
 
 The UI does not invent a numeric score.
 It only translates the existing trust state into faster-to-scan language for a first-time user.
+It also does not invent token counts when the backend did not return them.
 
 The sources panel remains inspectable, but the visible source cards are now easier to read:
 

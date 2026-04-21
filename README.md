@@ -12,6 +12,8 @@
 
 It is the place to understand the current browser surface, the workflow shape, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
 
+The current release-prep focus is transparency instead of theater: the checked-in UI and workflow exports keep the answer, sources, grounding state, trace signals, and generation usage inspectable together.
+
 ## <img src="assets/biscuit-emoji.png" width="18" /> Latest Capabilities
 
 CrispyBrain currently provides:
@@ -22,8 +24,9 @@ CrispyBrain currently provides:
 - Source quality weighting (not all notes count equally)
 - Independence-aware reasoning (distinguishes repeated vs independent evidence)
 - Correlation handling (duplicate-heavy signals are discounted)
-- Structured trust output (inspectable reasoning surface)
-- Live token usage tracing when Ollama reports generation counts
+- Structured trust + trace output (inspectable reasoning and execution surface)
+- Real token usage from live model execution when available
+- Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
@@ -44,6 +47,8 @@ It is a system that models evidence, conflict, and uncertainty explicitly.
 
 ## Current Status (v0.9.5)
 
+This is a pre-v1.0 release-prep surface for technical operators who want a truthful local memory path they can inspect end to end.
+
 CrispyBrain is a working local-first memory and retrieval system with:
 
 - semantic + lexical retrieval
@@ -53,6 +58,14 @@ CrispyBrain is a working local-first memory and retrieval system with:
 - independence-aware reasoning (correlation handling)
 - structured trust output (exposes evidence and uncertainty)
 - deterministic evaluation harness aligned with runtime behavior
+
+## Transparency Contract
+
+CrispyBrain keeps the current answer path inspectable across both webhook responses and the local UI:
+
+- answers, sources, grounding/trust, and trace signals travel together
+- token usage reflects real model execution when available. When unavailable, CrispyBrain explicitly reports that state instead of estimating.
+- the visible trace surface keeps execution stage, candidate/source context, answer mode, grounding status, and usage state visible together
 
 ## <img src="assets/biscuit-emoji.png" width="18" /> Why CrispyBrain Exists
 
@@ -84,6 +97,7 @@ Today’s checked-in repo surface can:
 - expose grounding status, supporting-source counts, and visible evidence fields in the browser path
 - expose normalized `usage` metadata in `assistant` and `crispybrain-demo` responses when Ollama reports generation counts
 - keep `usage` explicit as unavailable with `null` token fields when answer generation is skipped or upstream usage is missing
+- keep token usage, grounding, and retrieval/trace signals inspectable together in the same response path
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
 - update review state for stored memory rows through the memory inspector
@@ -204,7 +218,7 @@ Success currently looks like:
 - the page loads on `localhost:8787`
 - the theme selector is available
 - the response includes an answer, sources, and traceable retrieval state
-- the trace panel shows execution and retrieval signals without depending on every backend field being present
+- the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
 
 ## UI, Workflow, Ingestion, and Operator Entry Points
 

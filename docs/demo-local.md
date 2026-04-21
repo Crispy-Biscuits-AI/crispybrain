@@ -225,6 +225,7 @@ That query currently retrieves `alpha` memory rows reliably in the lab and exerc
 
 The local UI now centers the answer while making sources and trace signals easier to inspect.
 `v0.9.9` adds a human-readable explanation layer above the raw trace without removing the existing panes or changing the layout grid.
+Token usage in this surface reflects live Ollama generation counts when the upstream answer path reports them. The UI does not backfill estimates when those counts are absent.
 
 When retrieval support is available, the UI now shows:
 
@@ -316,6 +317,12 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 }
 ```
 
+## Expected Usage States
+
+- generated answer with provider counts: `usage.available = true`, `usage.reason = null`, numeric `usage.input_tokens` / `usage.output_tokens` / `usage.total_tokens`, and matching token fields in `trace`
+- insufficient or skipped generation: `answer_mode = insufficient`, `usage.available = false`, `usage.reason = answer_not_generated`, `null` token fields in the API response, and `—` in the UI trace panel
+- successful demo response but missing upstream generation counts: `usage.available = false` with `usage.reason = upstream_usage_missing`; this is explicit missing telemetry, not an estimate
+
 ## Honest Failure Modes
 
 - empty question: the UI and proxy return `INVALID_QUESTION`
@@ -401,14 +408,20 @@ node scripts/test-crispybrain-token-contract.js
 ./scripts/test-crispybrain-v0_9_9_tokens.sh
 ```
 
-7. Browser-check theme persistence:
+Expect the runtime token script to show:
+
+- prompt 1 and prompt 2 both returning `usage.available = true`
+- prompt 1 and prompt 2 returning different token counts
+- prompt 3 returning `usage.available = false` with `usage.reason = answer_not_generated`
+
+8. Browser-check theme persistence:
 - open `http://localhost:8787`
 - confirm a fresh load starts in `crispy`
 - switch from `crispy` to `dark`
 - confirm the theme badge updates
 - refresh the page and confirm the selected theme remains
 
-8. Browser-check container restart resilience:
+9. Browser-check container restart resilience:
 
 ```bash
 cd ../crispy-ai-lab
@@ -418,7 +431,7 @@ docker compose restart crispybrain-demo-ui
 - reload `http://localhost:8787`
 - confirm the previously selected theme still applies
 
-9. Browser-check invalid-theme fallback:
+10. Browser-check invalid-theme fallback:
 - set `localStorage["crispybrain-demo-theme"] = "banana"` in the browser console
 - reload `http://localhost:8787`
 - confirm the UI falls back to `crispy`
