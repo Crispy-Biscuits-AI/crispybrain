@@ -392,11 +392,16 @@ What the guard keeps:
 - weak-grounding uncertainty notes
 - explicit statements about what the stored project memory cannot verify
 
-For weak answers, the returned text is forced into a project-grounded structure:
+For weak and sparse answers, the returned text now uses an adaptive project-grounded structure:
 
-- what is known from the retrieved project memory
-- what remains limited or uncertain
-- what cannot be verified from the stored record
+- structured mode when multiple meaningful supported facts exist:
+  - what is known
+  - what is uncertain
+  - what cannot be verified
+- narrative mode when facts are sparse or only lightly supported:
+  - a short paragraph for the supported details
+  - one concise limitation sentence
+  - one concise non-verification sentence
 
 This means:
 
@@ -410,11 +415,11 @@ The final weak-answer formatter now also compresses presentation so the answer s
 
 What changed:
 
-- weak answers are limited to the three user-facing parts only:
-  - what is known
-  - what is uncertain
-  - what cannot be verified
-- the refinement guard now parses those parts separately instead of wrapping the raw model answer as one large "known" block
+- the refinement guard now chooses between:
+  - structured mode for answers with multiple meaningful supported facts
+  - narrative mode for sparse or low-information answers
+- section headers are omitted in narrative mode so weak answers do not show empty or mechanical blocks
+- the refinement guard parses supported facts, uncertainty, and non-verification separately instead of wrapping the raw model answer as one large "known" block
 - contradiction-style lead-ins such as `no information is available` are removed when supported facts are present elsewhere in the answer
 - low-value generic "known" lines are dropped in favor of stronger retrieved facts or a tighter source-scope summary
 - repeated uncertainty lines are collapsed into a single limitation paragraph

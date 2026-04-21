@@ -276,11 +276,11 @@ This final UX pass keeps the same weak-answer honesty while making the wording s
 
 What changed in the runtime:
 
-- weak answers are now compressed into three short user-facing parts:
-  - what is known
-  - what is uncertain
-  - what cannot be verified
-- the refinement guard now separates those parts before rewriting, so supported facts do not get mixed back together with uncertainty or non-verification lines
+- weak and sparse answers now use adaptive answer structure:
+  - structured mode when the selected evidence supports multiple meaningful facts
+  - narrative mode when the answer is sparse, lightly supported, or otherwise too thin for clean section blocks
+- narrative mode removes section headers entirely, so low-information answers do not show empty `known / uncertain / cannot verify` shells
+- the refinement guard separates supported facts, uncertainty, and non-verification before rewriting, so supported facts do not get mixed back together with uncertainty or non-verification lines
 - contradiction phrasing such as `no information is available` is removed when the same answer already contains supported facts
 - low-value generic "known" filler is dropped when stronger project-supported details are available
 - repeated uncertainty wording is collapsed so the answer does not restate the same limitation multiple times
@@ -297,7 +297,8 @@ Validated result:
 
 - weak answers stay domain-grounded and uncertainty-aware
 - the wording is shorter, less repetitive, and more professional for first-time users
-- trace inspection can now confirm the refinement pass through `synthesis_refined`, `contradiction_phrase_removed`, and `repeated_uncertainty_collapsed`
+- sparse development-history answers now fall back to narrative mode instead of forcing empty sections
+- trace inspection can now confirm the refinement pass through `synthesis_refined`, `answer_structure_mode`, `supported_fact_count`, `meaningful_source_count`, `contradiction_phrase_removed`, and `repeated_uncertainty_collapsed`
 
 ## Memory-Only Answer Enforcement (2026-04-21)
 
