@@ -45,7 +45,7 @@ It is a system that models evidence, conflict, and uncertainty explicitly.
 - [Ingest data](docs/ingest-text.md)
 - [Operator tools](docs/operator-quickstart.md)
 
-## Current Status (v0.9.5)
+## Current Status
 
 This is a pre-v1.0 release-prep surface for technical operators who want a truthful local memory path they can inspect end to end.
 
