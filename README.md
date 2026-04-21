@@ -39,7 +39,7 @@ It is a system that models evidence, conflict, and uncertainty explicitly.
 - [Ingest data](docs/ingest-text.md)
 - [Operator tools](docs/operator-quickstart.md)
 
-## Current Status (v0.9.5)
+## Current Status
 
 CrispyBrain is a working local-first memory and retrieval system with:
 
