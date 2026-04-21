@@ -414,6 +414,9 @@ What changed:
   - what is known
   - what is uncertain
   - what cannot be verified
+- the refinement guard now parses those parts separately instead of wrapping the raw model answer as one large "known" block
+- contradiction-style lead-ins such as `no information is available` are removed when supported facts are present elsewhere in the answer
+- low-value generic "known" lines are dropped in favor of stronger retrieved facts or a tighter source-scope summary
 - repeated uncertainty lines are collapsed into a single limitation paragraph
 - bullet-heavy weak summaries are compacted into a shorter prose summary when possible
 - meta-justification language such as `as per my training`, `I'm hesitant to`, `I should only`, `I will refrain`, `I cannot provide`, or `this appears to be self-referential` is stripped from the final answer
@@ -427,6 +430,12 @@ What did not change:
 
 The trace still carries the richer trust and eligibility details.
 The answer surface now keeps only the concise project-grounded summary.
+
+For runtime inspection, the trace can now also show:
+
+- `synthesis_refined`
+- `contradiction_phrase_removed`
+- `repeated_uncertainty_collapsed`
 
 ## Memory-Only Answer Enforcement
 

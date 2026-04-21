@@ -280,6 +280,9 @@ What changed in the runtime:
   - what is known
   - what is uncertain
   - what cannot be verified
+- the refinement guard now separates those parts before rewriting, so supported facts do not get mixed back together with uncertainty or non-verification lines
+- contradiction phrasing such as `no information is available` is removed when the same answer already contains supported facts
+- low-value generic "known" filler is dropped when stronger project-supported details are available
 - repeated uncertainty wording is collapsed so the answer does not restate the same limitation multiple times
 - meta-reasoning and self-justification phrases such as `as per my training`, `I'm hesitant to`, `I should only`, `I will refrain`, `I cannot provide`, and `this appears to be self-referential` are stripped from the final answer
 - weak bullet lists are compacted into shorter prose where that keeps the answer easier to scan
@@ -294,6 +297,7 @@ Validated result:
 
 - weak answers stay domain-grounded and uncertainty-aware
 - the wording is shorter, less repetitive, and more professional for first-time users
+- trace inspection can now confirm the refinement pass through `synthesis_refined`, `contradiction_phrase_removed`, and `repeated_uncertainty_collapsed`
 
 ## Memory-Only Answer Enforcement (2026-04-21)
 
