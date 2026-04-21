@@ -16,13 +16,16 @@ It is the place to understand the current browser surface, the workflow shape, a
 
 CrispyBrain currently provides:
 
+<!-- AUTO-GENERATED:BEGIN Latest Capabilities -->
 - Evidence-aware retrieval (not just semantic similarity)
 - Conflict detection with explicit non-collapse behavior
 - Source quality weighting (not all notes count equally)
 - Independence-aware reasoning (distinguishes repeated vs independent evidence)
 - Correlation handling (duplicate-heavy signals are discounted)
 - Structured trust output (inspectable reasoning surface)
+- Live token usage tracing when Ollama reports generation counts
 - Deterministic evaluation system (tests match live behavior)
+<!-- AUTO-GENERATED:END Latest Capabilities -->
 
 ## <img src="assets/biscuit-emoji.png" width="18" /> What This Is Not
 
@@ -79,6 +82,8 @@ Today’s checked-in repo surface can:
 - keep factual candidate lists cleaner when generic runtime/build-context notes are off-topic
 - expose trust and source metadata in responses
 - expose grounding status, supporting-source counts, and visible evidence fields in the browser path
+- expose normalized `usage` metadata in `assistant` and `crispybrain-demo` responses when Ollama reports generation counts
+- keep `usage` explicit as unavailable with `null` token fields when answer generation is skipped or upstream usage is missing
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
 - update review state for stored memory rows through the memory inspector
@@ -258,7 +263,7 @@ The current browser surface keeps the existing theme system and footer while pre
 
 - Answer panel: the primary response area for grounded memory answers
 - Sources panel: an open-by-default side panel that lists retrieved memory with previews and scores when available
-- Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, and behavior signals with graceful placeholders when fields are missing
+- Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, token-usage, and behavior signals with graceful placeholders when fields are missing
 - Transparency-first design: source usage, status, and latency stay visible without forcing operators into a separate inspection screen
 
 The UI currently supports:
@@ -293,6 +298,7 @@ Current product limitations remain explicit:
 - anchor detection is intentionally conservative and only activates on strong lexical evidence
 - broad semantic questions still rely on the current similarity-led retrieval path rather than a global newest-wins rule
 - visible evidence is limited to fields the current workflows already return, such as source labels, memory ids, chunk indexes, similarity, and trust/review metadata
+- token counts are provider-reported only; CrispyBrain does not estimate or invent token usage when the upstream answer path does not return it
 
 Compatibility caveats that remain true on purpose:
 

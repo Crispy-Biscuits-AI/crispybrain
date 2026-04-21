@@ -21,6 +21,7 @@
 - verify a Postgres credential named `Postgres account` works
 - verify Ollama access and required models
 - run a smoke request against `/webhook/assistant`
+- run the token-usage contract and runtime checks (`node scripts/test-crispybrain-token-contract.js` and `./scripts/test-crispybrain-v0_9_9_tokens.sh`)
 
 ## License
 

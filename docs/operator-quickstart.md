@@ -148,11 +148,14 @@ In a live repo-path file-drop setup, the same dropped file must be visible in bo
 curl -sS \
   -H "Content-Type: application/json" \
   -d '{"message":"How am I planning to build CrispyBrain?","project_slug":"alpha"}' \
-  http://localhost:5678/webhook/assistant | jq '{ok,grounding,retrieval,top_source:(.sources[0] // null),trace}'
+  http://localhost:5678/webhook/assistant | jq '{ok,usage,grounding,retrieval,top_source:(.sources[0] // null),trace}'
 ```
 
 Inspect:
 
+- `usage.available`
+- `usage.input_tokens` / `usage.output_tokens` when the answer path reported them
+- `usage.reason` when the token fields are unavailable
 - `grounding.status`
 - `grounding.note`
 - `grounding.supporting_source_count`
