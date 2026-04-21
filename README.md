@@ -12,17 +12,23 @@
 
 It is the place to understand the current browser surface, the workflow shape, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
 
+The current release-prep focus is transparency instead of theater: the checked-in UI and workflow exports keep the answer, sources, grounding state, trace signals, and generation usage inspectable together.
+
 ## <img src="assets/biscuit-emoji.png" width="18" /> Latest Capabilities
 
 CrispyBrain currently provides:
 
+<!-- AUTO-GENERATED:BEGIN Latest Capabilities -->
 - Evidence-aware retrieval (not just semantic similarity)
 - Conflict detection with explicit non-collapse behavior
 - Source quality weighting (not all notes count equally)
 - Independence-aware reasoning (distinguishes repeated vs independent evidence)
 - Correlation handling (duplicate-heavy signals are discounted)
-- Structured trust output (inspectable reasoning surface)
+- Structured trust + trace output (inspectable reasoning and execution surface)
+- Real token usage from live model execution when available
+- Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
+<!-- AUTO-GENERATED:END Latest Capabilities -->
 
 ## <img src="assets/biscuit-emoji.png" width="18" /> What This Is Not
 
@@ -41,6 +47,8 @@ It is a system that models evidence, conflict, and uncertainty explicitly.
 
 ## Current Status
 
+This is a pre-v1.0 release-prep surface for technical operators who want a truthful local memory path they can inspect end to end.
+
 CrispyBrain is a working local-first memory and retrieval system with:
 
 - semantic + lexical retrieval
@@ -50,6 +58,14 @@ CrispyBrain is a working local-first memory and retrieval system with:
 - independence-aware reasoning (correlation handling)
 - structured trust output (exposes evidence and uncertainty)
 - deterministic evaluation harness aligned with runtime behavior
+
+## Transparency Contract
+
+CrispyBrain keeps the current answer path inspectable across both webhook responses and the local UI:
+
+- answers, sources, grounding/trust, and trace signals travel together
+- token usage reflects real model execution when available. When unavailable, CrispyBrain explicitly reports that state instead of estimating.
+- the visible trace surface keeps execution stage, candidate/source context, answer mode, grounding status, and usage state visible together
 
 ## <img src="assets/biscuit-emoji.png" width="18" /> Why CrispyBrain Exists
 
@@ -79,6 +95,9 @@ Today’s checked-in repo surface can:
 - keep factual candidate lists cleaner when generic runtime/build-context notes are off-topic
 - expose trust and source metadata in responses
 - expose grounding status, supporting-source counts, and visible evidence fields in the browser path
+- expose normalized `usage` metadata in `assistant` and `crispybrain-demo` responses when Ollama reports generation counts
+- keep `usage` explicit as unavailable with `null` token fields when answer generation is skipped or upstream usage is missing
+- keep token usage, grounding, and retrieval/trace signals inspectable together in the same response path
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
 - update review state for stored memory rows through the memory inspector
@@ -199,7 +218,7 @@ Success currently looks like:
 - the page loads on `localhost:8787`
 - the theme selector is available
 - the response includes an answer, sources, and traceable retrieval state
-- the trace panel shows execution and retrieval signals without depending on every backend field being present
+- the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
 
 ## UI, Workflow, Ingestion, and Operator Entry Points
 
@@ -258,7 +277,7 @@ The current browser surface keeps the existing theme system and footer while pre
 
 - Answer panel: the primary response area for grounded memory answers
 - Sources panel: an open-by-default side panel that lists retrieved memory with previews and scores when available
-- Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, and behavior signals with graceful placeholders when fields are missing
+- Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, token-usage, and behavior signals with graceful placeholders when fields are missing
 - Transparency-first design: source usage, status, and latency stay visible without forcing operators into a separate inspection screen
 
 The UI currently supports:
@@ -293,6 +312,7 @@ Current product limitations remain explicit:
 - anchor detection is intentionally conservative and only activates on strong lexical evidence
 - broad semantic questions still rely on the current similarity-led retrieval path rather than a global newest-wins rule
 - visible evidence is limited to fields the current workflows already return, such as source labels, memory ids, chunk indexes, similarity, and trust/review metadata
+- token counts are provider-reported only; CrispyBrain does not estimate or invent token usage when the upstream answer path does not return it
 
 Compatibility caveats that remain true on purpose:
 

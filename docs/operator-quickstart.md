@@ -1,6 +1,6 @@
 # Operator Quickstart
 
-Use this if you want the fastest realistic path to a working CrispyBrain instance with the current trust-and-evaluation release.
+Use this if you want the fastest realistic path to a working CrispyBrain instance with the current trust, trace, and live-token-usage surface.
 
 ## 1. Prepare The Runtime
 
@@ -148,18 +148,41 @@ In a live repo-path file-drop setup, the same dropped file must be visible in bo
 curl -sS \
   -H "Content-Type: application/json" \
   -d '{"message":"How am I planning to build CrispyBrain?","project_slug":"alpha"}' \
-  http://localhost:5678/webhook/assistant | jq '{ok,grounding,retrieval,top_source:(.sources[0] // null),trace}'
+  http://localhost:5678/webhook/assistant | jq '{ok,usage,grounding,retrieval,top_source:(.sources[0] // null),trace}'
 ```
 
 Inspect:
 
+- `usage.available`
+- `usage.input_tokens` / `usage.output_tokens` when the answer path reported them
+- `usage.reason` when the token fields are unavailable
+- `trace.input_tokens` / `trace.output_tokens` / `trace.total_tokens` when usage is available
+- `trace.usage_reason` when usage is unavailable
 - `grounding.status`
 - `grounding.note`
 - `grounding.supporting_source_count`
 - `retrieval.memory_count`
 - the first source row if one exists
 
-## 8. Run The `v0.8` Evaluation Pack
+Token usage reflects real model execution when available. When unavailable, CrispyBrain explicitly reports that state instead of estimating.
+
+## 8. Verify The Token Usage Contract
+
+Use the repo-tracked token checks:
+
+```bash
+node scripts/test-crispybrain-token-contract.js
+./scripts/test-crispybrain-v0_9_9_tokens.sh
+```
+
+Expect:
+
+- generated prompts to return `usage.available = true`
+- different prompts to produce different token counts in the supported path
+- insufficient/no-answer cases to return `usage.available = false` with `null` token fields
+- unavailable usage to stay explicit through `usage.reason` instead of falling back to estimated values
+
+## 9. Run The `v0.8` Evaluation Pack
 
 Use the repo-tracked harness:
 
@@ -186,12 +209,13 @@ The terminal output prints, for each case:
 - pass/fail
 - compact diagnostic JSON
 
-## 9. What `v0.8` Adds For Operators
+## 10. What `v0.8` Adds For Operators
 
 The current workflows now surface:
 
 - a top-level `grounding` block in assistant and demo responses
 - explicit `weak` and `none` grounding states when support is limited
+- real usage metadata when Ollama returns generation counts, plus explicit unavailable states when it does not
 - source evidence fields already available in the workflow output, including memory ids, trust bands, review state, similarity, and chunk indexes when present
 
 `v0.8` does not invent confidence scores or hidden quality labels beyond the observable fields already present in the repo-owned path.

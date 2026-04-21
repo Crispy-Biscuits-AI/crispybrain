@@ -28,8 +28,29 @@ Relevant workflows now emit a `trace` object with these fields where practical:
 - `error_message`
 - `timestamp`
 - `stage_history`
+- `grounding_status`
+- `weak_grounding`
+- `answer_mode`
+- `usage_available`
+- `usage_reason`
+- `input_tokens`
+- `output_tokens`
+- `total_tokens`
+- `prompt_eval_count`
+- `eval_count`
 
 `stage_history` is append-only within the workflow response payload. It is the main repo-native view of stage transitions.
+
+## Token Usage Observability
+
+The current assistant and demo exports treat token usage as part of the observable response contract, not as an estimate layer.
+
+- successful generation copies provider-reported Ollama counts into top-level `usage` and mirrors those values into `trace.input_tokens`, `trace.output_tokens`, and `trace.total_tokens`
+- retrieval-empty and insufficient-answer paths keep `usage.available = false` with `null` token fields and `usage_reason = answer_not_generated`
+- the demo wrapper preserves a successful answer path with missing upstream generation counts as `usage.available = false` and `usage_reason = upstream_usage_missing`
+- failed generation paths keep the token fields explicit and preserve the failure reason rather than leaving stale counts in place
+
+Token usage reflects real model execution when available. When unavailable, CrispyBrain explicitly reports that state instead of estimating.
 
 ## Propagation Rules
 
@@ -67,6 +88,7 @@ Most workflows now return enough structured data to answer:
 - which file or request was involved
 - where the request stopped
 - whether the request succeeded, failed, retried, or was rejected
+- whether token usage came from a real generation result or was explicitly unavailable
 
 ### Stored assistant turns
 
@@ -98,6 +120,13 @@ Run the offline repo-grounded checks:
 
 ```bash
 ./scripts/test-crispybrain-v0_5.sh
+```
+
+Validate the current token contract:
+
+```bash
+node scripts/test-crispybrain-token-contract.js
+./scripts/test-crispybrain-v0_9_9_tokens.sh
 ```
 
 ## What This Does Not Claim

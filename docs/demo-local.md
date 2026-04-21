@@ -225,6 +225,7 @@ That query currently retrieves `alpha` memory rows reliably in the lab and exerc
 
 The local UI now centers the answer while making sources and trace signals easier to inspect.
 `v0.9.9` adds a human-readable explanation layer above the raw trace without removing the existing panes or changing the layout grid.
+Token usage in this surface reflects live Ollama generation counts when the upstream answer path reports them. The UI does not backfill estimates when those counts are absent.
 
 When retrieval support is available, the UI now shows:
 
@@ -235,7 +236,8 @@ When retrieval support is available, the UI now shows:
 - an open-by-default trace panel with live execution, retrieval, and behavior signals when the backend returns them
 - the sources panel now includes a `Source summary` block with project slug, answer mode, grounding status, selected-source count, candidate count, and the current grounding note when present
 - source cards now prefer the assistant's `selected_sources` list and expose the filename clearly, a chunk label, a short preview, a visible relevance badge, and the existing review/quality/independence metadata when those fields are present in the response
-- the trace panel now shows project slug, selected-source count, candidate count, grounding status, answer mode, and the current grounding note without hiding the existing layout or footer
+- the trace panel now shows project slug, selected-source count, candidate count, grounding status, answer mode, provider-reported input/output token counts when available, and the current grounding note without hiding the existing layout or footer
+- when the upstream answer path does not provide usage, the trace token fields stay at `—` and the API returns `usage.available = false` with `null` token counts instead of estimating them
 
 When support is weak or absent, the workflow stays explicit instead of implying confidence:
 
@@ -254,7 +256,7 @@ Direct to the n8n UI webhook:
 curl -sS \
   -H "Content-Type: application/json" \
   -d '{"project_slug":"alpha","question":"How am I planning to build CrispyBrain?"}' \
-  http://localhost:5678/webhook/crispybrain-demo | jq .
+  http://localhost:5678/webhook/crispybrain-demo | jq '{ok,answer,usage,trace}'
 ```
 
 Through the 8787 UI proxy:
@@ -263,7 +265,7 @@ Through the 8787 UI proxy:
 curl -sS \
   -H "Content-Type: application/json" \
   -d '{"project_slug":"alpha","question":"How am I planning to build CrispyBrain?"}' \
-  http://localhost:8787/api/demo/ask | jq .
+  http://localhost:8787/api/demo/ask | jq '{ok,answer,usage,trace}'
 ```
 
 Check the containerized UI is serving the page:
@@ -280,6 +282,15 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
   "project_slug": "alpha",
   "question": "How am I planning to build CrispyBrain?",
   "answer": "...",
+  "usage": {
+    "provider": "ollama",
+    "source": "generation",
+    "available": true,
+    "input_tokens": 42,
+    "output_tokens": 27,
+    "total_tokens": 69,
+    "reason": null
+  },
   "grounding": {
     "status": "weak",
     "note": "...",
@@ -298,10 +309,19 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
   "trace": {
     "stage": "answer_ready",
     "status": "succeeded",
-    "grounding_status": "weak"
+    "grounding_status": "weak",
+    "input_tokens": 42,
+    "output_tokens": 27,
+    "total_tokens": 69
   }
 }
 ```
+
+## Expected Usage States
+
+- generated answer with provider counts: `usage.available = true`, `usage.reason = null`, numeric `usage.input_tokens` / `usage.output_tokens` / `usage.total_tokens`, and matching token fields in `trace`
+- insufficient or skipped generation: `answer_mode = insufficient`, `usage.available = false`, `usage.reason = answer_not_generated`, `null` token fields in the API response, and `—` in the UI trace panel
+- successful demo response but missing upstream generation counts: `usage.available = false` with `usage.reason = upstream_usage_missing`; this is explicit missing telemetry, not an estimate
 
 ## Honest Failure Modes
 
@@ -310,6 +330,7 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 - n8n unavailable: the proxy returns `N8N_UNAVAILABLE`
 - weak retrieval: the upstream assistant can return `grounding.status = weak` with a cautionary note
 - no strong retrieval: the upstream assistant can return `grounding.status = none` and no evidence rows
+- usage unavailable: `assistant` / `crispybrain-demo` return `usage.available = false` with `null` token fields when answer generation is skipped or Ollama does not report usage
 - Ollama unavailable: the upstream assistant returns a structured generation/embedding error and the UI shows it
 
 ## Troubleshooting
@@ -359,7 +380,7 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 curl -sS \
   -H "Content-Type: application/json" \
   -d '{"project_slug":"alpha","question":"How am I planning to build CrispyBrain?"}' \
-  http://localhost:8787/api/demo/ask | jq .
+  http://localhost:8787/api/demo/ask | jq '{ok,answer,usage,trace}'
 ```
 
 5. Verify blank project slug defaults to `alpha`:
@@ -380,14 +401,27 @@ curl -sS \
   http://localhost:8787/api/demo/ask | jq .
 ```
 
-7. Browser-check theme persistence:
+7. Verify token usage and unavailable handling:
+
+```bash
+node scripts/test-crispybrain-token-contract.js
+./scripts/test-crispybrain-v0_9_9_tokens.sh
+```
+
+Expect the runtime token script to show:
+
+- prompt 1 and prompt 2 both returning `usage.available = true`
+- prompt 1 and prompt 2 returning different token counts
+- prompt 3 returning `usage.available = false` with `usage.reason = answer_not_generated`
+
+8. Browser-check theme persistence:
 - open `http://localhost:8787`
 - confirm a fresh load starts in `crispy`
 - switch from `crispy` to `dark`
 - confirm the theme badge updates
 - refresh the page and confirm the selected theme remains
 
-8. Browser-check container restart resilience:
+9. Browser-check container restart resilience:
 
 ```bash
 cd ../crispy-ai-lab
@@ -397,7 +431,7 @@ docker compose restart crispybrain-demo-ui
 - reload `http://localhost:8787`
 - confirm the previously selected theme still applies
 
-9. Browser-check invalid-theme fallback:
+10. Browser-check invalid-theme fallback:
 - set `localStorage["crispybrain-demo-theme"] = "banana"` in the browser console
 - reload `http://localhost:8787`
 - confirm the UI falls back to `crispy`
