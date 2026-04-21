@@ -442,6 +442,29 @@ For runtime inspection, the trace can now also show:
 - `contradiction_phrase_removed`
 - `repeated_uncertainty_collapsed`
 
+## Output Sanitization
+
+The final answer layer now also applies a user-facing sanitization pass after structure selection.
+
+This pass does not change retrieval, ranking, adaptive structure, trust, fallback behavior, or factual scope.
+It only cleans the returned wording so the visible answer reads like a natural summary instead of an internal system artifact.
+
+What the sanitization removes or normalizes:
+
+- internal identifiers such as `cb-v...`, `cbv...`, chunk labels, and path-like strings
+- operator or debug phrasing such as `operators should inspect...`, `check selected sources...`, or `refer to memory IDs...`
+- template residue such as `Based on the retrieved memory context`
+- fragmented semicolon chains in narrative answers
+
+What the sanitization preserves:
+
+- supported facts
+- uncertainty
+- explicit non-verification
+- structured mode versus narrative mode
+
+This means the answer text is cleaner for end users, while the trace and response metadata still expose the operator-facing details needed for validation.
+
 ## Memory-Only Answer Enforcement
 
 The assistant now applies a stricter memory-only containment layer before returning the final answer.

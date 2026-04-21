@@ -300,6 +300,31 @@ Validated result:
 - sparse development-history answers now fall back to narrative mode instead of forcing empty sections
 - trace inspection can now confirm the refinement pass through `synthesis_refined`, `answer_structure_mode`, `supported_fact_count`, `meaningful_source_count`, `contradiction_phrase_removed`, and `repeated_uncertainty_collapsed`
 
+## Output Sanitization (2026-04-21)
+
+This final wording pass cleans the user-visible answer text without changing retrieval, ranking, trust, fallback behavior, memory-only containment, or adaptive structure.
+
+What changed in the runtime:
+
+- internal identifiers such as `cb-v...`, `cbv...`, chunk labels, and path-like strings are stripped from the final answer text
+- operator-facing phrases such as `operators should inspect...`, `check selected sources...`, and `refer to memory IDs...` are removed before the answer is returned
+- generic template lead-ins such as `Based on the retrieved memory context` are stripped from grounded answers
+- semicolon-heavy narrative summaries are normalized into complete sentences
+- operator-specific wording inside surviving facts is rewritten into cleaner user-facing phrasing where the meaning stays the same
+
+What did not change:
+
+- factual content
+- weak versus grounded versus insufficient behavior
+- structured mode versus narrative mode
+- the trace and response metadata used for operator validation
+
+Validated result:
+
+- weak narrative answers now read as clean summaries instead of stitched fragments
+- uncertainty answers no longer surface operator/debug wording in the returned prose
+- grounded answers keep the same content but lose template residue and internal phrasing
+
 ## Memory-Only Answer Enforcement (2026-04-21)
 
 This final containment pass tightens the assistant so answers stay strictly inside retrieved project memory.
