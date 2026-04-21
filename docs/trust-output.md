@@ -404,6 +404,30 @@ This means:
 - `grounding.status = none` still uses the unchanged insufficient-memory fallback
 - boundary prompts such as `not in the project memory` no longer leak assistant identity language into the answer
 
+## Answer Conciseness Guard
+
+The final weak-answer formatter now also compresses presentation so the answer stays short and non-repetitive.
+
+What changed:
+
+- weak answers are limited to the three user-facing parts only:
+  - what is known
+  - what is uncertain
+  - what cannot be verified
+- repeated uncertainty lines are collapsed into a single limitation paragraph
+- bullet-heavy weak summaries are compacted into a shorter prose summary when possible
+- meta-justification language such as `as per my training`, `I'm hesitant to`, `I should only`, `I will refrain`, `I cannot provide`, or `this appears to be self-referential` is stripped from the final answer
+
+What did not change:
+
+- retrieval, ranking, isolation, trust, and fallback logic
+- grounded answers
+- conflict answers
+- the insufficient-memory fallback
+
+The trace still carries the richer trust and eligibility details.
+The answer surface now keeps only the concise project-grounded summary.
+
 ## Uncertainty versus conflict
 
 The assistant now separates incomplete history from true contradiction more explicitly.

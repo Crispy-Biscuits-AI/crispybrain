@@ -270,6 +270,31 @@ Validated result:
 - boundary prompts such as `Tell me something about CrispyBrain that is not in the project memory` now stay inside the repo-visible domain instead of leaking assistant-identity filler
 - weak uncertainty prompts still answer meaningfully, but now make the limitation and non-verifiable edge explicit in the answer text
 
+## Answer Conciseness Guard (2026-04-21)
+
+This final UX pass keeps the same weak-answer honesty while making the wording shorter and less defensive.
+
+What changed in the runtime:
+
+- weak answers are now compressed into three short user-facing parts:
+  - what is known
+  - what is uncertain
+  - what cannot be verified
+- repeated uncertainty wording is collapsed so the answer does not restate the same limitation multiple times
+- meta-reasoning and self-justification phrases such as `as per my training`, `I'm hesitant to`, `I should only`, `I will refrain`, `I cannot provide`, and `this appears to be self-referential` are stripped from the final answer
+- weak bullet lists are compacted into shorter prose where that keeps the answer easier to scan
+
+What did not change:
+
+- retrieval, ranking, project isolation, trust, and fallback behavior
+- grounded answers and conflict answers
+- the insufficient-memory fallback when no usable evidence is selected
+
+Validated result:
+
+- weak answers stay domain-grounded and uncertainty-aware
+- the wording is shorter, less repetitive, and more professional for first-time users
+
 Operational note:
 
 - if `openbrain-history` rows already exist from an earlier broken watcher pass, clear those rows and re-ingest the pack after re-importing the updated watcher workflow
