@@ -373,6 +373,37 @@ This keeps the distinction clear:
 - `weak`: relevant but incomplete project evidence exists
 - `none`: the retrieved candidates are too weak or too off-topic to justify an answer
 
+## Answer Quality Guard
+
+The assistant now applies a final answer-quality guard before returning weak or boundary-case answers.
+
+This guard does not change retrieval, ranking, project isolation, conflict handling, or the insufficient-memory fallback.
+It only rewrites the final answer text when the retrieved evidence is real but the raw model output drifts into generic assistant filler.
+
+What the guard removes:
+
+- assistant identity language such as `I'm CrispyBrain` or `as an AI`
+- generic scope disclaimers such as `I don't have information outside...`
+- low-value meta lead-ins such as `Based on the retrieved memory context, here's what I found`
+
+What the guard keeps:
+
+- repo-visible facts that were actually retrieved
+- weak-grounding uncertainty notes
+- explicit statements about what the stored project memory cannot verify
+
+For weak answers, the returned text is forced into a project-grounded structure:
+
+- what is known from the retrieved project memory
+- what remains limited or uncertain
+- what cannot be verified from the stored record
+
+This means:
+
+- `grounding.status = weak` still returns a cautious direct answer when the query is on-topic
+- `grounding.status = none` still uses the unchanged insufficient-memory fallback
+- boundary prompts such as `not in the project memory` no longer leak assistant identity language into the answer
+
 ## Uncertainty versus conflict
 
 The assistant now separates incomplete history from true contradiction more explicitly.

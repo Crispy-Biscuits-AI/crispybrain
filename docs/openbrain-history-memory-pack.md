@@ -245,6 +245,31 @@ The goal is conservative:
 - keep valid weak-history answers
 - preserve the existing trust surface instead of hiding retrieval state
 
+## Answer Quality Guard (2026-04-21)
+
+This final polish pass improves weak-answer usefulness without changing retrieval, ranking, isolation, or fallback decisions.
+
+What changed in the runtime:
+
+- weak or boundary-case answers now pass through an answer-quality guard before the final response is returned
+- generic assistant filler such as `I'm CrispyBrain`, `I don't have information outside...`, and `as an AI` is stripped from the final answer text
+- generic lead-ins such as `Based on the retrieved memory context, here's what I found` are removed when the answer is being rewritten
+- weak answers are reformatted into a domain-grounded structure that explains:
+  - what the retrieved memory does support
+  - what remains uncertain or incomplete
+  - what the stored project memory cannot verify
+
+What did not change:
+
+- the insufficient-memory fallback remains the same when no usable evidence is selected
+- uncertainty synthesis still stays on the weak direct-answer path when the project history is genuinely incomplete
+- failure-domain and other grounded answers still use the existing ranking and trust path
+
+Validated result:
+
+- boundary prompts such as `Tell me something about CrispyBrain that is not in the project memory` now stay inside the repo-visible domain instead of leaking assistant-identity filler
+- weak uncertainty prompts still answer meaningfully, but now make the limitation and non-verifiable edge explicit in the answer text
+
 Operational note:
 
 - if `openbrain-history` rows already exist from an earlier broken watcher pass, clear those rows and re-ingest the pack after re-importing the updated watcher workflow
