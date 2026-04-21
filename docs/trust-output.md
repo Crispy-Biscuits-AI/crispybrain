@@ -337,6 +337,42 @@ still behave the same way once the candidate set has been scoped correctly.
 That means a scoped query can still return `grounding.status = weak` if the matching project contains only limited evidence.
 The isolation fix guarantees scope integrity, not stronger evidence than the project actually contains.
 
+## Relevance Threshold And Fallback Behavior
+
+The assistant now applies an answer-eligibility gate after retrieval ranking and before answer generation.
+
+This gate is intentionally narrow.
+It does not replace the normal trust model, and it does not suppress valid weak-history answers just because their similarity is low.
+
+The fallback triggers when a scoped candidate set still looks irrelevant overall, for example when:
+
+- the top similarity stays below the answer-eligibility floor
+- lexical overlap is minimal
+- there is no domain or intent match
+- there are no strong token, anchor, entity, or structured signals
+- only a tiny answer set would be selected
+
+When that happens, the assistant does not carry the weak match into answer generation.
+It returns the existing insufficient-memory fallback instead:
+
+- `answer_mode = insufficient`
+- `grounding.status = none`
+- `selected_sources = []`
+
+The current gate is designed to preserve real weak answers.
+It explicitly allows the normal weak path when the query still has meaningful support signals such as:
+
+- uncertainty-history intent
+- failure-domain intent
+- anchor or title hits
+- strong or structured token hits
+- multiple compatible supporting sources
+
+This keeps the distinction clear:
+
+- `weak`: relevant but incomplete project evidence exists
+- `none`: the retrieved candidates are too weak or too off-topic to justify an answer
+
 ## Uncertainty versus conflict
 
 The assistant now separates incomplete history from true contradiction more explicitly.

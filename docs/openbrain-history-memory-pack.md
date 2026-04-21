@@ -151,6 +151,7 @@ What was validated after those fixes:
 - adversarial prompts asking for undocumented mistakes now return an explicit lack-of-evidence answer instead of turning documented failures into new claims
 - the failures file now includes a retrieval-wording note so phrasing variants such as `issues`, `bugs`, `breakdowns`, `regressions`, `weak points`, and `went wrong` stay attached to the same repo-supported corpus without adding new historical claims
 - uncertainty prompts now stay on a weak direct-synthesis path when multiple sources are compatible but incomplete, instead of flipping into conflict mode just because different notes describe different missing pieces
+- low-signal off-topic prompts now fall back instead of turning a single weak semantic match into a misleading `weak` answer
 
 ## Failure-domain retrieval weighting (2026-04-21)
 
@@ -206,6 +207,43 @@ What did not change:
 - failure-intent weighting still works inside the scoped corpus
 - grounding, weak-evidence notes, uncertainty handling, and conflict behavior are unchanged
 - strict isolation does not guarantee a `none` result; weak same-project evidence can still produce a cautious `weak` answer if that is what the scoped corpus supports
+
+## Relevance Threshold And Fallback Behavior (2026-04-21)
+
+This follow-up correctness fix adds a narrow answer-eligibility gate for irrelevant queries.
+
+What changed in the runtime:
+
+- retrieval candidates are still ranked and exposed for inspection
+- but before answer generation, the assistant now checks whether the final answer set is too weak and too off-topic to justify a response
+- low-signal single-source matches now fall back instead of becoming `answer_mode = direct` with `grounding.status = weak`
+
+The gate is designed around existing retrieval signals, including:
+
+- top similarity
+- lexical overlap
+- strong token hits
+- anchor or title hits
+- intent-domain matches
+- final selected-source count
+
+What now falls back:
+
+- irrelevant prompts such as developer food habits
+- unrelated prompts like the earlier `moonbase` test case
+- other cases where the history pack only offers a weak semantic neighbor without meaningful topical support
+
+What still stays weak instead of falling back:
+
+- uncertainty questions that genuinely map to incomplete project history
+- narrow but real history prompts that still have meaningful lexical or intent support
+- failure-domain prompts that match the documented failures corpus
+
+The goal is conservative:
+
+- block truly irrelevant weak matches
+- keep valid weak-history answers
+- preserve the existing trust surface instead of hiding retrieval state
 
 Operational note:
 
