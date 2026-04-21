@@ -147,7 +147,7 @@ What was validated after those fixes:
 - failures, problems, bugs, and issues prompts retrieve and select `04-problems-and-failures.txt` instead of substituting a more generic history file
 - broad history prompts such as `List...` and `Walk me through...` are treated as fact-seeking retrieval requests for ranking purposes
 - weakly grounded answers now include the grounding warning in the answer text itself instead of only exposing it through trace metadata
-- clearly unsupported questions now fall back instead of being carried by generic lexical/filepath matches inside the history corpus
+- clearly unsupported questions no longer borrow cross-project notes when the request is scoped to `openbrain-history`, even though weak same-project matches can still surface under the current grounding rules
 - adversarial prompts asking for undocumented mistakes now return an explicit lack-of-evidence answer instead of turning documented failures into new claims
 - the failures file now includes a retrieval-wording note so phrasing variants such as `issues`, `bugs`, `breakdowns`, `regressions`, `weak points`, and `went wrong` stay attached to the same repo-supported corpus without adding new historical claims
 - uncertainty prompts now stay on a weak direct-synthesis path when multiple sources are compatible but incomplete, instead of flipping into conflict mode just because different notes describe different missing pieces
@@ -178,6 +178,34 @@ The intended effect is narrow and practical:
 
 - failure-domain prompts should now keep `04-problems-and-failures.txt` in `selected_sources` when it is actually relevant
 - trust remains conservative because source selection and answer confidence are still evaluated separately
+
+## Project Isolation Enforcement (2026-04-21)
+
+This follow-up integrity fix enforces strict project-level memory isolation for scoped queries.
+
+What changed in the runtime:
+
+- when a request includes `project_slug = openbrain-history`, retrieval now keeps only memories whose stored `project_slug` is exactly `openbrain-history`
+- the project filter runs before ranking, lexical scoring, intent weighting, or answer selection
+- `general`, `all`, `lexical_general`, and `lexical_all` pools stay empty for scoped requests
+- a defensive same-slug check is applied again before final source selection
+
+What is excluded:
+
+- rows from other projects such as `alpha` or live-demo corpora
+- rows with null, empty, or missing `project_slug`
+- any cross-corpus fallback that would mix unrelated memory packs into a scoped answer
+
+Why this matters:
+
+- cross-project retrieval can sound plausible while still being wrong for the requested corpus
+- for this history pack, the integrity boundary is part of the trust model, not just a retrieval preference
+
+What did not change:
+
+- failure-intent weighting still works inside the scoped corpus
+- grounding, weak-evidence notes, uncertainty handling, and conflict behavior are unchanged
+- strict isolation does not guarantee a `none` result; weak same-project evidence can still produce a cautious `weak` answer if that is what the scoped corpus supports
 
 Operational note:
 

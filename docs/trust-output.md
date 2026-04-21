@@ -304,6 +304,39 @@ The visible candidate metadata can now include:
 Those fields are diagnostic only.
 They explain why a failure-domain file ranked higher; they do not change the answer rules after retrieval.
 
+## Project Isolation Enforcement
+
+When a request includes `project_slug`, retrieval is now strictly scoped to that project before ranking begins.
+
+For a scoped request such as:
+
+- `project_slug = openbrain-history`
+
+the assistant now only keeps candidates whose stored `project_slug` exactly matches `openbrain-history`.
+
+That enforcement happens in two places:
+
+- the SQL retrieval stage returns project-matching rows only and leaves the `general` and `all` pools empty for scoped requests
+- the retrieval assembly stage applies the same exact-slug check again before ranking and again before final source selection
+
+Null, empty, or missing project slugs are excluded from scoped retrieval.
+They are not treated as global fallback memory.
+
+This matters because cross-corpus retrieval is unsafe even when the retrieved text is real.
+A different project can produce a plausible but misleading answer that crosses the system trust boundary.
+
+Project isolation does not change the trust rules after retrieval:
+
+- `grounding`
+- `answer_mode`
+- conflict handling
+- weak-evidence handling
+
+still behave the same way once the candidate set has been scoped correctly.
+
+That means a scoped query can still return `grounding.status = weak` if the matching project contains only limited evidence.
+The isolation fix guarantees scope integrity, not stronger evidence than the project actually contains.
+
 ## Uncertainty versus conflict
 
 The assistant now separates incomplete history from true contradiction more explicitly.
