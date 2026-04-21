@@ -262,6 +262,48 @@ For phrasing drift on project-history questions, the assistant now adds a small 
 This does not hardcode an answer.
 It only helps the candidate set keep the intended history-pack files in play when the user changes wording.
 
+## Intent-aware retrieval weighting
+
+The assistant now exposes a bounded failure-intent retrieval bias for ranking, not answering.
+
+When the normalized query clearly asks about:
+
+- failures
+- problems
+- issues
+- bugs
+- breakdowns
+- regressions
+- incidents
+- mistakes
+- what went wrong
+- weak points
+
+the retrieval pipeline marks `is_failure_intent = true` before candidate ranking.
+
+That flag does not bypass trust gates, grounding thresholds, or fallback behavior.
+It only changes how closely competing sources are compared.
+
+For failure-intent queries, the ranking layer now gives a small domain boost to candidates whose title, filename, or filepath clearly matches the failures corpus, especially:
+
+- `04-problems-and-failures.txt`
+- `inbox/openbrain-history/04-problems-and-failures.txt`
+
+The boost is intentionally small and inspectable:
+
+- it helps the domain-specific failures file outcompete weak generic notes when the candidates are otherwise close
+- it does not force inclusion of an irrelevant source
+- it does not override a clearly stronger non-failure source on a non-failure query
+
+The visible candidate metadata can now include:
+
+- `is_failure_intent`
+- `intent_domain_match`
+- `intent_domain_boost`
+
+Those fields are diagnostic only.
+They explain why a failure-domain file ranked higher; they do not change the answer rules after retrieval.
+
 ## Uncertainty versus conflict
 
 The assistant now separates incomplete history from true contradiction more explicitly.

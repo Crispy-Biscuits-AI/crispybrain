@@ -152,6 +152,33 @@ What was validated after those fixes:
 - the failures file now includes a retrieval-wording note so phrasing variants such as `issues`, `bugs`, `breakdowns`, `regressions`, `weak points`, and `went wrong` stay attached to the same repo-supported corpus without adding new historical claims
 - uncertainty prompts now stay on a weak direct-synthesis path when multiple sources are compatible but incomplete, instead of flipping into conflict mode just because different notes describe different missing pieces
 
+## Failure-domain retrieval weighting (2026-04-21)
+
+This follow-up refinement addressed a proven ranking failure mode: weak generic notes could occasionally compete too well against the actual failures corpus on development-failure questions.
+
+What changed in the runtime:
+
+- the assistant now detects failure intent from normalized query wording such as `failures`, `problems`, `issues`, `bugs`, `went wrong`, `breakdowns`, `regressions`, `incidents`, `mistakes`, and `weak points`
+- when that flag is active, retrieval gives a small domain boost to clearly matching failures sources, especially `04-problems-and-failures.txt`
+- the boost is used only during ranking and close-candidate tie-breaks
+
+Why this matters:
+
+- the failures corpus is the repo-visible source that actually documents breakdowns and negative outcomes
+- generic notes about principles, evaluation, or current state may still be relevant context, but they should not outrank the purpose-built failures file on a failure query just because they look cleaner or more independent
+
+What did not change:
+
+- no answers are hardcoded
+- grounding still determines whether the answer is `grounded`, `weak`, or `none`
+- unsupported questions still fall back or stay explicitly limited
+- non-failure prompts such as uncertainty or version-difference queries do not receive this domain boost
+
+The intended effect is narrow and practical:
+
+- failure-domain prompts should now keep `04-problems-and-failures.txt` in `selected_sources` when it is actually relevant
+- trust remains conservative because source selection and answer confidence are still evaluated separately
+
 Operational note:
 
 - if `openbrain-history` rows already exist from an earlier broken watcher pass, clear those rows and re-ingest the pack after re-importing the updated watcher workflow
