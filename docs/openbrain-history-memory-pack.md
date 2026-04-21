@@ -295,6 +295,37 @@ Validated result:
 - weak answers stay domain-grounded and uncertainty-aware
 - the wording is shorter, less repetitive, and more professional for first-time users
 
+## Memory-Only Answer Enforcement (2026-04-21)
+
+This final containment pass tightens the assistant so answers stay strictly inside retrieved project memory.
+
+What changed in the runtime:
+
+- the final answer-generation prompt now explicitly requires memory-only answering
+- the prompt now explicitly forbids training data, general knowledge, assumptions, speculation, rumors, and invented facts
+- if the requested detail is not directly supported by the retrieved notes, the assistant is instructed to say it cannot be verified from project memory
+- the final answer scrubber now removes training-data and general-knowledge leakage if it appears anyway
+- the response formatter no longer injects a hardcoded CrispyBrain fact outside the retrieved memory context
+
+What this means for this memory pack:
+
+- answers about `openbrain-history` should now be traceable to the selected `openbrain-history` sources or to an explicit non-verification statement
+- open-ended or boundary prompts should stay inside the retrieved note set instead of drifting into model priors
+- weak answers remain allowed when the pack has partial evidence, but they must still stay memory-grounded
+
+What did not change:
+
+- retrieval weighting
+- project isolation
+- relevance-threshold fallback behavior
+- uncertainty synthesis and conflict handling
+- the existing insufficient-memory fallback when no usable memory is selected
+
+Validated result:
+
+- boundary prompts no longer depend on assistant self-knowledge or training-data language
+- final answers either stay inside the retrieved history notes or explicitly say the missing detail cannot be verified from project memory
+
 Operational note:
 
 - if `openbrain-history` rows already exist from an earlier broken watcher pass, clear those rows and re-ingest the pack after re-importing the updated watcher workflow

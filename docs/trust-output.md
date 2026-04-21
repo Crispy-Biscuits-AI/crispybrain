@@ -428,6 +428,36 @@ What did not change:
 The trace still carries the richer trust and eligibility details.
 The answer surface now keeps only the concise project-grounded summary.
 
+## Memory-Only Answer Enforcement
+
+The assistant now applies a stricter memory-only containment layer before returning the final answer.
+
+What changed:
+
+- the answer-generation prompt now explicitly requires the model to answer only from the retrieved memory context
+- the prompt now explicitly forbids training data, general knowledge, assumptions, speculation, rumors, and invented facts
+- if a detail is not directly supported by the retrieved memory context, the model is told to say that it cannot be verified from project memory
+- the final answer scrubber now removes training-data and general-knowledge phrasing if it appears anyway
+- the response layer no longer injects a hardcoded CrispyBrain fact outside the retrieved memory context
+
+What is blocked:
+
+- phrases such as `based on my training`, `based on training data`, `based on general knowledge`, `generally speaking`, `it is known that`, `rumored`, and `in general`
+- answer text that tries to fill gaps with model priors instead of retrieved evidence
+
+What happens instead:
+
+- when retrieved sources support an answer, the response stays inside those visible notes
+- when the history is partial, the answer remains cautious and uncertainty-aware
+- when a requested detail is missing from the retrieved notes, the answer explicitly says it cannot be verified from project memory
+
+What did not change:
+
+- retrieval, ranking, intent weighting, project isolation, and relevance threshold behavior
+- weak-answer synthesis, conflict handling, and the insufficient-memory fallback
+
+The containment goal is strict but simple: every final answer sentence should now come from retrieved project memory or from an explicit statement that the memory cannot verify the missing detail.
+
 ## Uncertainty versus conflict
 
 The assistant now separates incomplete history from true contradiction more explicitly.
