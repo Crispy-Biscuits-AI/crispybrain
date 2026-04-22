@@ -222,10 +222,11 @@ alpha
 The visible project selector in the UI defaults to `alpha` and also exposes `starwars`.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 
-## Transparency In `v0.9.9`
+## Transparency In The Current Demo Build
 
 The local UI now centers the answer while making sources and trace signals easier to inspect.
-`v0.9.9` adds a human-readable explanation layer above the raw trace without removing the existing panes or changing the layout grid.
+The current demo build keeps the explanation layer above the raw trace without removing the existing panes or changing the layout grid.
+The footer version label is injected from `git describe --tags --always`, and the footer keeps the existing support and repo links while also exposing the BlueSky and Reddit profiles without changing the layout grid.
 Token usage in this surface reflects live Ollama generation counts when the upstream answer path reports them. The UI does not backfill estimates when those counts are absent.
 
 When retrieval support is available, the UI now shows:

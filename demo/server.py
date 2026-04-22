@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import html
 import json
 import os
+import subprocess
 import sys
 import time
 import urllib.error
@@ -27,11 +29,45 @@ UPSTREAM_URL = os.environ.get(
 REQUEST_TIMEOUT_SECONDS = float(os.environ.get("CRISPYBRAIN_DEMO_TIMEOUT_SECONDS", "60"))
 
 
+def resolve_repo_version() -> str:
+    commands = (
+        ["git", "describe", "--tags", "--always"],
+        ["git", "rev-parse", "--short", "HEAD"],
+    )
+    for command in commands:
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                capture_output=True,
+                check=True,
+                text=True,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            continue
+
+        version = completed.stdout.strip()
+        if version:
+            return version
+
+    raise RuntimeError(f"Could not determine CrispyBrain repo version from {REPO_ROOT}")
+
+
 class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
     server_version = "CrispyBrainDemo/0.2"
 
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stdout.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), fmt % args))
+
+    def do_GET(self) -> None:
+        if self._maybe_serve_index(include_body=True):
+            return
+        super().do_GET()
+
+    def do_HEAD(self) -> None:
+        if self._maybe_serve_index(include_body=False):
+            return
+        super().do_HEAD()
 
     def do_POST(self) -> None:
         if self.path != "/api/demo/ask":
@@ -203,6 +239,24 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _maybe_serve_index(self, include_body: bool) -> bool:
+        clean_path = urlparse(self.path).path
+        if clean_path not in ("/", "", "/index.html"):
+            return False
+
+        rendered = (DEMO_DIR / "index.html").read_text(encoding="utf-8").replace(
+            "__CRISPYBRAIN_APP_VERSION__",
+            html.escape(resolve_repo_version()),
+        )
+        body = rendered.encode("utf-8")
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if include_body:
+            self.wfile.write(body)
+        return True
 
 
 def main() -> None:
