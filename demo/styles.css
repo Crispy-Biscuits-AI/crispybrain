@@ -371,7 +371,7 @@ select {
 }
 
 .explanation-shell {
-  margin-bottom: 18px;
+  margin-top: 18px;
   padding: 16px;
   border-radius: 18px;
   border: 1px solid var(--line);
@@ -473,8 +473,13 @@ select {
 .answer-output {
   margin: 0;
   min-height: 240px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
   white-space: pre-wrap;
   font-family: var(--font-body);
+  font-size: 1.02rem;
   line-height: 1.72;
 }
 

@@ -51,7 +51,7 @@ Token usage reflects real model execution when available. When unavailable, Cris
 
 ## v0.9.9 explanation layer
 
-The demo UI now adds a human-readable explanation layer above the existing answer text and keeps the raw trace drawer intact underneath it.
+The demo UI now keeps the main answer first, follows it with a human-readable explanation layer, and still keeps the raw trace drawer intact underneath it.
 
 The explanation layer reads directly from existing response fields:
 

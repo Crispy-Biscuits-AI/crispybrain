@@ -231,7 +231,7 @@ Token usage in this surface reflects live Ollama generation counts when the upst
 When retrieval support is available, the UI now shows:
 
 - an answer panel with the current response
-- an explanation layer at the top of the answer panel titled `Why this answer`
+- the main answer now renders before the explanation layer, while `Why this answer` stays directly underneath it
 - a visible confidence indicator that maps directly from `grounding.status`
 - an open-by-default sources panel with visible source cards and previews
 - an open-by-default trace panel with live execution, retrieval, and behavior signals when the backend returns them
