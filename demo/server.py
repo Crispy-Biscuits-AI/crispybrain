@@ -55,6 +55,22 @@ def resolve_repo_version() -> str:
     return UNKNOWN_VERSION
 
 
+def resolve_runtime_context() -> str:
+    if Path("/.dockerenv").exists():
+        return "docker"
+
+    cgroup_path = Path("/proc/1/cgroup")
+    try:
+        cgroup_text = cgroup_path.read_text(encoding="utf-8")
+    except OSError:
+        return "local"
+
+    if "docker" in cgroup_text or "containerd" in cgroup_text:
+        return "docker"
+
+    return "local"
+
+
 class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
     server_version = "CrispyBrainDemo/0.2"
 
@@ -247,9 +263,10 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
         if clean_path not in ("/", "", "/index.html"):
             return False
 
+        footer_version = f"{resolve_repo_version()} ({resolve_runtime_context()})"
         rendered = (DEMO_DIR / "index.html").read_text(encoding="utf-8").replace(
             APP_VERSION_PLACEHOLDER,
-            html.escape(resolve_repo_version()),
+            html.escape(footer_version),
         )
         body = rendered.encode("utf-8")
         self.send_response(HTTPStatus.OK)
