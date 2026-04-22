@@ -27,6 +27,8 @@ UPSTREAM_URL = os.environ.get(
     "http://localhost:5678/webhook/crispybrain-demo",
 )
 REQUEST_TIMEOUT_SECONDS = float(os.environ.get("CRISPYBRAIN_DEMO_TIMEOUT_SECONDS", "60"))
+APP_VERSION_PLACEHOLDER = "__CRISPYBRAIN_APP_VERSION__"
+UNKNOWN_VERSION = "unknown-version"
 
 
 def resolve_repo_version() -> str:
@@ -50,7 +52,7 @@ def resolve_repo_version() -> str:
         if version:
             return version
 
-    raise RuntimeError(f"Could not determine CrispyBrain repo version from {REPO_ROOT}")
+    return UNKNOWN_VERSION
 
 
 class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
@@ -246,7 +248,7 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
             return False
 
         rendered = (DEMO_DIR / "index.html").read_text(encoding="utf-8").replace(
-            "__CRISPYBRAIN_APP_VERSION__",
+            APP_VERSION_PLACEHOLDER,
             html.escape(resolve_repo_version()),
         )
         body = rendered.encode("utf-8")
