@@ -14,7 +14,10 @@ const sourcesToggle = document.getElementById("sources-toggle");
 const sourcesBadge = document.getElementById("sources-badge");
 const sourceToggleButtons = document.querySelectorAll("[data-toggle-sources]");
 const traceDrawer = document.getElementById("trace-drawer");
-const traceToggleButtons = document.querySelectorAll("[data-toggle-trace]");
+const traceShell = traceDrawer?.closest(".trace-shell") ?? null;
+const traceShortcutButton = document.getElementById("trace-shortcut");
+const traceToggleButton = document.getElementById("trace-toggle");
+const traceButtons = document.querySelectorAll("[data-toggle-trace]");
 const answerState = document.getElementById("answer-state");
 const explanationSummary = document.getElementById("explanation-summary");
 const confidenceIndicator = document.getElementById("confidence-indicator");
@@ -58,8 +61,12 @@ for (const button of sourceToggleButtons) {
   });
 }
 
-for (const button of traceToggleButtons) {
-  button.addEventListener("click", () => {
+if (traceShortcutButton) {
+  traceShortcutButton.addEventListener("click", revealTracePane);
+}
+
+if (traceToggleButton) {
+  traceToggleButton.addEventListener("click", () => {
     setTraceOpen(!traceOpen);
   });
 }
@@ -426,9 +433,26 @@ function setTraceOpen(isOpen) {
   traceDrawer.classList.toggle("trace-open", isOpen);
   traceDrawer.setAttribute("aria-hidden", String(!isOpen));
 
-  for (const button of traceToggleButtons) {
+  for (const button of traceButtons) {
     button.setAttribute("aria-expanded", String(isOpen));
   }
+}
+
+function revealTracePane() {
+  if (!traceOpen) {
+    setTraceOpen(true);
+  }
+
+  if (!traceShell) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    traceShell.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  });
 }
 
 function buildAnswerState(body, sources) {
