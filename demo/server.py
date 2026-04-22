@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import html
 import json
 import os
+import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -25,6 +28,99 @@ UPSTREAM_URL = os.environ.get(
     "http://localhost:5678/webhook/crispybrain-demo",
 )
 REQUEST_TIMEOUT_SECONDS = float(os.environ.get("CRISPYBRAIN_DEMO_TIMEOUT_SECONDS", "60"))
+APP_VERSION_ENV_VAR = "CRISPYBRAIN_APP_VERSION"
+APP_VERSION_PLACEHOLDER = "__CRISPYBRAIN_APP_VERSION__"
+UNKNOWN_VERSION = "unknown-version"
+FOOTER_VERSION_PATTERN = re.compile(r'(<span class="footer-version">)(.*?)(</span>)', re.DOTALL)
+
+
+def run_git_command(*args: str) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+    value = completed.stdout.strip()
+    return value or None
+
+
+def resolve_injected_app_version() -> str | None:
+    version = os.environ.get(APP_VERSION_ENV_VAR)
+    if not version:
+        return None
+
+    normalized = version.strip()
+    return normalized or None
+
+
+def resolve_runtime_context() -> str:
+    if Path("/.dockerenv").exists():
+        return "docker"
+
+    cgroup_path = Path("/proc/1/cgroup")
+    try:
+        cgroup_text = cgroup_path.read_text(encoding="utf-8")
+    except OSError:
+        return "local"
+
+    if "docker" in cgroup_text or "containerd" in cgroup_text:
+        return "docker"
+
+    return "local"
+
+
+def resolve_repo_version() -> str:
+    injected_version = resolve_injected_app_version()
+    if injected_version:
+        return injected_version
+
+    command_sets = (
+        ("describe", "--tags", "--always"),
+        ("rev-parse", "--short", "HEAD"),
+    )
+    for command in command_sets:
+        version = run_git_command(*command)
+        if version:
+            return version
+
+    runtime = resolve_runtime_context()
+    if runtime == "docker":
+        return f"{UNKNOWN_VERSION} ({runtime})"
+
+    return UNKNOWN_VERSION
+
+
+def resolve_commit_hash() -> str:
+    return run_git_command("rev-parse", "--short", "HEAD") or UNKNOWN_VERSION
+
+
+def resolve_footer_version() -> str:
+    version = resolve_repo_version()
+    runtime = resolve_runtime_context()
+    runtime_suffix = f" ({runtime})"
+    if version.endswith(runtime_suffix):
+        return version
+
+    return f"{version}{runtime_suffix}"
+
+
+def render_index_html() -> str:
+    footer_version = html.escape(resolve_footer_version())
+    rendered = (DEMO_DIR / "index.html").read_text(encoding="utf-8")
+    if APP_VERSION_PLACEHOLDER in rendered:
+        return rendered.replace(APP_VERSION_PLACEHOLDER, footer_version)
+
+    def replace_footer_version(match: re.Match[str]) -> str:
+        return f"{match.group(1)}{footer_version}{match.group(3)}"
+
+    rendered, _ = FOOTER_VERSION_PATTERN.subn(replace_footer_version, rendered, count=1)
+    return rendered
 
 
 class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
@@ -32,6 +128,26 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stdout.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), fmt % args))
+
+    def do_GET(self) -> None:
+        if self.path == "/meta":
+            self._write_json(
+                HTTPStatus.OK,
+                {
+                    "version": resolve_repo_version(),
+                    "runtime": resolve_runtime_context(),
+                    "commit": resolve_commit_hash(),
+                },
+            )
+            return
+        if self._maybe_serve_index(include_body=True):
+            return
+        super().do_GET()
+
+    def do_HEAD(self) -> None:
+        if self._maybe_serve_index(include_body=False):
+            return
+        super().do_HEAD()
 
     def do_POST(self) -> None:
         if self.path != "/api/demo/ask":
@@ -203,6 +319,20 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _maybe_serve_index(self, include_body: bool) -> bool:
+        clean_path = urlparse(self.path).path
+        if clean_path not in ("/", "", "/index.html"):
+            return False
+
+        body = render_index_html().encode("utf-8")
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if include_body:
+            self.wfile.write(body)
+        return True
 
 
 def main() -> None:

@@ -29,6 +29,7 @@ CrispyBrain currently provides:
 - Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
 - Visible demo project selector with `alpha` default and `starwars` switching
+- Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
 ## <img src="assets/biscuit-emoji.png" width="18" /> What This Is Not
@@ -186,13 +187,13 @@ git clone <crispy-ai-lab-repo-url> crispy-ai-lab
 ```bash
 cd crispy-ai-lab
 cp .env.example .env
-docker compose up -d postgres n8n crispybrain-demo-ui
+../crispybrain/scripts/set-version-env.sh up -d postgres n8n crispybrain-demo-ui
 ```
 
 If you change files under `demo/` or `assets/`, rebuild the UI service so `localhost:8787` serves the new baked image contents:
 
 ```bash
-docker compose up -d --build crispybrain-demo-ui
+../crispybrain/scripts/set-version-env.sh up -d --build crispybrain-demo-ui
 ```
 
 3. Import the current workflow set from this repo into the running n8n container.
@@ -221,6 +222,17 @@ Success currently looks like:
 - the project selector is visible and defaults to `alpha`
 - the response includes an answer, sources, and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
+
+## Version Handling
+
+The demo server now resolves its visible app version in this order:
+
+1. `CRISPYBRAIN_APP_VERSION` when the environment variable is present
+2. `git describe --tags --always`
+3. `git rev-parse --short HEAD`
+4. `unknown-version (docker)` when the container has neither an injected version nor git metadata
+
+Docker images in this repo do not include `.git`, so the Compose-managed UI should be started through [`scripts/set-version-env.sh`](/Users/elric/repos/crispybrain/scripts/set-version-env.sh). That wrapper resolves the host-side git version, exports `CRISPYBRAIN_APP_VERSION`, and then runs `docker compose ...` so the containerized footer can render the same version string as the local fallback server.
 
 ## UI, Workflow, Ingestion, and Operator Entry Points
 

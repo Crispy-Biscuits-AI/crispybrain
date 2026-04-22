@@ -31,13 +31,13 @@ Clone `crispybrain` and `crispy-ai-lab` as sibling directories, then start the A
 ```bash
 cd ../crispy-ai-lab
 cp .env.example .env
-docker compose up -d postgres n8n crispybrain-demo-ui
+../crispybrain/scripts/set-version-env.sh up -d postgres n8n crispybrain-demo-ui
 ```
 
 If you have changed files in `../crispybrain/demo/` or `../crispybrain/assets/`, rebuild the UI service so port `8787` serves the updated image contents:
 
 ```bash
-docker compose up -d --build crispybrain-demo-ui
+../crispybrain/scripts/set-version-env.sh up -d --build crispybrain-demo-ui
 ```
 
 Verify the UI container is running:
@@ -225,8 +225,29 @@ That query currently retrieves `alpha` memory rows reliably in the lab and exerc
 ## Transparency In `v0.9.9`
 
 The local UI now centers the answer while making sources and trace signals easier to inspect.
-`v0.9.9` adds a human-readable explanation layer above the raw trace without removing the existing panes or changing the layout grid.
+The current demo build keeps the explanation layer above the raw trace without removing the existing panes or changing the layout grid.
+The demo server also exposes `GET /meta`, which returns JSON with the current `version`, `runtime`, and short `commit` hash from the same runtime helpers.
 Token usage in this surface reflects live Ollama generation counts when the upstream answer path reports them. The UI does not backfill estimates when those counts are absent.
+
+## Version Handling
+
+Docker containers for this demo image do not include `.git` metadata, so version lookup must be injected from the host when you start the Compose-managed UI service.
+
+Use the wrapper from the sibling lab repo:
+
+```bash
+cd ../crispy-ai-lab
+../crispybrain/scripts/set-version-env.sh up -d crispybrain-demo-ui
+```
+
+If you have changed the UI files and need a rebuild, use:
+
+```bash
+cd ../crispy-ai-lab
+../crispybrain/scripts/set-version-env.sh up -d --build crispybrain-demo-ui
+```
+
+The wrapper resolves the host checkout version, exports `CRISPYBRAIN_APP_VERSION`, and keeps the containerized footer and `GET /meta` output aligned with the repo version that launched the service.
 
 When retrieval support is available, the UI now shows:
 
@@ -354,13 +375,13 @@ Use the recommended query and `alpha` project slug first. The current `alpha` me
 
 ```bash
 cd ../crispy-ai-lab
-docker compose up -d postgres n8n crispybrain-demo-ui
+../crispybrain/scripts/set-version-env.sh up -d postgres n8n crispybrain-demo-ui
 ```
 
 If the browser still shows an older UI after repo changes, rebuild the UI service explicitly:
 
 ```bash
-docker compose up -d --build crispybrain-demo-ui
+../crispybrain/scripts/set-version-env.sh up -d --build crispybrain-demo-ui
 ```
 
 2. Verify the service is running:
