@@ -28,6 +28,7 @@ CrispyBrain currently provides:
 - Real token usage from live model execution when available
 - Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
+- Visible demo project selector with `alpha` default and `starwars` switching
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
 ## <img src="assets/biscuit-emoji.png" width="18" /> What This Is Not
@@ -210,13 +211,14 @@ scripts/workflows/import-exported-into-docker.sh
 
 7. Use:
 
-- project slug: `alpha`
+- project selector: leave it on `alpha` by default, or switch it to `starwars`
 - question: `How am I planning to build CrispyBrain?`
 
 Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
+- the project selector is visible and defaults to `alpha`
 - the response includes an answer, sources, and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
 

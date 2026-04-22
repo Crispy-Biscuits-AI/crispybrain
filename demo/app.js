@@ -1,7 +1,7 @@
 const themeManager = window.CrispyBrainTheme;
 
 const form = document.getElementById("memory-form");
-const projectSlugInput = document.getElementById("project-slug");
+const projectSlugSelect = document.getElementById("project-slug");
 const sessionIdInput = document.getElementById("session-id");
 const questionInput = document.getElementById("question");
 const submitButton = document.getElementById("submit-button");
@@ -81,7 +81,7 @@ form.addEventListener("submit", async (event) => {
 
   const payload = {
     question,
-    project_slug: projectSlugInput.value.trim(),
+    project_slug: projectSlugSelect.value.trim(),
     session_id: sessionIdInput.value.trim(),
   };
 

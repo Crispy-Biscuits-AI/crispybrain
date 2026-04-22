@@ -219,6 +219,7 @@ With project slug:
 alpha
 ```
 
+The visible project selector in the UI defaults to `alpha` and also exposes `starwars`.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 
 ## Transparency In `v0.9.9`
@@ -326,7 +327,7 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 ## Honest Failure Modes
 
 - empty question: the UI and proxy return `INVALID_QUESTION`
-- empty slug: the UI defaults it to `alpha`
+- blank API slug: the demo proxy defaults it to `alpha`
 - n8n unavailable: the proxy returns `N8N_UNAVAILABLE`
 - weak retrieval: the upstream assistant can return `grounding.status = weak` with a cautionary note
 - no strong retrieval: the upstream assistant can return `grounding.status = none` and no evidence rows
