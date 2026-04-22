@@ -226,7 +226,7 @@ That query currently retrieves `alpha` memory rows reliably in the lab and exerc
 
 The local UI now centers the answer while making sources and trace signals easier to inspect.
 The current demo build keeps the explanation layer above the raw trace without removing the existing panes or changing the layout grid.
-The footer version label is injected from the current repo checkout using `git describe --tags --always`, falling back to `git rev-parse --short HEAD` and then `unknown-version`, and it now appends a runtime context label such as `(local)` or `(docker)` while keeping the existing support and repo links plus the BlueSky and Reddit profiles without changing the layout grid.
+The footer version label is injected from the current repo checkout using `git describe --tags --always`, falling back to `git rev-parse --short HEAD` and then `unknown-version`, and it now appends a runtime context label such as `(local)` or `(docker)` while keeping the existing support and repo links plus the BlueSky, Reddit, and MIT License links without changing the layout grid.
 The demo server also exposes `GET /meta`, which returns JSON with the current `version`, `runtime`, and short `commit` hash from the same runtime helpers.
 Token usage in this surface reflects live Ollama generation counts when the upstream answer path reports them. The UI does not backfill estimates when those counts are absent.
 
