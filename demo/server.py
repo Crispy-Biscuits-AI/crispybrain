@@ -31,24 +31,29 @@ APP_VERSION_PLACEHOLDER = "__CRISPYBRAIN_APP_VERSION__"
 UNKNOWN_VERSION = "unknown-version"
 
 
-def resolve_repo_version() -> str:
-    commands = (
-        ["git", "describe", "--tags", "--always"],
-        ["git", "rev-parse", "--short", "HEAD"],
-    )
-    for command in commands:
-        try:
-            completed = subprocess.run(
-                command,
-                cwd=REPO_ROOT,
-                capture_output=True,
-                check=True,
-                text=True,
-            )
-        except (OSError, subprocess.CalledProcessError):
-            continue
+def run_git_command(*args: str) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
 
-        version = completed.stdout.strip()
+    value = completed.stdout.strip()
+    return value or None
+
+
+def resolve_repo_version() -> str:
+    command_sets = (
+        ("describe", "--tags", "--always"),
+        ("rev-parse", "--short", "HEAD"),
+    )
+    for command in command_sets:
+        version = run_git_command(*command)
         if version:
             return version
 
@@ -71,6 +76,10 @@ def resolve_runtime_context() -> str:
     return "local"
 
 
+def resolve_commit_hash() -> str:
+    return run_git_command("rev-parse", "--short", "HEAD") or UNKNOWN_VERSION
+
+
 class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
     server_version = "CrispyBrainDemo/0.2"
 
@@ -78,6 +87,16 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
         sys.stdout.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), fmt % args))
 
     def do_GET(self) -> None:
+        if self.path == "/meta":
+            self._write_json(
+                HTTPStatus.OK,
+                {
+                    "version": resolve_repo_version(),
+                    "runtime": resolve_runtime_context(),
+                    "commit": resolve_commit_hash(),
+                },
+            )
+            return
         if self._maybe_serve_index(include_body=True):
             return
         super().do_GET()
