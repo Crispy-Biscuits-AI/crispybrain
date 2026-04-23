@@ -28,7 +28,7 @@ CrispyBrain currently provides:
 - Real token usage from live model execution when available
 - Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
-- Inbox-backed project API plus dynamic project selector and delete flow on the demo UI
+- Inbox-backed project API and delete flow on both the repo-local and wrapper-started demo UI
 - Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
@@ -226,7 +226,9 @@ Success currently looks like:
 - the response includes an answer, sources, and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
 
-For direct inbox project management on `localhost:8787`, run the repo-local demo server from this repo so the API works against the repo-owned inbox path:
+The wrapper script now injects the repo inbox into `crispybrain-demo-ui`, so the Compose-managed `localhost:8787` runtime can serve the same project management API directly from the repo-owned inbox path.
+
+For local debugging outside Docker, you can still run the repo-local demo server from this repo:
 
 ```bash
 cd /Users/elric/repos/crispybrain
@@ -242,7 +244,7 @@ The demo server now resolves its visible app version in this order:
 3. `git rev-parse --short HEAD`
 4. `unknown-version (docker)` when the container has neither an injected version nor git metadata
 
-Docker images in this repo do not include `.git`, so the Compose-managed UI should be started through [`scripts/set-version-env.sh`](/Users/elric/repos/crispybrain/scripts/set-version-env.sh). That wrapper resolves the host-side git version, exports `CRISPYBRAIN_APP_VERSION`, and then runs `docker compose ...` so the containerized footer can render the same version string as the local fallback server.
+Docker images in this repo do not include `.git`, so the Compose-managed UI should be started through [`scripts/set-version-env.sh`](/Users/elric/repos/crispybrain/scripts/set-version-env.sh). That wrapper resolves the host-side git version, exports `CRISPYBRAIN_APP_VERSION`, injects the repo inbox mount override for `crispybrain-demo-ui`, and then runs `docker compose ...` so the containerized footer and project API both use the same repo-backed state as the local fallback server.
 
 ## UI, Workflow, Ingestion, and Operator Entry Points
 

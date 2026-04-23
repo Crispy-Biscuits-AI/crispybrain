@@ -35,6 +35,11 @@ cp .env.example .env
 ../crispybrain/scripts/set-version-env.sh up -d postgres n8n crispybrain-demo-ui
 ```
 
+That wrapper now injects the repo inbox bind mount into `crispybrain-demo-ui`:
+
+- host source: `/Users/elric/repos/crispybrain/inbox`
+- container target: `/app/inbox`
+
 If you have changed files in `../crispybrain/demo/` or `../crispybrain/assets/`, rebuild the UI service so port `8787` serves the updated image contents:
 
 ```bash
@@ -204,13 +209,15 @@ cd ../crispybrain
 python3 scripts/run_demo_server.py
 ```
 
-That script is now explicitly the repo-local path for direct inbox project management on `localhost:8787`.
-It reads and deletes project folders directly under `/Users/elric/repos/crispybrain/inbox/`.
-The Compose service remains the main supported UI runtime for the broader lab flow.
+That script remains the repo-local fallback/dev path.
+The Compose service also supports direct inbox project management now when it is started through `scripts/set-version-env.sh`, because the wrapper injects the repo inbox mount for `crispybrain-demo-ui`.
 
 ## Project API
 
-The demo server now treats the repo inbox as the source of truth for projects.
+The demo server now treats the repo inbox as the source of truth for projects in both supported runtime paths:
+
+- the repo-local fallback script
+- the Compose-managed `crispybrain-demo-ui` service when started through `scripts/set-version-env.sh`
 
 - `GET /api/projects` returns the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
 - `DELETE /api/projects/<project-slug>` removes that inbox folder when the slug is valid and present
