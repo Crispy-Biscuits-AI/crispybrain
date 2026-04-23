@@ -258,16 +258,16 @@ With project slug:
 alpha
 ```
 
-The top control area now splits into three visible panes on desktop widths:
+The top control area now renders as one larger parent pane with three visible sub-panes on desktop widths:
 
 - `Query context`: the visible project selector and active queried context
-- `Ask a question`: query input and `Run query` in the primary center pane
-- `Project management`: `Delete Project`, new project slug input, and `Create Project`
+- `Ask a question`: a larger multiline query entry area and `Run query` in the primary center pane
+- `Project management`: a delete-target pulldown plus `Delete Project`, new project slug input, and `Create Project`
 
 The visible project selector in the `Query context` pane now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`.
 If `alpha` exists, the selector chooses it by default on load.
 The `Create Project` control makes a new inbox folder directly from the UI and then selects it automatically.
-The `Delete Project` control removes the selected inbox folder after confirmation and then refreshes the selector immediately.
+The `Delete Project` control removes the explicitly selected delete target after confirmation and then refreshes the selector state immediately.
 The `Ask a question` pane keeps query submission separate while still using the currently selected project context and repeating that context near the query input.
 If the inbox is temporarily empty, the UI shows a no-projects message, disables query submission safely, and keeps project creation available.
 The answer panel now places the direct answer above `Why this answer`, while sources and trace behavior remain unchanged.

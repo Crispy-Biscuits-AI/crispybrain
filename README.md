@@ -213,8 +213,8 @@ scripts/workflows/import-exported-into-docker.sh
 7. Use:
 
 - `Query context`: it makes the selected project explicit before you run retrieval
-- `Ask a question`: it keeps the query input and `Run query` button in the primary center card and reinforces the active project/context
-- `Project management`: it keeps `Delete Project`, new project slug input, and `Create Project` controls in a smaller companion card
+- `Ask a question`: it keeps a larger multiline query entry area and `Run query` button in the primary center sub-pane while reinforcing the active project/context
+- `Project management`: it keeps a dedicated delete-target pulldown plus the `Delete Project`, new project slug input, and `Create Project` controls in the right sub-pane
 - question: `How am I planning to build CrispyBrain?`
 
 Project creation and validation now follow the repo inbox as the source of truth:
@@ -228,14 +228,14 @@ Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
-- the top controls render as a three-pane row on desktop: `Query context`, `Ask a question`, and `Project management`
+- the top controls render as one parent pane containing three sub-panes on desktop: `Query context`, `Ask a question`, and `Project management`
 - `GET /api/projects` returns the current repo inbox folders without a `404`
 - `POST /api/projects` creates a valid inbox project and returns the created slug plus the refreshed selector payload
 - the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
 - creating a project from the UI reloads the selector and auto-selects the new project
 - invalid or duplicate create attempts return clear `4xx` validation responses without partial folder creation
 - when the inbox is empty, the UI shows a safe empty state and keeps the create flow available
-- deleting a project removes its `inbox/<project-slug>/` folder and drops it from the selector immediately
+- deleting a project removes the explicitly selected delete target from its pulldown and from the inbox-backed selector state immediately
 - running a query still uses the currently selected project and surfaces that project slug in trace output
 - the response shows the answer content above `Why this answer`, followed by sources and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
@@ -315,7 +315,7 @@ Recency matters as a tie-breaker, not as a global override.
 
 The current browser surface keeps the existing theme system and footer while presenting retrieval more transparently:
 
-- Top control row: a responsive three-pane layout for query context, the primary query action, and project management
+- Top control pane: a responsive parent card containing three sub-panes for query context, the primary query action, and project management
 - Answer panel: the primary response area for grounded memory answers, with the direct answer shown above `Why this answer`
 - Sources panel: an open-by-default side panel that lists retrieved memory with previews and scores when available
 - Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, token-usage, and behavior signals with graceful placeholders when fields are missing

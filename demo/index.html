@@ -40,102 +40,121 @@
         </div>
       </header>
 
-      <div class="control-stack">
-        <section class="panel context-card" aria-labelledby="query-context-title">
-          <div class="card-heading">
-            <div>
-              <p class="eyebrow">Query target</p>
-              <h2 id="query-context-title">Query context</h2>
-            </div>
+      <section class="panel controls-shell" aria-labelledby="top-controls-title">
+        <div class="controls-shell-heading">
+          <div>
+            <p class="eyebrow">Workflow controls</p>
+            <h2 id="top-controls-title">Query and project controls</h2>
           </div>
+        </div>
 
-          <div class="context-controls">
-            <label class="query-field query-field-compact" for="project-slug">
-              <span>Project in use</span>
-              <select id="project-slug" name="project_slug" aria-label="Choose project">
-                <option value="" selected>Loading projects…</option>
-              </select>
-            </label>
-
-            <div class="context-active-shell">
-              <span class="context-active-label">Active context</span>
-              <strong id="active-project-pill" class="context-active-value">Loading projects…</strong>
-            </div>
-
-            <p class="context-note subtle">Queries run against the selected inbox project.</p>
-          </div>
-        </section>
-
-        <form id="memory-form" class="query-card query-card-primary">
-          <div class="card-heading">
-            <div>
-              <p class="eyebrow">Primary action</p>
-              <h2>Ask a question</h2>
-            </div>
-
-            <div class="query-context-shell" aria-live="polite">
-              <span class="query-context-label">Querying</span>
-              <strong id="query-context-badge" class="query-context-value">Loading projects…</strong>
-            </div>
-          </div>
-
-          <input id="session-id" name="session_id" type="hidden" value="">
-
-          <p id="query-context-note" class="query-context-note subtle">
-            Pick a project to aim retrieval before you run the query.
-          </p>
-
-          <div class="query-input-row">
-            <label class="query-field" for="question">
-              <span>Query</span>
-              <input
-                id="question"
-                name="question"
-                type="text"
-                placeholder="Query your stored memory…"
-                autocomplete="off"
-                required
-              >
-            </label>
-
-            <div class="query-actions">
-              <button id="submit-button" type="submit">Run query</button>
-            </div>
-          </div>
-        </form>
-
-        <section class="panel project-card" aria-labelledby="project-management-title">
-          <div class="card-heading">
-            <div>
-              <p class="eyebrow">Project tools</p>
-              <h2 id="project-management-title">Project management</h2>
-            </div>
-          </div>
-
-          <div class="project-controls">
-            <div class="project-toolbar">
-              <p id="project-count" class="project-count subtle">0 projects</p>
-              <button id="delete-project-button" type="button">Delete Project</button>
-            </div>
-
-            <label class="query-field query-field-compact" for="create-project-slug">
-              <span>New project slug</span>
-              <div class="project-create-row">
-                <input
-                  id="create-project-slug"
-                  name="create_project_slug"
-                  type="text"
-                  placeholder="e.g. alpha-2"
-                  autocomplete="off"
-                >
-                <button id="create-project-button" type="button">Create Project</button>
+        <div class="control-stack">
+          <section class="control-subpane context-card" aria-labelledby="query-context-title">
+            <div class="card-heading">
+              <div>
+                <p class="eyebrow">Query target</p>
+                <h2 id="query-context-title">Query context</h2>
               </div>
-            </label>
+            </div>
 
-            <p id="project-feedback" class="project-feedback subtle" aria-live="polite" hidden></p>
-          </div>
-        </section>
-      </div>
+            <div class="context-controls">
+              <label class="query-field query-field-compact" for="project-slug">
+                <span>Project in use</span>
+                <select id="project-slug" name="project_slug" aria-label="Choose project">
+                  <option value="" selected>Loading projects…</option>
+                </select>
+              </label>
+
+              <div class="context-active-shell">
+                <span class="context-active-label">Active context</span>
+                <strong id="active-project-pill" class="context-active-value">Loading projects…</strong>
+              </div>
+
+              <p class="context-note subtle">Queries run against the selected inbox project.</p>
+            </div>
+          </section>
+
+          <form id="memory-form" class="query-card query-card-primary control-subpane">
+            <div class="card-heading">
+              <div>
+                <p class="eyebrow">Primary action</p>
+                <h2>Ask a question</h2>
+              </div>
+
+              <div class="query-context-shell" aria-live="polite">
+                <span class="query-context-label">Querying</span>
+                <strong id="query-context-badge" class="query-context-value">Loading projects…</strong>
+              </div>
+            </div>
+
+            <input id="session-id" name="session_id" type="hidden" value="">
+
+            <p id="query-context-note" class="query-context-note subtle">
+              Pick a project to aim retrieval before you run the query.
+            </p>
+
+            <div class="query-input-row">
+              <label class="query-field query-field-large" for="question">
+                <span>Query</span>
+                <textarea
+                  id="question"
+                  name="question"
+                  placeholder="Query your stored memory…"
+                  autocomplete="off"
+                  required
+                ></textarea>
+              </label>
+
+              <div class="query-actions">
+                <button id="submit-button" type="submit">Run query</button>
+              </div>
+            </div>
+          </form>
+
+          <section class="control-subpane project-card" aria-labelledby="project-management-title">
+            <div class="card-heading">
+              <div>
+                <p class="eyebrow">Project tools</p>
+                <h2 id="project-management-title">Project management</h2>
+              </div>
+            </div>
+
+            <div class="project-controls">
+              <label class="query-field query-field-compact" for="delete-project-slug">
+                <span>Delete target</span>
+                <select id="delete-project-slug" aria-label="Choose project to delete">
+                  <option value="" selected>Loading projects…</option>
+                </select>
+              </label>
+
+              <div class="project-toolbar">
+                <p id="project-count" class="project-count subtle">0 projects</p>
+                <button id="delete-project-button" type="button">Delete Project</button>
+              </div>
+
+              <p id="delete-project-note" class="project-note subtle">
+                Choose the exact project to remove. This delete target is separate from the active query context.
+              </p>
+
+              <label class="query-field query-field-compact" for="create-project-slug">
+                <span>New project slug</span>
+                <div class="project-create-row">
+                  <input
+                    id="create-project-slug"
+                    name="create_project_slug"
+                    type="text"
+                    placeholder="e.g. alpha-2"
+                    autocomplete="off"
+                  >
+                  <button id="create-project-button" type="button">Create Project</button>
+                </div>
+              </label>
+
+              <p id="project-feedback" class="project-feedback subtle" aria-live="polite" hidden></p>
+            </div>
+          </section>
+        </div>
+      </section>
 
       <section class="results-layout sources-open" id="results-layout">
         <article class="panel answer-panel">

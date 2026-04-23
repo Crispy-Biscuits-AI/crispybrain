@@ -2,6 +2,7 @@ const themeManager = window.CrispyBrainTheme;
 
 const form = document.getElementById("memory-form");
 const projectSlugSelect = document.getElementById("project-slug");
+const deleteProjectSelect = document.getElementById("delete-project-slug");
 const createProjectInput = document.getElementById("create-project-slug");
 const sessionIdInput = document.getElementById("session-id");
 const questionInput = document.getElementById("question");
@@ -86,9 +87,25 @@ projectSlugSelect.addEventListener("change", () => {
   syncProjectControls();
 });
 
+deleteProjectSelect.addEventListener("change", () => {
+  clearProjectFeedback();
+  syncProjectControls();
+});
+
 createProjectInput.addEventListener("input", () => {
   clearProjectFeedback();
   syncProjectControls();
+});
+
+questionInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) {
+    return;
+  }
+
+  event.preventDefault();
+  if (!submitButton.disabled) {
+    form.requestSubmit();
+  }
 });
 
 createProjectInput.addEventListener("keydown", (event) => {
@@ -107,7 +124,7 @@ createProjectButton.addEventListener("click", () => {
 });
 
 deleteProjectButton.addEventListener("click", async () => {
-  const projectSlug = projectSlugSelect.value.trim();
+  const projectSlug = deleteProjectSelect.value.trim();
   if (!projectSlug) {
     renderNoProjectsState();
     return;
@@ -309,15 +326,22 @@ async function loadProjectOptions(preferredProjectSlug = "") {
 
 function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug = "") {
   const currentValue = projectSlugSelect.value.trim();
+  const currentDeleteValue = deleteProjectSelect.value.trim();
   const selectedValue = projects.includes(preferredProjectSlug)
     ? preferredProjectSlug
     : (projects.includes(currentValue)
       ? currentValue
       : (projects.includes(defaultProjectSlug) ? defaultProjectSlug : (projects[0] || "")));
+  const selectedDeleteValue = projects.includes(currentDeleteValue)
+    ? currentDeleteValue
+    : (projects.includes(preferredProjectSlug)
+      ? preferredProjectSlug
+      : selectedValue);
 
   availableProjects = [...projects];
   projectListUnavailable = false;
   projectSlugSelect.innerHTML = "";
+  deleteProjectSelect.innerHTML = "";
 
   if (projects.length === 0) {
     const option = document.createElement("option");
@@ -325,6 +349,13 @@ function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug
     option.textContent = "No inbox projects found";
     option.selected = true;
     projectSlugSelect.appendChild(option);
+
+    const deleteOption = document.createElement("option");
+    deleteOption.value = "";
+    deleteOption.textContent = "No inbox projects found";
+    deleteOption.selected = true;
+    deleteProjectSelect.appendChild(deleteOption);
+
     updateProjectContext();
     renderNoProjectsState();
     return;
@@ -336,6 +367,12 @@ function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug
     option.textContent = project;
     option.selected = project === selectedValue;
     projectSlugSelect.appendChild(option);
+
+    const deleteOption = document.createElement("option");
+    deleteOption.value = project;
+    deleteOption.textContent = project;
+    deleteOption.selected = project === selectedDeleteValue;
+    deleteProjectSelect.appendChild(deleteOption);
   }
 
   if (answerState.textContent === "No projects available" || answerState.textContent === "Project list unavailable") {
@@ -349,12 +386,19 @@ function renderProjectLoadFailure(error) {
   availableProjects = [];
   projectListUnavailable = true;
   projectSlugSelect.innerHTML = "";
+  deleteProjectSelect.innerHTML = "";
 
   const option = document.createElement("option");
   option.value = "";
   option.textContent = "Projects unavailable";
   option.selected = true;
   projectSlugSelect.appendChild(option);
+
+  const deleteOption = document.createElement("option");
+  deleteOption.value = "";
+  deleteOption.textContent = "Projects unavailable";
+  deleteOption.selected = true;
+  deleteProjectSelect.appendChild(deleteOption);
 
   updateProjectContext();
   answerState.textContent = "Project list unavailable";
@@ -401,15 +445,17 @@ function setProjectActionBusy(isBusy, statusText = "idle", actionMode = "") {
 function syncProjectControls() {
   const hasProjects = availableProjects.length > 0;
   const hasProjectSelection = Boolean(projectSlugSelect.value.trim());
+  const hasDeleteSelection = Boolean(deleteProjectSelect.value.trim());
   const hasCreateInput = Boolean(createProjectInput.value.trim());
   const controlsBusy = queryBusy || projectActionBusy || projectsLoading;
 
   projectSlugSelect.disabled = controlsBusy || !hasProjects;
+  deleteProjectSelect.disabled = controlsBusy || !hasProjects;
   createProjectInput.disabled = controlsBusy;
   createProjectButton.disabled = controlsBusy || !hasCreateInput;
   questionInput.disabled = controlsBusy || !hasProjectSelection;
   submitButton.disabled = controlsBusy || !hasProjectSelection;
-  deleteProjectButton.disabled = controlsBusy || !hasProjectSelection;
+  deleteProjectButton.disabled = controlsBusy || !hasDeleteSelection;
 }
 
 function setProjectFeedback(message, isError = false) {
