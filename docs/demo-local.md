@@ -18,7 +18,7 @@ The canonical CrispyBrain ingest inbox now lives in this repo at `/Users/elric/r
 ## UI Architecture
 
 1. Browser opens `http://localhost:8787`
-2. The demo server on `8787` serves `GET /api/projects` and `DELETE /api/projects/<project-slug>` from the repo inbox
+2. The demo server on `8787` serves `GET /api/projects`, `POST /api/projects`, and `DELETE /api/projects/<project-slug>` from the repo inbox
 3. The same server accepts `POST /api/demo/ask`
 4. The proxy forwards to the n8n webhook `POST /webhook/crispybrain-demo`
 5. The `crispybrain-demo` workflow calls the repo-owned `assistant` webhook path
@@ -220,9 +220,29 @@ The demo server now treats the repo inbox as the source of truth for projects in
 - the Compose-managed `crispybrain-demo-ui` service when started through `scripts/set-version-env.sh`
 
 - `GET /api/projects` returns the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
+- `POST /api/projects` creates `inbox/<project-slug>/` when the slug is valid and available
 - `DELETE /api/projects/<project-slug>` removes that inbox folder when the slug is valid and present
 - the UI selector reloads from that API instead of using hardcoded project names
+- creating a project from the UI reloads the selector and auto-selects the created slug
 - deleting a project from the UI removes it from both the filesystem and the selector immediately
+- when no inbox projects exist, the UI renders a safe empty state, disables query submission, and keeps the create flow available
+
+Create validation rules:
+
+- slugs are trimmed before validation
+- slugs must start with a letter or number
+- the remaining characters may only be letters, numbers, dots, underscores, and hyphens
+- empty and whitespace-only input returns `400`
+- duplicate slugs return `409`
+- invalid or escaping/path-traversal input returns `400`
+- validation failures do not partially create `inbox/<project-slug>/`
+
+Response shapes:
+
+- `GET /api/projects` returns `{ "projects": [...], "default_project_slug": "..." }`
+- successful `POST /api/projects` returns the same selector payload plus `ok`, `created_project_slug`, and `selected_project_slug`
+- successful `DELETE /api/projects/<project-slug>` returns the same selector payload plus `ok` and `deleted_project_slug`
+- validation failures return `ok = false` and an `error` object with a stable `code` and user-facing `message`
 
 ## Recommended Query
 
@@ -240,7 +260,9 @@ alpha
 
 The visible project selector in the UI now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`.
 If `alpha` exists, the selector chooses it by default on load.
+The `Create Project` control makes a new inbox folder directly from the UI and then selects it automatically.
 The `Delete Project` control removes the selected inbox folder after confirmation and then refreshes the selector immediately.
+If the inbox is temporarily empty, the UI shows a no-projects message, disables query submission safely, and keeps project creation available.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 
 ## Transparency In `v0.9.9`
@@ -320,6 +342,21 @@ curl -sS \
   http://localhost:8787/api/demo/ask | jq '{ok,answer,usage,trace}'
 ```
 
+Through the 8787 project API:
+
+```bash
+curl -sS http://localhost:8787/api/projects | jq .
+
+curl -sS \
+  -H "Content-Type: application/json" \
+  -d '{"project_slug":"demo-docs-smoke"}' \
+  http://localhost:8787/api/projects | jq .
+
+curl -sS \
+  -X DELETE \
+  http://localhost:8787/api/projects/demo-docs-smoke | jq .
+```
+
 Check the containerized UI is serving the page:
 
 ```bash
@@ -379,6 +416,9 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 
 - empty question: the UI and proxy return `INVALID_QUESTION`
 - blank API slug: the demo proxy defaults it to `alpha`
+- empty or whitespace-only project creation: `POST /api/projects` returns `EMPTY_PROJECT_SLUG`
+- duplicate project creation: `POST /api/projects` returns `PROJECT_ALREADY_EXISTS`
+- invalid project creation: `POST /api/projects` returns `INVALID_PROJECT_SLUG`
 - n8n unavailable: the proxy returns `N8N_UNAVAILABLE`
 - weak retrieval: the upstream assistant can return `grounding.status = weak` with a cautionary note
 - no strong retrieval: the upstream assistant can return `grounding.status = none` and no evidence rows

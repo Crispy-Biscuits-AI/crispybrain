@@ -28,7 +28,7 @@ CrispyBrain currently provides:
 - Real token usage from live model execution when available
 - Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
-- Inbox-backed project API and delete flow on both the repo-local and wrapper-started demo UI
+- Inbox-backed project create/list/delete flow with validation, auto-selection, and empty-state UX on both the repo-local and wrapper-started demo UI
 - Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
@@ -213,15 +213,27 @@ scripts/workflows/import-exported-into-docker.sh
 7. Use:
 
 - project selector: it loads the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
+- create control: enter a new project slug and use `Create Project` to make `inbox/<project-slug>/` from the UI
 - delete control: use `Delete Project` to remove the selected inbox project after confirmation
 - question: `How am I planning to build CrispyBrain?`
+
+Project creation and validation now follow the repo inbox as the source of truth:
+
+- `POST /api/projects` creates a new `inbox/<project-slug>/` folder when the slug is valid and available
+- slugs are trimmed, must start with a letter or number, and may only contain letters, numbers, dots, underscores, and hyphens
+- empty, whitespace-only, duplicate, and escaping/path-traversal inputs are rejected before anything is created
+- when no inbox projects exist, the UI keeps `Create Project` available, disables query submission safely, and auto-selects the first newly created project
 
 Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
 - `GET /api/projects` returns the current repo inbox folders without a `404`
+- `POST /api/projects` creates a valid inbox project and returns the created slug plus the refreshed selector payload
 - the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
+- creating a project from the UI reloads the selector and auto-selects the new project
+- invalid or duplicate create attempts return clear `4xx` validation responses without partial folder creation
+- when the inbox is empty, the UI shows a safe empty state and keeps the create flow available
 - deleting a project removes its `inbox/<project-slug>/` folder and drops it from the selector immediately
 - the response includes an answer, sources, and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present

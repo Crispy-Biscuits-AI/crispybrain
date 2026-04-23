@@ -41,12 +41,30 @@
       </header>
 
       <form id="memory-form" class="query-card">
-        <label class="query-field query-field-compact" for="project-slug">
-          <span>Project</span>
-          <select id="project-slug" name="project_slug" aria-label="Choose project">
-            <option value="" selected>Loading projects…</option>
-          </select>
-        </label>
+        <div class="project-controls">
+          <label class="query-field query-field-compact" for="project-slug">
+            <span>Project</span>
+            <select id="project-slug" name="project_slug" aria-label="Choose project">
+              <option value="" selected>Loading projects…</option>
+            </select>
+          </label>
+
+          <label class="query-field query-field-compact" for="create-project-slug">
+            <span>New project slug</span>
+            <div class="project-create-row">
+              <input
+                id="create-project-slug"
+                name="create_project_slug"
+                type="text"
+                placeholder="e.g. alpha-2"
+                autocomplete="off"
+              >
+              <button id="create-project-button" type="button">Create Project</button>
+            </div>
+          </label>
+
+          <p id="project-feedback" class="project-feedback subtle" aria-live="polite" hidden></p>
+        </div>
         <input id="session-id" name="session_id" type="hidden" value="">
 
         <label class="query-field" for="question">

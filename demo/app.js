@@ -2,10 +2,13 @@ const themeManager = window.CrispyBrainTheme;
 
 const form = document.getElementById("memory-form");
 const projectSlugSelect = document.getElementById("project-slug");
+const createProjectInput = document.getElementById("create-project-slug");
 const sessionIdInput = document.getElementById("session-id");
 const questionInput = document.getElementById("question");
+const createProjectButton = document.getElementById("create-project-button");
 const submitButton = document.getElementById("submit-button");
 const deleteProjectButton = document.getElementById("delete-project-button");
+const projectFeedback = document.getElementById("project-feedback");
 const statusPill = document.getElementById("status-pill");
 const themeSelect = document.getElementById("theme-select");
 const themeBadge = document.getElementById("theme-badge");
@@ -50,6 +53,7 @@ let traceOpen = true;
 let queryBusy = false;
 let projectActionBusy = false;
 let projectsLoading = false;
+let projectActionMode = "";
 let availableProjects = [];
 
 themeManager.mountThemeControls(themeSelect, themeBadge);
@@ -71,7 +75,28 @@ for (const button of traceToggleButtons) {
 }
 
 projectSlugSelect.addEventListener("change", () => {
+  clearProjectFeedback();
   syncProjectControls();
+});
+
+createProjectInput.addEventListener("input", () => {
+  clearProjectFeedback();
+  syncProjectControls();
+});
+
+createProjectInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  event.preventDefault();
+  if (!createProjectButton.disabled) {
+    createProject();
+  }
+});
+
+createProjectButton.addEventListener("click", () => {
+  createProject();
 });
 
 deleteProjectButton.addEventListener("click", async () => {
@@ -81,12 +106,13 @@ deleteProjectButton.addEventListener("click", async () => {
     return;
   }
 
+  clearProjectFeedback();
   const confirmed = window.confirm(`Delete project "${projectSlug}" and remove its inbox folder?`);
   if (!confirmed) {
     return;
   }
 
-  setProjectActionBusy(true, "deleting project");
+  setProjectActionBusy(true, "deleting project", "deleting");
   try {
     const response = await fetch(`/api/projects/${encodeURIComponent(projectSlug)}`, {
       method: "DELETE",
@@ -189,6 +215,62 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+async function createProject() {
+  const desiredProjectSlug = createProjectInput.value.trim();
+  if (!desiredProjectSlug) {
+    setProjectFeedback("Enter a project slug before creating a project.", true);
+    return;
+  }
+
+  clearProjectFeedback();
+  setProjectActionBusy(true, "creating project", "creating");
+
+  try {
+    const response = await fetch("/api/projects", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        project_slug: desiredProjectSlug,
+      }),
+    });
+    const body = await response.json();
+
+    if (!response.ok || body.ok !== true || typeof body.created_project_slug !== "string") {
+      setProjectFeedback(
+        body?.error?.message || "CrispyBrain could not create that inbox project.",
+        true,
+      );
+      return;
+    }
+
+    createProjectInput.value = "";
+    await loadProjectOptions(body.created_project_slug);
+    if (!availableProjects.includes(body.created_project_slug) || projectSlugSelect.value.trim() !== body.created_project_slug) {
+      setProjectFeedback("Project created, but CrispyBrain could not refresh the selector safely.", true);
+      return;
+    }
+
+    clearProjectFeedback();
+    resetPanels();
+    answerState.textContent = "Project created";
+    answerOutput.textContent = `Created project "${body.created_project_slug}" and selected it for retrieval.`;
+    questionInput.focus();
+  } catch (error) {
+    setProjectFeedback(
+      error instanceof Error
+        ? `CrispyBrain could not create that inbox project. ${error.message}`
+        : "CrispyBrain could not create that inbox project.",
+      true,
+    );
+  } finally {
+    setProjectActionBusy(false);
+  }
+}
+
 async function loadProjectOptions(preferredProjectSlug = "") {
   projectsLoading = true;
   syncProjectControls();
@@ -266,7 +348,7 @@ function renderProjectLoadFailure(error) {
 
 function renderNoProjectsState(message = "No inbox projects are available.") {
   answerState.textContent = "No projects available";
-  answerOutput.textContent = `${message} Create a folder under inbox/ to enable retrieval.`;
+  answerOutput.textContent = `${message} Create a project above to enable retrieval from inbox/.`;
 }
 
 function setBusy(isBusy) {
@@ -284,9 +366,11 @@ function setBusy(isBusy) {
   }
 }
 
-function setProjectActionBusy(isBusy, statusText = "idle") {
+function setProjectActionBusy(isBusy, statusText = "idle", actionMode = "") {
   projectActionBusy = isBusy;
-  deleteProjectButton.textContent = isBusy ? "Deleting..." : "Delete Project";
+  projectActionMode = isBusy ? actionMode : "";
+  createProjectButton.textContent = projectActionMode === "creating" ? "Creating..." : "Create Project";
+  deleteProjectButton.textContent = projectActionMode === "deleting" ? "Deleting..." : "Delete Project";
   if (isBusy) {
     statusPill.textContent = statusText;
     statusPill.classList.add("busy");
@@ -300,11 +384,26 @@ function setProjectActionBusy(isBusy, statusText = "idle") {
 function syncProjectControls() {
   const hasProjects = availableProjects.length > 0;
   const hasProjectSelection = Boolean(projectSlugSelect.value.trim());
+  const hasCreateInput = Boolean(createProjectInput.value.trim());
   const controlsBusy = queryBusy || projectActionBusy || projectsLoading;
 
   projectSlugSelect.disabled = controlsBusy || !hasProjects;
+  createProjectInput.disabled = controlsBusy;
+  createProjectButton.disabled = controlsBusy || !hasCreateInput;
+  questionInput.disabled = controlsBusy || !hasProjectSelection;
   submitButton.disabled = controlsBusy || !hasProjectSelection;
   deleteProjectButton.disabled = controlsBusy || !hasProjectSelection;
+}
+
+function setProjectFeedback(message, isError = false) {
+  const trimmedMessage = typeof message === "string" ? message.trim() : "";
+  projectFeedback.textContent = trimmedMessage;
+  projectFeedback.hidden = trimmedMessage === "";
+  projectFeedback.classList.toggle("is-error", isError && trimmedMessage !== "");
+}
+
+function clearProjectFeedback() {
+  setProjectFeedback("");
 }
 
 function resetPanels() {

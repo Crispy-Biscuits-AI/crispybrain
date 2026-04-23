@@ -35,6 +35,9 @@ APP_VERSION_PLACEHOLDER = "__CRISPYBRAIN_APP_VERSION__"
 UNKNOWN_VERSION = "unknown-version"
 FOOTER_VERSION_PATTERN = re.compile(r'(<span class="footer-version">)(.*?)(</span>)', re.DOTALL)
 PROJECT_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+PROJECT_SLUG_VALIDATION_MESSAGE = (
+    "Project slugs must start with a letter or number and may only contain letters, numbers, dots, underscores, and hyphens."
+)
 
 
 def run_git_command(*args: str) -> str | None:
@@ -169,6 +172,7 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stdout.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), fmt % args))
+        sys.stdout.flush()
 
     def do_GET(self) -> None:
         clean_path = urlparse(self.path).path
@@ -214,7 +218,7 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
                     "ok": False,
                     "error": {
                         "code": "INVALID_PROJECT_SLUG",
-                        "message": "Project slugs may only contain letters, numbers, dots, underscores, and hyphens.",
+                        "message": PROJECT_SLUG_VALIDATION_MESSAGE,
                     },
                 },
             )
@@ -245,25 +249,16 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         clean_path = urlparse(self.path).path
-        if clean_path != "/api/demo/ask":
+        if clean_path not in {"/api/demo/ask", "/api/projects"}:
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
             return
 
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length) if content_length else b""
-        try:
-            payload = json.loads(raw_body.decode("utf-8") or "{}")
-        except json.JSONDecodeError:
-            self._write_json(
-                HTTPStatus.BAD_REQUEST,
-                {
-                    "ok": False,
-                    "error": {
-                        "code": "INVALID_JSON",
-                        "message": "Request body must be valid JSON.",
-                    },
-                },
-            )
+        payload = self._read_json_payload()
+        if payload is None:
+            return
+
+        if clean_path == "/api/projects":
+            self._handle_create_project(payload)
             return
 
         question = payload.get("question")
@@ -393,6 +388,101 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
         status = HTTPStatus.OK if upstream_status < 500 else HTTPStatus.BAD_GATEWAY
         self._write_json(status, upstream_payload)
 
+    def _handle_create_project(self, payload: dict[str, Any]) -> None:
+        project_slug = payload.get("project_slug")
+        if not isinstance(project_slug, str):
+            self._write_json(
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "INVALID_PROJECT_SLUG",
+                        "message": "project_slug must be a string.",
+                    },
+                },
+            )
+            return
+
+        normalized_slug = project_slug.strip()
+        if not normalized_slug:
+            self._write_json(
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "EMPTY_PROJECT_SLUG",
+                        "message": "Enter a project slug before creating a project.",
+                    },
+                },
+            )
+            return
+
+        project_path = resolve_project_path(normalized_slug)
+        if project_path is None:
+            self._write_json(
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "INVALID_PROJECT_SLUG",
+                        "message": PROJECT_SLUG_VALIDATION_MESSAGE,
+                    },
+                },
+            )
+            return
+
+        INBOX_DIR.mkdir(parents=True, exist_ok=True)
+        if project_path.exists():
+            self._write_json(
+                HTTPStatus.CONFLICT,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "PROJECT_ALREADY_EXISTS",
+                        "message": "An inbox project with that slug already exists.",
+                    },
+                },
+            )
+            return
+
+        try:
+            project_path.mkdir(exist_ok=False)
+        except FileExistsError:
+            self._write_json(
+                HTTPStatus.CONFLICT,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "PROJECT_ALREADY_EXISTS",
+                        "message": "An inbox project with that slug already exists.",
+                    },
+                },
+            )
+            return
+        except OSError as exc:
+            self._write_json(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "PROJECT_CREATE_FAILED",
+                        "message": "CrispyBrain could not create the requested inbox project.",
+                        "details": str(exc),
+                    },
+                },
+            )
+            return
+
+        response_payload = build_projects_payload()
+        response_payload.update(
+            {
+                "ok": True,
+                "created_project_slug": normalized_slug,
+                "selected_project_slug": normalized_slug,
+            }
+        )
+        self._write_json(HTTPStatus.CREATED, response_payload)
+
     def translate_path(self, path: str) -> str:
         clean_path = urlparse(path).path
         if clean_path in ("/", ""):
@@ -414,6 +504,39 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _read_json_payload(self) -> dict[str, Any] | None:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length) if content_length else b""
+        try:
+            payload = json.loads(raw_body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            self._write_json(
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "INVALID_JSON",
+                        "message": "Request body must be valid JSON.",
+                    },
+                },
+            )
+            return None
+
+        if not isinstance(payload, dict):
+            self._write_json(
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "INVALID_JSON",
+                        "message": "Request body must be a JSON object.",
+                    },
+                },
+            )
+            return None
+
+        return payload
 
     def _maybe_serve_index(self, include_body: bool) -> bool:
         clean_path = urlparse(self.path).path

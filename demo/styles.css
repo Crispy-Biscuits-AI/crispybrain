@@ -256,10 +256,24 @@ h3 {
 
 .query-card {
   display: grid;
-  grid-template-columns: minmax(160px, 190px) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) auto;
   gap: 14px;
   align-items: end;
   padding: 18px;
+}
+
+.project-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.project-create-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
 }
 
 .query-actions {
@@ -295,6 +309,7 @@ select {
   min-height: 52px;
 }
 
+#create-project-button,
 #submit-button,
 #delete-project-button {
   border: 0;
@@ -303,6 +318,12 @@ select {
   font-weight: 800;
   cursor: pointer;
   min-height: 52px;
+}
+
+#create-project-button {
+  color: var(--accent);
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
 }
 
 #submit-button {
@@ -316,10 +337,25 @@ select {
   border: 1px solid rgba(194, 65, 12, 0.18);
 }
 
+#create-project-button:disabled,
 #submit-button:disabled,
 #delete-project-button:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.project-feedback {
+  margin: 0;
+  min-height: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.project-feedback[hidden] {
+  display: none;
+}
+
+.project-feedback.is-error {
+  color: var(--error);
 }
 
 .results-layout {
@@ -808,6 +844,10 @@ code {
 
   .theme-control select {
     min-width: 0;
+  }
+
+  .project-create-row {
+    grid-template-columns: 1fr;
   }
 
   .trace-row {
