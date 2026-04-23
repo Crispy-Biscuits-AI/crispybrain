@@ -237,7 +237,7 @@ Success currently looks like:
 - when the inbox is empty, the UI shows a safe empty state and keeps the create flow available
 - deleting a project removes the explicitly selected delete target from its pulldown and from the inbox-backed selector state immediately
 - running a query still uses the currently selected project and surfaces that project slug in trace output
-- the response shows the answer content above `Why this answer`, followed by sources and traceable retrieval state
+- the response keeps the direct answer content in the `Answer` pane while caveats and grounding limits stay in `Why this answer`, followed by sources and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
 
 The wrapper script now injects the repo inbox into `crispybrain-demo-ui`, so the Compose-managed `localhost:8787` runtime can serve the same project management API directly from the repo-owned inbox path.
@@ -316,7 +316,7 @@ Recency matters as a tie-breaker, not as a global override.
 The current browser surface keeps the existing theme system and footer while presenting retrieval more transparently:
 
 - Top control pane: a responsive parent card containing three sub-panes for query context, the primary query action, and project management
-- Answer panel: the primary response area for grounded memory answers, with the direct answer shown above `Why this answer`
+- Answer panel: the primary response area for grounded memory answers, with the direct answer shown above `Why this answer` and caveats moved into the rationale layer when the workflow returns both
 - Sources panel: an open-by-default side panel that lists retrieved memory with previews and scores when available
 - Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, token-usage, and behavior signals with graceful placeholders when fields are missing
 - Transparency-first design: source usage, status, and latency stay visible without forcing operators into a separate inspection screen

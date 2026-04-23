@@ -328,7 +328,7 @@ When support is weak or absent, the workflow stays explicit instead of implying 
 - `grounding.status = grounded` renders `High confidence`
 - `grounding.status = weak` renders `Limited confidence`
 - `grounding.status = none` renders `No evidence`
-- weak answers also render a visible uncertainty note in the answer panel; when `grounding.note` is present, the UI appends that exact note after the plain-language caution
+- weak support still renders a visible uncertainty note, but it now stays in `Why this answer` so the `Answer` pane can show only the direct grounded answer when one exists
 
 ## Curl Smoke Tests
 

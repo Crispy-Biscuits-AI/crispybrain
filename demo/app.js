@@ -529,11 +529,12 @@ function resetPanels() {
 function renderSuccess(body, meta = {}) {
   const selectedSources = normalizeSources(body.selected_sources || body.sources);
   const retrievedCandidates = normalizeSources(body.retrieved_candidates);
-  answerOutput.textContent = body.answer || "No answer text returned.";
+  const presentation = deriveAnswerPresentation(body);
+  answerOutput.textContent = presentation.answerText || "No answer text returned.";
   answerState.textContent = buildAnswerState(body, selectedSources);
 
   updateSourceLabels(selectedSources.length);
-  renderExplanation(body, selectedSources, retrievedCandidates);
+  renderExplanation(body, selectedSources, retrievedCandidates, { presentation });
   renderSourceSummary(body, selectedSources, retrievedCandidates);
   renderSources(selectedSources);
   renderTrace(body, meta, selectedSources, retrievedCandidates);
@@ -542,11 +543,12 @@ function renderSuccess(body, meta = {}) {
 function renderError(error, body = {}, meta = {}) {
   const selectedSources = normalizeSources(body.selected_sources || body.sources);
   const retrievedCandidates = normalizeSources(body.retrieved_candidates);
+  const presentation = deriveAnswerPresentation(body);
   answerState.textContent = "Request could not be completed";
-  answerOutput.textContent = body.answer || error.message || "The memory query failed.";
+  answerOutput.textContent = presentation.answerText || body.answer || error.message || "The memory query failed.";
 
   updateSourceLabels(selectedSources.length);
-  renderExplanation({ ...body, error }, selectedSources, retrievedCandidates);
+  renderExplanation({ ...body, error }, selectedSources, retrievedCandidates, { presentation });
   renderSourceSummary({ ...body, error }, selectedSources, retrievedCandidates);
   renderSources(selectedSources);
   renderTrace({ ...body, error }, meta, selectedSources, retrievedCandidates);
@@ -555,6 +557,7 @@ function renderError(error, body = {}, meta = {}) {
 function renderExplanation(body, selectedSources, retrievedCandidates, options = {}) {
   const grounding = asObject(body.grounding);
   const error = asObject(body.error);
+  const presentation = asObject(options.presentation);
   const sourceCount = selectedSources.length;
   const candidateCount = retrievedCandidates.length;
   const isBusy = options.isBusy === true;
@@ -570,7 +573,7 @@ function renderExplanation(body, selectedSources, retrievedCandidates, options =
   confidenceIndicator.textContent = confidence.label;
   confidenceIndicator.className = `confidence-pill ${confidence.className}`;
 
-  const uncertaintyText = buildUncertaintyText(status, grounding);
+  const uncertaintyText = buildUncertaintyText(status, grounding, presentation);
   if (uncertaintyText) {
     explanationUncertainty.hidden = false;
     explanationUncertainty.textContent = uncertaintyText;
@@ -812,12 +815,16 @@ function setTraceOpen(isOpen) {
 function buildAnswerState(body, sources) {
   const grounding = asObject(body.grounding);
 
-  if (typeof grounding.note === "string" && grounding.note.trim() !== "") {
-    return grounding.note.trim();
+  if (body.answer_mode === "direct" && sources.length > 0) {
+    return "Direct answer";
   }
 
   if (sources.length > 0) {
     return "Source-backed response";
+  }
+
+  if (typeof grounding.note === "string" && grounding.note.trim() !== "") {
+    return grounding.note.trim();
   }
 
   if (body.answer_mode === "insufficient") {
@@ -825,6 +832,111 @@ function buildAnswerState(body, sources) {
   }
 
   return "Response ready";
+}
+
+function deriveAnswerPresentation(body) {
+  const rawAnswer = cleanText(body.answer);
+  if (!rawAnswer) {
+    return {
+      answerText: "",
+      caveatText: "",
+    };
+  }
+
+  if (body.answer_mode !== "direct") {
+    return {
+      answerText: rawAnswer,
+      caveatText: "",
+    };
+  }
+
+  const paragraphs = splitAnswerParagraphs(rawAnswer);
+  const answerParagraphs = [];
+  const caveatParagraphs = [];
+
+  for (const [index, paragraph] of paragraphs.entries()) {
+    if (index === 0) {
+      const splitParagraph = splitDirectAnswerParagraph(paragraph);
+      if (splitParagraph !== null) {
+        if (splitParagraph.answerText) answerParagraphs.push(splitParagraph.answerText);
+        if (splitParagraph.caveatText) caveatParagraphs.push(splitParagraph.caveatText);
+        continue;
+      }
+    }
+
+    if (looksLikeAnswerCaveat(paragraph)) {
+      caveatParagraphs.push(paragraph);
+      continue;
+    }
+
+    answerParagraphs.push(paragraph);
+  }
+
+  const answerText = answerParagraphs.join("\n\n").trim() || rawAnswer;
+  const caveatText = uniqueTexts(caveatParagraphs).join(" ").trim();
+
+  return {
+    answerText,
+    caveatText,
+  };
+}
+
+function splitAnswerParagraphs(answerText) {
+  return answerText
+    .split(/\n\s*\n/g)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
+function splitDirectAnswerParagraph(paragraph) {
+  const colonIndex = paragraph.indexOf(":");
+  if (colonIndex <= 0 || colonIndex >= paragraph.length - 1) {
+    return null;
+  }
+
+  const lead = paragraph.slice(0, colonIndex).trim();
+  const tail = paragraph.slice(colonIndex + 1).trim();
+
+  if (!lead || !tail || !looksLikeAnswerCaveat(lead)) {
+    return null;
+  }
+
+  return {
+    caveatText: normalizeCaveatLead(lead),
+    answerText: tail,
+  };
+}
+
+function looksLikeAnswerCaveat(text) {
+  const value = cleanText(text).toLowerCase();
+  if (!value) return false;
+
+  return [
+    /^available project memory is limited\b/,
+    /^based on available project memory\b/,
+    /^project memory is limited\b/,
+    /^the evidence is limited\b/,
+    /^however, (?:the )?available information is limited\b/,
+    /^grounding is weak\b/,
+    /^early development is only partially documented\b/,
+    /^anything beyond .* cannot be verified\b/,
+    /^i do not have enough stored memory\b/,
+    /^no strong supporting memory was retrieved\b/,
+    /^some aspects of this answer are uncertain\b/,
+    /^some details may be incomplete\b/,
+    /^this answer is based on limited evidence\b/,
+    /^this answer is based on project memory\b/,
+  ].some((pattern) => pattern.test(value));
+}
+
+function normalizeCaveatLead(text) {
+  const normalized = cleanText(text)
+    .replace(/,?\s*but it supports these points$/i, "")
+    .replace(/,?\s*but$/i, "")
+    .trim();
+
+  if (!normalized) return "";
+  return /[.!?]$/.test(normalized) ? normalized : `${normalized}.`;
 }
 
 function normalizeSources(value) {
@@ -1005,12 +1117,24 @@ function buildExplanationDetail(body, status, sourceCount, candidateCount, isBus
   return "This layer explains what sources were used, how strong the evidence is, and where uncertainty remains.";
 }
 
-function buildUncertaintyText(status, grounding) {
-  if (status !== "weak") return "";
-
+function buildUncertaintyText(status, grounding, presentation = {}) {
+  const noteParts = [];
+  const caveatText = cleanText(presentation.caveatText);
   const note = cleanText(grounding.note);
-  const prefix = "Some aspects of this answer are uncertain or not fully documented.";
-  return note ? `${prefix} ${note}` : prefix;
+
+  if (status === "weak") {
+    noteParts.push("Some aspects of this answer are uncertain or not fully documented.");
+  }
+
+  if (caveatText) {
+    noteParts.push(caveatText);
+  }
+
+  if (note) {
+    noteParts.push(note);
+  }
+
+  return uniqueTexts(noteParts).join(" ");
 }
 
 function formatSourceCount(count, noun) {
@@ -1083,6 +1207,24 @@ function asObject(value) {
 
 function cleanText(value) {
   return typeof value === "string" && value.trim() !== "" ? value.trim() : "";
+}
+
+function uniqueTexts(values) {
+  const result = [];
+  const seen = new Set();
+
+  for (const value of values) {
+    const cleaned = cleanText(value);
+    if (!cleaned) continue;
+
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(cleaned);
+  }
+
+  return result;
 }
 
 function firstNumber(...values) {

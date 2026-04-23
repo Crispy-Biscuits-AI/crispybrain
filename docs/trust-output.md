@@ -58,7 +58,7 @@ The explanation layer reads directly from existing response fields:
 - `grounding.status` drives the visible confidence indicator
 - `selected_sources` drives the visible source count and source cards
 - `retrieved_candidates` still informs the operator-facing source summary and trace counts
-- `grounding.note` is surfaced as the visible uncertainty note whenever grounding is weak
+- `grounding.note` is surfaced as the visible uncertainty note in `Why this answer` whenever grounding is weak
 - `usage` and `trace.*_tokens` drive the visible token row when generation counts are available
 
 The confidence label is intentionally literal:
@@ -240,13 +240,13 @@ When a note is retrieved but the support remains weak, the assistant can still r
 
 That means the response can answer cautiously from visible evidence instead of collapsing to the generic fallback message.
 
-The answer text itself now mirrors that trust state:
+The presentation layer now mirrors that trust state without hiding the workflow's caveats:
 
-- `grounded`: the answer is prefixed with a short "based on available project memory" lead instead of silently looking fully unqualified
-- `weak`: the answer is prefixed with the deterministic `grounding.note`, so limited support is visible even outside the trace or sources panes
-- `none`: the assistant keeps the existing insufficient-memory fallback and does not synthesize an answer
+- `grounded`: the answer pane shows the direct grounded answer, while the rationale layer explains the supporting evidence
+- `weak`: the answer pane still shows the direct grounded answer when one exists, while deterministic caveats and `grounding.note` move into `Why this answer`
+- `none`: the assistant keeps the existing insufficient-memory fallback in the answer pane and does not synthesize an answer
 
-This keeps weak support visible in both the structured response and the human-readable answer.
+This keeps weak support visible in the structured response and in the rationale layer without burying the direct answer sentence.
 It also keeps clearly unsupported questions from receiving a weakly phrased answer just because a generic history file was nearby in semantic space.
 If a user asks for undocumented or not-recorded project mistakes, the answer now explicitly says that repo-visible memory cannot support that claim instead of re-labeling documented failures as undocumented facts.
 
