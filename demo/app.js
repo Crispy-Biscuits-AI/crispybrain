@@ -5,6 +5,7 @@ const projectSlugSelect = document.getElementById("project-slug");
 const sessionIdInput = document.getElementById("session-id");
 const questionInput = document.getElementById("question");
 const submitButton = document.getElementById("submit-button");
+const deleteProjectButton = document.getElementById("delete-project-button");
 const statusPill = document.getElementById("status-pill");
 const themeSelect = document.getElementById("theme-select");
 const themeBadge = document.getElementById("theme-badge");
@@ -46,11 +47,16 @@ const traceFields = {
 
 let sourcesOpen = true;
 let traceOpen = true;
+let queryBusy = false;
+let projectActionBusy = false;
+let projectsLoading = false;
+let availableProjects = [];
 
 themeManager.mountThemeControls(themeSelect, themeBadge);
 setSourcesOpen(true);
 setTraceOpen(true);
 resetPanels();
+loadProjectOptions();
 
 for (const button of sourceToggleButtons) {
   button.addEventListener("click", () => {
@@ -64,9 +70,66 @@ for (const button of traceToggleButtons) {
   });
 }
 
+projectSlugSelect.addEventListener("change", () => {
+  syncProjectControls();
+});
+
+deleteProjectButton.addEventListener("click", async () => {
+  const projectSlug = projectSlugSelect.value.trim();
+  if (!projectSlug) {
+    renderNoProjectsState();
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete project "${projectSlug}" and remove its inbox folder?`);
+  if (!confirmed) {
+    return;
+  }
+
+  setProjectActionBusy(true, "deleting project");
+  try {
+    const response = await fetch(`/api/projects/${encodeURIComponent(projectSlug)}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+    const body = await response.json();
+
+    if (!response.ok || body.ok !== true || !Array.isArray(body.projects)) {
+      renderError(body.error || {
+        code: "PROJECT_DELETE_FAILED",
+        message: "CrispyBrain could not delete the selected project.",
+      }, body);
+      return;
+    }
+
+    renderProjectOptions(body.projects, body.default_project_slug);
+    resetPanels();
+
+    if (availableProjects.length === 0) {
+      renderNoProjectsState(`Deleted project "${projectSlug}". No inbox projects remain.`);
+      return;
+    }
+
+    answerState.textContent = "Project deleted";
+    answerOutput.textContent = `Deleted project "${projectSlug}". Switched to "${projectSlugSelect.value.trim()}".`;
+  } catch (error) {
+    renderError({
+      code: "PROJECT_DELETE_FAILED",
+      message: "CrispyBrain could not delete the selected project.",
+      details: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    setProjectActionBusy(false);
+  }
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  const projectSlug = projectSlugSelect.value.trim();
   const question = questionInput.value.trim();
   if (!question) {
     renderError({
@@ -76,12 +139,17 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  if (!projectSlug) {
+    renderNoProjectsState();
+    return;
+  }
+
   setBusy(true);
   resetPanels();
 
   const payload = {
     question,
-    project_slug: projectSlugSelect.value.trim(),
+    project_slug: projectSlug,
     session_id: sessionIdInput.value.trim(),
   };
 
@@ -121,16 +189,122 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+async function loadProjectOptions(preferredProjectSlug = "") {
+  projectsLoading = true;
+  syncProjectControls();
+
+  try {
+    const response = await fetch("/api/projects", {
+      headers: {
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+    const body = await response.json();
+
+    if (!response.ok || !Array.isArray(body.projects)) {
+      throw new Error("Project list request did not return a valid payload.");
+    }
+
+    renderProjectOptions(body.projects, body.default_project_slug, preferredProjectSlug);
+  } catch (error) {
+    renderProjectLoadFailure(error);
+  } finally {
+    projectsLoading = false;
+    syncProjectControls();
+  }
+}
+
+function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug = "") {
+  const currentValue = projectSlugSelect.value.trim();
+  const selectedValue = projects.includes(preferredProjectSlug)
+    ? preferredProjectSlug
+    : (projects.includes(currentValue)
+      ? currentValue
+      : (projects.includes(defaultProjectSlug) ? defaultProjectSlug : (projects[0] || "")));
+
+  availableProjects = [...projects];
+  projectSlugSelect.innerHTML = "";
+
+  if (projects.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No inbox projects found";
+    option.selected = true;
+    projectSlugSelect.appendChild(option);
+    renderNoProjectsState();
+    return;
+  }
+
+  for (const project of projects) {
+    const option = document.createElement("option");
+    option.value = project;
+    option.textContent = project;
+    option.selected = project === selectedValue;
+    projectSlugSelect.appendChild(option);
+  }
+
+  if (answerState.textContent === "No projects available" || answerState.textContent === "Project list unavailable") {
+    resetPanels();
+  }
+}
+
+function renderProjectLoadFailure(error) {
+  availableProjects = [];
+  projectSlugSelect.innerHTML = "";
+
+  const option = document.createElement("option");
+  option.value = "";
+  option.textContent = "Projects unavailable";
+  option.selected = true;
+  projectSlugSelect.appendChild(option);
+
+  answerState.textContent = "Project list unavailable";
+  answerOutput.textContent = "CrispyBrain could not load inbox projects from /api/projects.";
+  console.error("Failed to load inbox projects for CrispyBrain demo:", error);
+}
+
+function renderNoProjectsState(message = "No inbox projects are available.") {
+  answerState.textContent = "No projects available";
+  answerOutput.textContent = `${message} Create a folder under inbox/ to enable retrieval.`;
+}
+
 function setBusy(isBusy) {
-  submitButton.disabled = isBusy;
+  queryBusy = isBusy;
   submitButton.textContent = isBusy ? "Running..." : "Run query";
-  statusPill.textContent = isBusy ? "running" : "idle";
-  statusPill.classList.toggle("busy", isBusy);
+  if (!projectActionBusy) {
+    statusPill.textContent = isBusy ? "running" : "idle";
+    statusPill.classList.toggle("busy", isBusy);
+  }
+  syncProjectControls();
 
   if (isBusy) {
     answerState.textContent = "Retrieving memory…";
     answerOutput.textContent = "Searching stored memory and assembling a response…";
   }
+}
+
+function setProjectActionBusy(isBusy, statusText = "idle") {
+  projectActionBusy = isBusy;
+  deleteProjectButton.textContent = isBusy ? "Deleting..." : "Delete Project";
+  if (isBusy) {
+    statusPill.textContent = statusText;
+    statusPill.classList.add("busy");
+  } else if (!queryBusy) {
+    statusPill.textContent = "idle";
+    statusPill.classList.remove("busy");
+  }
+  syncProjectControls();
+}
+
+function syncProjectControls() {
+  const hasProjects = availableProjects.length > 0;
+  const hasProjectSelection = Boolean(projectSlugSelect.value.trim());
+  const controlsBusy = queryBusy || projectActionBusy || projectsLoading;
+
+  projectSlugSelect.disabled = controlsBusy || !hasProjects;
+  submitButton.disabled = controlsBusy || !hasProjectSelection;
+  deleteProjectButton.disabled = controlsBusy || !hasProjectSelection;
 }
 
 function resetPanels() {

@@ -28,7 +28,7 @@ CrispyBrain currently provides:
 - Real token usage from live model execution when available
 - Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
-- Visible demo project selector with `alpha` default and `starwars` switching
+- Inbox-backed project API plus dynamic project selector and delete flow on the demo UI
 - Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
@@ -212,16 +212,26 @@ scripts/workflows/import-exported-into-docker.sh
 
 7. Use:
 
-- project selector: leave it on `alpha` by default, or switch it to `starwars`
+- project selector: it loads the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
+- delete control: use `Delete Project` to remove the selected inbox project after confirmation
 - question: `How am I planning to build CrispyBrain?`
 
 Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
-- the project selector is visible and defaults to `alpha`
+- `GET /api/projects` returns the current repo inbox folders without a `404`
+- the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
+- deleting a project removes its `inbox/<project-slug>/` folder and drops it from the selector immediately
 - the response includes an answer, sources, and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
+
+For direct inbox project management on `localhost:8787`, run the repo-local demo server from this repo so the API works against the repo-owned inbox path:
+
+```bash
+cd /Users/elric/repos/crispybrain
+python3 scripts/run_demo_server.py
+```
 
 ## Version Handling
 

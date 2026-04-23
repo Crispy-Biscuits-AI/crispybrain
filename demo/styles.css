@@ -262,6 +262,13 @@ h3 {
   padding: 18px;
 }
 
+.query-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+
 .query-field {
   display: flex;
   flex-direction: column;
@@ -288,18 +295,29 @@ select {
   min-height: 52px;
 }
 
-#submit-button {
+#submit-button,
+#delete-project-button {
   border: 0;
   border-radius: 999px;
   padding: 12px 18px;
   font-weight: 800;
-  color: var(--accent-ink);
-  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
   cursor: pointer;
   min-height: 52px;
 }
 
-#submit-button:disabled {
+#submit-button {
+  color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+}
+
+#delete-project-button {
+  color: var(--error);
+  background: var(--panel-strong);
+  border: 1px solid rgba(194, 65, 12, 0.18);
+}
+
+#submit-button:disabled,
+#delete-project-button:disabled {
   cursor: wait;
   opacity: 0.72;
 }

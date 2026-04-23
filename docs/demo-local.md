@@ -18,11 +18,12 @@ The canonical CrispyBrain ingest inbox now lives in this repo at `/Users/elric/r
 ## UI Architecture
 
 1. Browser opens `http://localhost:8787`
-2. The `crispybrain-demo-ui` container accepts `POST /api/demo/ask`
-3. The proxy forwards to the n8n webhook `POST /webhook/crispybrain-demo`
-4. The `crispybrain-demo` workflow calls the repo-owned `assistant` webhook path
-5. CrispyBrain retrieves memory and returns a structured answer
-6. The UI renders the answer, sources, and traceable retrieval signals
+2. The demo server on `8787` serves `GET /api/projects` and `DELETE /api/projects/<project-slug>` from the repo inbox
+3. The same server accepts `POST /api/demo/ask`
+4. The proxy forwards to the n8n webhook `POST /webhook/crispybrain-demo`
+5. The `crispybrain-demo` workflow calls the repo-owned `assistant` webhook path
+6. CrispyBrain retrieves memory and returns a structured answer
+7. The UI renders the answer, sources, and traceable retrieval signals
 
 ## Primary Runtime
 
@@ -203,7 +204,18 @@ cd ../crispybrain
 python3 scripts/run_demo_server.py
 ```
 
-That script is now explicitly a fallback/dev utility. The main supported runtime is the Compose service.
+That script is now explicitly the repo-local path for direct inbox project management on `localhost:8787`.
+It reads and deletes project folders directly under `/Users/elric/repos/crispybrain/inbox/`.
+The Compose service remains the main supported UI runtime for the broader lab flow.
+
+## Project API
+
+The demo server now treats the repo inbox as the source of truth for projects.
+
+- `GET /api/projects` returns the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
+- `DELETE /api/projects/<project-slug>` removes that inbox folder when the slug is valid and present
+- the UI selector reloads from that API instead of using hardcoded project names
+- deleting a project from the UI removes it from both the filesystem and the selector immediately
 
 ## Recommended Query
 
@@ -219,7 +231,9 @@ With project slug:
 alpha
 ```
 
-The visible project selector in the UI defaults to `alpha` and also exposes `starwars`.
+The visible project selector in the UI now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`.
+If `alpha` exists, the selector chooses it by default on load.
+The `Delete Project` control removes the selected inbox folder after confirmation and then refreshes the selector immediately.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 
 ## Transparency In `v0.9.9`
