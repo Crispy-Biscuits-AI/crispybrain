@@ -51,6 +51,7 @@ themeManager.mountThemeControls(themeSelect, themeBadge);
 setSourcesOpen(true);
 setTraceOpen(true);
 resetPanels();
+loadProjectOptions();
 
 for (const button of sourceToggleButtons) {
   button.addEventListener("click", () => {
@@ -67,6 +68,7 @@ for (const button of traceToggleButtons) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  const projectSlug = projectSlugSelect.value.trim();
   const question = questionInput.value.trim();
   if (!question) {
     renderError({
@@ -76,12 +78,20 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  if (!projectSlug) {
+    renderError({
+      code: "INVALID_PROJECT_SLUG",
+      message: "Choose an available inbox project before running retrieval.",
+    });
+    return;
+  }
+
   setBusy(true);
   resetPanels();
 
   const payload = {
     question,
-    project_slug: projectSlugSelect.value.trim(),
+    project_slug: projectSlug,
     session_id: sessionIdInput.value.trim(),
   };
 
@@ -120,6 +130,75 @@ form.addEventListener("submit", async (event) => {
     setBusy(false);
   }
 });
+
+async function loadProjectOptions() {
+  try {
+    const response = await fetch("/api/projects", {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    const body = await response.json();
+
+    if (!response.ok || body.ok !== true || !Array.isArray(body.projects)) {
+      throw new Error("Project list request did not return a valid payload.");
+    }
+
+    renderProjectOptions(body.projects, body.default_project_slug);
+    projectSlugSelect.disabled = body.projects.length === 0;
+  } catch (error) {
+    renderProjectLoadFailure(error);
+  }
+}
+
+function renderProjectOptions(projects, defaultProjectSlug) {
+  const currentValue = projectSlugSelect.value.trim();
+  projectSlugSelect.innerHTML = "";
+
+  if (projects.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No inbox projects found";
+    option.selected = true;
+    projectSlugSelect.appendChild(option);
+    return "";
+  }
+
+  const selectedValue = projects.includes(currentValue)
+    ? currentValue
+    : (projects.includes(defaultProjectSlug) ? defaultProjectSlug : projects[0]);
+
+  for (const project of projects) {
+    const option = document.createElement("option");
+    option.value = project;
+    option.textContent = project;
+    option.selected = project === selectedValue;
+    projectSlugSelect.appendChild(option);
+  }
+
+  return selectedValue;
+}
+
+function renderProjectLoadFailure(error) {
+  projectSlugSelect.innerHTML = "";
+  projectSlugSelect.disabled = false;
+
+  const option = document.createElement("option");
+  option.value = "alpha";
+  option.textContent = "alpha";
+  option.selected = true;
+  projectSlugSelect.appendChild(option);
+
+  const fallbackOption = document.createElement("option");
+  fallbackOption.value = "starwars";
+  fallbackOption.textContent = "starwars";
+  projectSlugSelect.appendChild(fallbackOption);
+
+  statusPill.textContent = "project list fallback";
+  statusPill.classList.remove("busy");
+
+  console.error("Failed to load inbox projects for CrispyBrain demo:", error);
+}
 
 function setBusy(isBusy) {
   submitButton.disabled = isBusy;

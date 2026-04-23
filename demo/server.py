@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEMO_DIR = REPO_ROOT / "demo"
 ASSETS_DIR = REPO_ROOT / "assets"
+INBOX_DIR = REPO_ROOT / "inbox"
 HOST = os.environ.get("CRISPYBRAIN_DEMO_HOST", "127.0.0.1")
 PORT = int(os.environ.get("CRISPYBRAIN_DEMO_PORT", "8787"))
 UPSTREAM_URL = os.environ.get(
@@ -104,6 +105,26 @@ def resolve_footer_version() -> str:
     return resolve_repo_version()
 
 
+def list_inbox_projects() -> list[str]:
+    if not INBOX_DIR.exists():
+        return []
+
+    project_slugs = [
+        entry.name
+        for entry in INBOX_DIR.iterdir()
+        if entry.is_dir() and not entry.name.startswith(".")
+    ]
+    return sorted(project_slugs)
+
+
+def resolve_default_project_slug(project_slugs: list[str]) -> str:
+    if "alpha" in project_slugs:
+        return "alpha"
+    if project_slugs:
+        return project_slugs[0]
+    return ""
+
+
 def render_index_html() -> str:
     footer_version = html.escape(resolve_footer_version())
     rendered = (DEMO_DIR / "index.html").read_text(encoding="utf-8")
@@ -124,7 +145,20 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
         sys.stdout.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), fmt % args))
 
     def do_GET(self) -> None:
-        if self.path == "/meta":
+        clean_path = urlparse(self.path).path
+        if clean_path == "/api/projects":
+            project_slugs = list_inbox_projects()
+            self._write_json(
+                HTTPStatus.OK,
+                {
+                    "ok": True,
+                    "projects": project_slugs,
+                    "default_project_slug": resolve_default_project_slug(project_slugs),
+                    "source": str(INBOX_DIR),
+                },
+            )
+            return
+        if clean_path == "/meta":
             self._write_json(
                 HTTPStatus.OK,
                 {

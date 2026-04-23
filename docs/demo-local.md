@@ -219,7 +219,9 @@ With project slug:
 alpha
 ```
 
-The visible project selector in the UI defaults to `alpha` and also exposes `starwars`.
+The visible project selector in the UI now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`.
+If `alpha` exists, the selector chooses it by default on load.
+Removing an inbox project folder removes that project from the selector on the next page load.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 
 ## Transparency In `v0.9.9`
