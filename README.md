@@ -28,7 +28,7 @@ CrispyBrain currently provides:
 - Real token usage from live model execution when available
 - Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
-- Visible demo project selector with `alpha` default and `starwars` switching
+- Inbox-backed project create/list/delete flow with validation, auto-selection, and empty-state UX on both the repo-local and wrapper-started demo UI
 - Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
@@ -212,16 +212,41 @@ scripts/workflows/import-exported-into-docker.sh
 
 7. Use:
 
-- project selector: leave it on `alpha` by default, or switch it to `starwars`
+- `Project management`: it groups the project selector, `Delete Project`, new project slug input, and `Create Project` control in one context card
+- `Ask a question`: it keeps the query input and `Run query` button in a separate action card that runs against the currently selected project
 - question: `How am I planning to build CrispyBrain?`
+
+Project creation and validation now follow the repo inbox as the source of truth:
+
+- `POST /api/projects` creates a new `inbox/<project-slug>/` folder when the slug is valid and available
+- slugs are trimmed, must start with a letter or number, and may only contain letters, numbers, dots, underscores, and hyphens
+- empty, whitespace-only, duplicate, and escaping/path-traversal inputs are rejected before anything is created
+- when no inbox projects exist, the UI keeps `Create Project` available, disables query submission safely, and auto-selects the first newly created project
 
 Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
-- the project selector is visible and defaults to `alpha`
+- the top controls render as separate `Project management` and `Ask a question` cards without changing the surrounding layout tone
+- `GET /api/projects` returns the current repo inbox folders without a `404`
+- `POST /api/projects` creates a valid inbox project and returns the created slug plus the refreshed selector payload
+- the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
+- creating a project from the UI reloads the selector and auto-selects the new project
+- invalid or duplicate create attempts return clear `4xx` validation responses without partial folder creation
+- when the inbox is empty, the UI shows a safe empty state and keeps the create flow available
+- deleting a project removes its `inbox/<project-slug>/` folder and drops it from the selector immediately
+- running a query still uses the currently selected project and surfaces that project slug in trace output
 - the response includes an answer, sources, and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
+
+The wrapper script now injects the repo inbox into `crispybrain-demo-ui`, so the Compose-managed `localhost:8787` runtime can serve the same project management API directly from the repo-owned inbox path.
+
+For local debugging outside Docker, you can still run the repo-local demo server from this repo:
+
+```bash
+cd /Users/elric/repos/crispybrain
+python3 scripts/run_demo_server.py
+```
 
 ## Version Handling
 
@@ -232,7 +257,7 @@ The demo server now resolves its visible app version in this order:
 3. `git rev-parse --short HEAD`
 4. `unknown-version (docker)` when the container has neither an injected version nor git metadata
 
-Docker images in this repo do not include `.git`, so the Compose-managed UI should be started through [`scripts/set-version-env.sh`](/Users/elric/repos/crispybrain/scripts/set-version-env.sh). That wrapper resolves the host-side git version, exports `CRISPYBRAIN_APP_VERSION`, and then runs `docker compose ...` so the containerized footer can render the same version string as the local fallback server.
+Docker images in this repo do not include `.git`, so the Compose-managed UI should be started through [`scripts/set-version-env.sh`](/Users/elric/repos/crispybrain/scripts/set-version-env.sh). That wrapper resolves the host-side git version, exports `CRISPYBRAIN_APP_VERSION`, injects the repo inbox mount override for `crispybrain-demo-ui`, and then runs `docker compose ...` so the containerized footer and project API both use the same repo-backed state as the local fallback server.
 
 ## UI, Workflow, Ingestion, and Operator Entry Points
 

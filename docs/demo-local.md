@@ -18,11 +18,12 @@ The canonical CrispyBrain ingest inbox now lives in this repo at `/Users/elric/r
 ## UI Architecture
 
 1. Browser opens `http://localhost:8787`
-2. The `crispybrain-demo-ui` container accepts `POST /api/demo/ask`
-3. The proxy forwards to the n8n webhook `POST /webhook/crispybrain-demo`
-4. The `crispybrain-demo` workflow calls the repo-owned `assistant` webhook path
-5. CrispyBrain retrieves memory and returns a structured answer
-6. The UI renders the answer, sources, and traceable retrieval signals
+2. The demo server on `8787` serves `GET /api/projects`, `POST /api/projects`, and `DELETE /api/projects/<project-slug>` from the repo inbox
+3. The same server accepts `POST /api/demo/ask`
+4. The proxy forwards to the n8n webhook `POST /webhook/crispybrain-demo`
+5. The `crispybrain-demo` workflow calls the repo-owned `assistant` webhook path
+6. CrispyBrain retrieves memory and returns a structured answer
+7. The UI renders the answer, sources, and traceable retrieval signals
 
 ## Primary Runtime
 
@@ -33,6 +34,11 @@ cd ../crispy-ai-lab
 cp .env.example .env
 ../crispybrain/scripts/set-version-env.sh up -d postgres n8n crispybrain-demo-ui
 ```
+
+That wrapper now injects the repo inbox bind mount into `crispybrain-demo-ui`:
+
+- host source: `/Users/elric/repos/crispybrain/inbox`
+- container target: `/app/inbox`
 
 If you have changed files in `../crispybrain/demo/` or `../crispybrain/assets/`, rebuild the UI service so port `8787` serves the updated image contents:
 
@@ -203,7 +209,40 @@ cd ../crispybrain
 python3 scripts/run_demo_server.py
 ```
 
-That script is now explicitly a fallback/dev utility. The main supported runtime is the Compose service.
+That script remains the repo-local fallback/dev path.
+The Compose service also supports direct inbox project management now when it is started through `scripts/set-version-env.sh`, because the wrapper injects the repo inbox mount for `crispybrain-demo-ui`.
+
+## Project API
+
+The demo server now treats the repo inbox as the source of truth for projects in both supported runtime paths:
+
+- the repo-local fallback script
+- the Compose-managed `crispybrain-demo-ui` service when started through `scripts/set-version-env.sh`
+
+- `GET /api/projects` returns the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
+- `POST /api/projects` creates `inbox/<project-slug>/` when the slug is valid and available
+- `DELETE /api/projects/<project-slug>` removes that inbox folder when the slug is valid and present
+- the UI selector reloads from that API instead of using hardcoded project names
+- creating a project from the UI reloads the selector and auto-selects the created slug
+- deleting a project from the UI removes it from both the filesystem and the selector immediately
+- when no inbox projects exist, the UI renders a safe empty state, disables query submission, and keeps the create flow available
+
+Create validation rules:
+
+- slugs are trimmed before validation
+- slugs must start with a letter or number
+- the remaining characters may only be letters, numbers, dots, underscores, and hyphens
+- empty and whitespace-only input returns `400`
+- duplicate slugs return `409`
+- invalid or escaping/path-traversal input returns `400`
+- validation failures do not partially create `inbox/<project-slug>/`
+
+Response shapes:
+
+- `GET /api/projects` returns `{ "projects": [...], "default_project_slug": "..." }`
+- successful `POST /api/projects` returns the same selector payload plus `ok`, `created_project_slug`, and `selected_project_slug`
+- successful `DELETE /api/projects/<project-slug>` returns the same selector payload plus `ok` and `deleted_project_slug`
+- validation failures return `ok = false` and an `error` object with a stable `code` and user-facing `message`
 
 ## Recommended Query
 
@@ -219,7 +258,17 @@ With project slug:
 alpha
 ```
 
-The visible project selector in the UI defaults to `alpha` and also exposes `starwars`.
+The top control area now splits into two visible cards:
+
+- `Project management`: project selector, `Delete Project`, new project slug input, and `Create Project`
+- `Ask a question`: query input and `Run query`
+
+The visible project selector in the `Project management` card now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`.
+If `alpha` exists, the selector chooses it by default on load.
+The `Create Project` control makes a new inbox folder directly from the UI and then selects it automatically.
+The `Delete Project` control removes the selected inbox folder after confirmation and then refreshes the selector immediately.
+The `Ask a question` card keeps query submission separate while still using the currently selected project context.
+If the inbox is temporarily empty, the UI shows a no-projects message, disables query submission safely, and keeps project creation available.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 
 ## Transparency In `v0.9.9`
@@ -299,6 +348,21 @@ curl -sS \
   http://localhost:8787/api/demo/ask | jq '{ok,answer,usage,trace}'
 ```
 
+Through the 8787 project API:
+
+```bash
+curl -sS http://localhost:8787/api/projects | jq .
+
+curl -sS \
+  -H "Content-Type: application/json" \
+  -d '{"project_slug":"demo-docs-smoke"}' \
+  http://localhost:8787/api/projects | jq .
+
+curl -sS \
+  -X DELETE \
+  http://localhost:8787/api/projects/demo-docs-smoke | jq .
+```
+
 Check the containerized UI is serving the page:
 
 ```bash
@@ -358,6 +422,9 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 
 - empty question: the UI and proxy return `INVALID_QUESTION`
 - blank API slug: the demo proxy defaults it to `alpha`
+- empty or whitespace-only project creation: `POST /api/projects` returns `EMPTY_PROJECT_SLUG`
+- duplicate project creation: `POST /api/projects` returns `PROJECT_ALREADY_EXISTS`
+- invalid project creation: `POST /api/projects` returns `INVALID_PROJECT_SLUG`
 - n8n unavailable: the proxy returns `N8N_UNAVAILABLE`
 - weak retrieval: the upstream assistant can return `grounding.status = weak` with a cautionary note
 - no strong retrieval: the upstream assistant can return `grounding.status = none` and no evidence rows

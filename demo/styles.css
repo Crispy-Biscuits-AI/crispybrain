@@ -254,12 +254,65 @@ h3 {
   padding: 18px;
 }
 
+.control-stack {
+  display: grid;
+  gap: 16px;
+}
+
 .query-card {
   display: grid;
-  grid-template-columns: minmax(160px, 190px) minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 18px;
+}
+
+.card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card-heading .eyebrow {
+  margin-bottom: 6px;
+}
+
+.project-card,
+.query-card-primary {
+  display: grid;
+  gap: 14px;
+}
+
+.project-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.project-selection-row,
+.query-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   align-items: end;
-  padding: 18px;
+}
+
+.project-create-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.query-actions {
+  display: flex;
+  align-items: stretch;
+  min-width: 176px;
+}
+
+.query-actions button {
+  width: 100%;
 }
 
 .query-field {
@@ -288,20 +341,53 @@ select {
   min-height: 52px;
 }
 
-#submit-button {
+#create-project-button,
+#submit-button,
+#delete-project-button {
   border: 0;
   border-radius: 999px;
   padding: 12px 18px;
   font-weight: 800;
-  color: var(--accent-ink);
-  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
   cursor: pointer;
   min-height: 52px;
 }
 
-#submit-button:disabled {
+#create-project-button {
+  color: var(--accent);
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+}
+
+#submit-button {
+  color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+}
+
+#delete-project-button {
+  color: var(--error);
+  background: var(--panel-strong);
+  border: 1px solid rgba(194, 65, 12, 0.18);
+}
+
+#create-project-button:disabled,
+#submit-button:disabled,
+#delete-project-button:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.project-feedback {
+  margin: 0;
+  min-height: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.project-feedback[hidden] {
+  display: none;
+}
+
+.project-feedback.is-error {
+  color: var(--error);
 }
 
 .results-layout {
@@ -704,7 +790,8 @@ code {
 }
 
 @media (max-width: 980px) {
-  .query-card {
+  .project-selection-row,
+  .query-input-row {
     grid-template-columns: 1fr;
   }
 
@@ -790,6 +877,10 @@ code {
 
   .theme-control select {
     min-width: 0;
+  }
+
+  .project-create-row {
+    grid-template-columns: 1fr;
   }
 
   .trace-row {

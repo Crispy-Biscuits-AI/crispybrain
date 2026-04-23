@@ -1,0 +1,6 @@
+services:
+  crispybrain-demo-ui:
+    volumes:
+      - type: bind
+        source: ${CRISPYBRAIN_REPO_ROOT}/inbox
+        target: /app/inbox
