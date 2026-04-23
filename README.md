@@ -304,7 +304,7 @@ The UI currently supports:
 
 The selected theme is stored client-side so it survives reloads and container restarts.
 
-Because CrispyBrain is being built in public, the UI also includes intentionally subtle support/contact links in the footer.
+Because CrispyBrain is being built in public, the UI also includes intentionally subtle support/contact/community links in the footer, including BlueSky, Reddit, and the MIT License, while the footer version label is injected from the current repo checkout instead of staying hardcoded.
 They remain low-prominence so the retrieval surface stays primary.
 
 ## Current Limitations

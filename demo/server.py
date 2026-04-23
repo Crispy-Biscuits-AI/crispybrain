@@ -101,13 +101,7 @@ def resolve_commit_hash() -> str:
 
 
 def resolve_footer_version() -> str:
-    version = resolve_repo_version()
-    runtime = resolve_runtime_context()
-    runtime_suffix = f" ({runtime})"
-    if version.endswith(runtime_suffix):
-        return version
-
-    return f"{version}{runtime_suffix}"
+    return resolve_repo_version()
 
 
 def render_index_html() -> str:
