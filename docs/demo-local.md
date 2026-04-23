@@ -249,6 +249,15 @@ cd ../crispy-ai-lab
 
 The wrapper resolves the host checkout version, exports `CRISPYBRAIN_APP_VERSION`, and keeps the containerized footer and `GET /meta` output aligned with the repo version that launched the service.
 
+The version resolution order is:
+
+1. `CRISPYBRAIN_APP_VERSION`
+2. `git describe --tags --always`
+3. `git rev-parse --short HEAD`
+4. `unknown-version (docker)` when the container has neither injected version data nor git metadata
+
+The footer and `GET /meta` both use that same resolved version string, so the containerized UI keeps the latest footer links without falling back to a stale hardcoded label or duplicating the `(docker)` suffix.
+
 When retrieval support is available, the UI now shows:
 
 - an answer panel with the current response
