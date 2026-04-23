@@ -258,10 +258,16 @@ With project slug:
 alpha
 ```
 
-The visible project selector in the UI now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`.
+The top control area now splits into two visible cards:
+
+- `Project management`: project selector, `Delete Project`, new project slug input, and `Create Project`
+- `Ask a question`: query input and `Run query`
+
+The visible project selector in the `Project management` card now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`.
 If `alpha` exists, the selector chooses it by default on load.
 The `Create Project` control makes a new inbox folder directly from the UI and then selects it automatically.
 The `Delete Project` control removes the selected inbox folder after confirmation and then refreshes the selector immediately.
+The `Ask a question` card keeps query submission separate while still using the currently selected project context.
 If the inbox is temporarily empty, the UI shows a no-projects message, disables query submission safely, and keeps project creation available.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 

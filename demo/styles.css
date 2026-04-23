@@ -254,12 +254,33 @@ h3 {
   padding: 18px;
 }
 
+.control-stack {
+  display: grid;
+  gap: 16px;
+}
+
 .query-card {
   display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) auto;
   gap: 14px;
-  align-items: end;
   padding: 18px;
+}
+
+.card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card-heading .eyebrow {
+  margin-bottom: 6px;
+}
+
+.project-card,
+.query-card-primary {
+  display: grid;
+  gap: 14px;
 }
 
 .project-controls {
@@ -267,6 +288,14 @@ h3 {
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+}
+
+.project-selection-row,
+.query-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
 }
 
 .project-create-row {
@@ -278,9 +307,12 @@ h3 {
 
 .query-actions {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
   align-items: stretch;
+  min-width: 176px;
+}
+
+.query-actions button {
+  width: 100%;
 }
 
 .query-field {
@@ -758,7 +790,8 @@ code {
 }
 
 @media (max-width: 980px) {
-  .query-card {
+  .project-selection-row,
+  .query-input-row {
     grid-template-columns: 1fr;
   }
 

@@ -212,9 +212,8 @@ scripts/workflows/import-exported-into-docker.sh
 
 7. Use:
 
-- project selector: it loads the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
-- create control: enter a new project slug and use `Create Project` to make `inbox/<project-slug>/` from the UI
-- delete control: use `Delete Project` to remove the selected inbox project after confirmation
+- `Project management`: it groups the project selector, `Delete Project`, new project slug input, and `Create Project` control in one context card
+- `Ask a question`: it keeps the query input and `Run query` button in a separate action card that runs against the currently selected project
 - question: `How am I planning to build CrispyBrain?`
 
 Project creation and validation now follow the repo inbox as the source of truth:
@@ -228,6 +227,7 @@ Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
+- the top controls render as separate `Project management` and `Ask a question` cards without changing the surrounding layout tone
 - `GET /api/projects` returns the current repo inbox folders without a `404`
 - `POST /api/projects` creates a valid inbox project and returns the created slug plus the refreshed selector payload
 - the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
@@ -235,6 +235,7 @@ Success currently looks like:
 - invalid or duplicate create attempts return clear `4xx` validation responses without partial folder creation
 - when the inbox is empty, the UI shows a safe empty state and keeps the create flow available
 - deleting a project removes its `inbox/<project-slug>/` folder and drops it from the selector immediately
+- running a query still uses the currently selected project and surfaces that project slug in trace output
 - the response includes an answer, sources, and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
 
