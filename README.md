@@ -29,6 +29,7 @@ CrispyBrain currently provides:
 - Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
 - Inbox-backed project create/list/delete flow with validation, auto-selection, and empty-state UX on both the repo-local and wrapper-started demo UI
+- Markdown Q&A export controls with Full and Social clipboard formats from the rendered demo answer state
 - Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
@@ -333,6 +334,9 @@ The selected theme is stored client-side so it survives reloads and container re
 
 Because CrispyBrain is being built in public, the UI also includes intentionally subtle support/contact/community links in the footer, including BlueSky, Reddit, and the MIT License, while the footer version label is injected from the current repo checkout instead of staying hardcoded.
 They remain low-prominence so the retrieval surface stays primary.
+
+The answer controls also include additive `Export MD (Full)` and `Export MD (Social)` actions.
+They copy markdown generated from the currently rendered question, answer, explanation, sources, and trace surface without changing the answer flow, backend behavior, or existing controls.
 
 ## Current Limitations
 

@@ -463,7 +463,9 @@ select {
 
 #create-project-button:disabled,
 #submit-button:disabled,
-#delete-project-button:disabled {
+#delete-project-button:disabled,
+#export-md-full:disabled,
+#export-md-social:disabled {
   cursor: wait;
   opacity: 0.72;
 }
@@ -535,6 +537,22 @@ select {
 .answer-meta {
   justify-content: flex-start;
   margin: 14px 0 16px;
+}
+
+.answer-export-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.export-status {
+  min-height: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.export-status.is-error {
+  color: var(--error);
 }
 
 .panel-toggle,

@@ -35,6 +35,9 @@ const answerOutput = document.getElementById("answer-output");
 const sourceSummary = document.getElementById("source-summary");
 const sourcesOutput = document.getElementById("sources-output");
 const traceNote = document.getElementById("trace-note");
+const exportFullButton = document.getElementById("export-md-full");
+const exportSocialButton = document.getElementById("export-md-social");
+const exportStatus = document.getElementById("export-status");
 
 const traceFields = {
   elapsed: document.getElementById("trace-elapsed"),
@@ -61,6 +64,7 @@ let projectsLoading = false;
 let projectListUnavailable = false;
 let projectActionMode = "";
 let availableProjects = [];
+let exportStatusTimer = null;
 
 themeManager.mountThemeControls(themeSelect, themeBadge);
 setSourcesOpen(true);
@@ -80,6 +84,14 @@ for (const button of traceToggleButtons) {
     setTraceOpen(!traceOpen);
   });
 }
+
+exportFullButton.addEventListener("click", () => {
+  void handleMarkdownExport("full");
+});
+
+exportSocialButton.addEventListener("click", () => {
+  void handleMarkdownExport("social");
+});
 
 projectSlugSelect.addEventListener("change", () => {
   clearProjectFeedback();
@@ -165,6 +177,7 @@ deleteProjectButton.addEventListener("click", async () => {
 
     answerState.textContent = "Project deleted";
     answerOutput.textContent = `Deleted project "${projectSlug}". Switched to "${projectSlugSelect.value.trim()}".`;
+    syncProjectControls();
   } catch (error) {
     renderError({
       code: "PROJECT_DELETE_FAILED",
@@ -196,6 +209,7 @@ form.addEventListener("submit", async (event) => {
 
   setBusy(true);
   resetPanels();
+  setRenderedQuestion(question);
 
   const payload = {
     question,
@@ -221,11 +235,11 @@ form.addEventListener("submit", async (event) => {
       renderError(body.error || {
         code: "REQUEST_FAILED",
         message: "The memory query did not complete successfully.",
-      }, body, { elapsedMs });
+      }, body, { elapsedMs, question });
       return;
     }
 
-    renderSuccess(body, { elapsedMs });
+    renderSuccess(body, { elapsedMs, question });
   } catch (error) {
     renderError({
       code: "NETWORK_ERROR",
@@ -233,6 +247,7 @@ form.addEventListener("submit", async (event) => {
       details: error instanceof Error ? error.message : String(error),
     }, {}, {
       elapsedMs: Math.round(performance.now() - requestStarted),
+      question,
     });
   } finally {
     setBusy(false);
@@ -282,6 +297,7 @@ async function createProject() {
     resetPanels();
     answerState.textContent = "Project created";
     answerOutput.textContent = `Created project "${body.created_project_slug}" and selected it for retrieval.`;
+    syncProjectControls();
     questionInput.focus();
   } catch (error) {
     setProjectFeedback(
@@ -387,6 +403,8 @@ function renderProjectLoadFailure(error) {
   projectListUnavailable = true;
   projectSlugSelect.innerHTML = "";
   deleteProjectSelect.innerHTML = "";
+  setRenderedQuestion("");
+  clearExportStatus();
 
   const option = document.createElement("option");
   option.value = "";
@@ -403,13 +421,17 @@ function renderProjectLoadFailure(error) {
   updateProjectContext();
   answerState.textContent = "Project list unavailable";
   answerOutput.textContent = "CrispyBrain could not load inbox projects from /api/projects.";
+  syncProjectControls();
   console.error("Failed to load inbox projects for CrispyBrain demo:", error);
 }
 
 function renderNoProjectsState(message = "No inbox projects are available.") {
+  setRenderedQuestion("");
+  clearExportStatus();
   updateProjectContext();
   answerState.textContent = "No projects available";
   answerOutput.textContent = `${message} Create a project above to enable retrieval from inbox/.`;
+  syncProjectControls();
 }
 
 function setBusy(isBusy) {
@@ -422,6 +444,7 @@ function setBusy(isBusy) {
   syncProjectControls();
 
   if (isBusy) {
+    clearExportStatus();
     answerState.textContent = "Retrieving memory…";
     answerOutput.textContent = "Searching stored memory and assembling a response…";
   }
@@ -448,6 +471,7 @@ function syncProjectControls() {
   const hasDeleteSelection = Boolean(deleteProjectSelect.value.trim());
   const hasCreateInput = Boolean(createProjectInput.value.trim());
   const controlsBusy = queryBusy || projectActionBusy || projectsLoading;
+  const canExport = canExportRenderedAnswer();
 
   projectSlugSelect.disabled = controlsBusy || !hasProjects;
   deleteProjectSelect.disabled = controlsBusy || !hasProjects;
@@ -456,6 +480,8 @@ function syncProjectControls() {
   questionInput.disabled = controlsBusy || !hasProjectSelection;
   submitButton.disabled = controlsBusy || !hasProjectSelection;
   deleteProjectButton.disabled = controlsBusy || !hasDeleteSelection;
+  exportFullButton.disabled = controlsBusy || !canExport;
+  exportSocialButton.disabled = controlsBusy || !canExport;
 }
 
 function setProjectFeedback(message, isError = false) {
@@ -512,6 +538,10 @@ function updateProjectContext() {
 }
 
 function resetPanels() {
+  clearExportStatus();
+  if (!queryBusy) {
+    setRenderedQuestion("");
+  }
   updateSourceLabels(0);
   renderExplanation({}, [], [], {
     isBusy: statusPill.classList.contains("busy"),
@@ -524,12 +554,17 @@ function resetPanels() {
     answerState.textContent = "Ready for a query";
     answerOutput.textContent = "Query memory to see an answer here.";
   }
+
+  syncProjectControls();
 }
 
 function renderSuccess(body, meta = {}) {
   const selectedSources = normalizeSources(body.selected_sources || body.sources);
   const retrievedCandidates = normalizeSources(body.retrieved_candidates);
   const presentation = deriveAnswerPresentation(body);
+  if (typeof meta.question === "string") {
+    setRenderedQuestion(meta.question);
+  }
   answerOutput.textContent = presentation.answerText || "No answer text returned.";
   answerState.textContent = buildAnswerState(body, selectedSources);
 
@@ -538,12 +573,14 @@ function renderSuccess(body, meta = {}) {
   renderSourceSummary(body, selectedSources, retrievedCandidates);
   renderSources(selectedSources);
   renderTrace(body, meta, selectedSources, retrievedCandidates);
+  syncProjectControls();
 }
 
 function renderError(error, body = {}, meta = {}) {
   const selectedSources = normalizeSources(body.selected_sources || body.sources);
   const retrievedCandidates = normalizeSources(body.retrieved_candidates);
   const presentation = deriveAnswerPresentation(body);
+  setRenderedQuestion(typeof meta.question === "string" ? meta.question : "");
   answerState.textContent = "Request could not be completed";
   answerOutput.textContent = presentation.answerText || body.answer || error.message || "The memory query failed.";
 
@@ -552,6 +589,225 @@ function renderError(error, body = {}, meta = {}) {
   renderSourceSummary({ ...body, error }, selectedSources, retrievedCandidates);
   renderSources(selectedSources);
   renderTrace({ ...body, error }, meta, selectedSources, retrievedCandidates);
+  syncProjectControls();
+}
+
+async function handleMarkdownExport(mode) {
+  const exportData = extractRenderedContentFromDom();
+  if (!isRenderableExportData(exportData)) {
+    showExportStatus("Run a query before exporting.", true);
+    syncProjectControls();
+    return;
+  }
+
+  const markdown = generateMarkdownExport(mode, exportData);
+  if (!markdown) {
+    showExportStatus("Markdown export is not available right now.", true);
+    return;
+  }
+
+  const copied = await copyTextToClipboard(markdown);
+  if (!copied) {
+    showExportStatus("CrispyBrain could not copy the markdown.", true);
+    return;
+  }
+
+  showExportStatus(mode === "full" ? "Copied full markdown." : "Copied social markdown.");
+}
+
+function setRenderedQuestion(questionText) {
+  resultsLayout.dataset.renderedQuestion = normalizeExportBlock(questionText);
+}
+
+function extractRenderedContentFromDom() {
+  return {
+    questionText: normalizeExportBlock(resultsLayout.dataset.renderedQuestion || ""),
+    answerText: normalizeExportBlock(answerOutput.textContent),
+    whyThisAnswer: extractRenderedWhyThisAnswer(),
+    sources: extractRenderedSources(),
+    trace: extractRenderedTraceLines(),
+  };
+}
+
+function extractRenderedWhyThisAnswer() {
+  return {
+    bullets: uniqueTexts([
+      explanationSummary.textContent,
+      explanationDetail.textContent,
+      explanationUncertainty.hidden ? "" : explanationUncertainty.textContent,
+    ]).map((line) => collapseExportLine(line)).filter(Boolean),
+  };
+}
+
+function extractRenderedSources() {
+  return Array.from(sourcesOutput.querySelectorAll(".source-card"))
+    .map((card) => {
+      const title = collapseExportLine(card.querySelector("h3")?.textContent || "");
+      const chunkLabel = collapseExportLine(card.querySelector(".source-card-header .source-badge")?.textContent || "");
+      const preview = collapseExportLine(card.querySelector(".source-preview")?.textContent || "");
+      const pathLabel = collapseExportLine(card.querySelector(".source-path")?.textContent || "");
+      const meta = collapseExportLine(card.querySelector(".source-meta")?.textContent || "");
+      const segments = [];
+
+      if (title) {
+        segments.push(chunkLabel ? `${title} (${chunkLabel})` : title);
+      }
+      if (preview) segments.push(preview);
+      if (pathLabel && pathLabel !== title) segments.push(pathLabel);
+      if (meta && meta !== "Supporting memory") segments.push(meta);
+
+      return segments.join(" — ");
+    })
+    .filter(Boolean);
+}
+
+function extractRenderedTraceLines() {
+  const traceLines = Array.from(traceDrawer.querySelectorAll(".trace-row"))
+    .map((row) => {
+      const label = collapseExportLine(row.querySelector("dt")?.textContent || "");
+      const value = collapseExportLine(row.querySelector("dd")?.textContent || "");
+      if (!label || !value || value === "—") {
+        return "";
+      }
+
+      return `${label}: ${value}`;
+    })
+    .filter(Boolean);
+
+  const noteText = collapseExportLine(traceNote.textContent);
+  if (noteText && noteText !== "No grounding note yet.") {
+    traceLines.push(`Grounding note: ${noteText}`);
+  }
+
+  return traceLines;
+}
+
+function canExportRenderedAnswer() {
+  return isRenderableExportData(extractRenderedContentFromDom());
+}
+
+function isRenderableExportData(exportData) {
+  if (!exportData.questionText || !exportData.answerText) {
+    return false;
+  }
+
+  return ![
+    "Query memory to see an answer here.",
+    "Searching stored memory and assembling a response…",
+  ].includes(exportData.answerText);
+}
+
+function generateMarkdownExport(mode, data) {
+  if (mode === "social") {
+    return [
+      `❓ ${data.questionText}`,
+      "",
+      `✅ ${data.answerText}`,
+      "",
+      "🧠 Source: CrispyBrain (local AI memory)",
+    ].join("\n").trim();
+  }
+
+  const lines = [
+    "# 🧠 CrispyBrain Q&A",
+    "",
+    "## ❓ Question",
+    data.questionText,
+    "",
+    "## ✅ Answer",
+    data.answerText,
+  ];
+
+  if (data.whyThisAnswer.bullets.length > 0) {
+    lines.push("", "## 🧩 Why This Answer");
+    for (const line of data.whyThisAnswer.bullets) {
+      lines.push(`- ${line}`);
+    }
+  }
+
+  if (data.sources.length > 0) {
+    lines.push("", "## 📚 Sources");
+    for (const source of data.sources) {
+      lines.push(`- ${source}`);
+    }
+  }
+
+  if (data.trace.length > 0) {
+    lines.push("", "## 🔍 Trace (Optional)");
+    for (const traceLine of data.trace) {
+      lines.push(`- ${traceLine}`);
+    }
+  }
+
+  lines.push("", "---", "Shared via **CrispyBrain (local-first AI memory system)**");
+  return lines.join("\n").trim();
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (error) {
+      console.warn("navigator.clipboard.writeText failed, falling back to execCommand:", error);
+    }
+  }
+
+  const fallback = document.createElement("textarea");
+  fallback.value = text;
+  fallback.setAttribute("readonly", "");
+  fallback.style.position = "fixed";
+  fallback.style.opacity = "0";
+  fallback.style.pointerEvents = "none";
+  document.body.appendChild(fallback);
+  fallback.select();
+  fallback.setSelectionRange(0, fallback.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch (error) {
+    console.warn("Clipboard fallback failed:", error);
+  } finally {
+    fallback.remove();
+  }
+
+  return copied;
+}
+
+function showExportStatus(message, isError = false) {
+  window.clearTimeout(exportStatusTimer);
+  exportStatus.textContent = collapseExportLine(message);
+  exportStatus.classList.toggle("is-error", isError);
+  exportStatusTimer = window.setTimeout(() => {
+    clearExportStatus();
+  }, 2200);
+}
+
+function clearExportStatus() {
+  window.clearTimeout(exportStatusTimer);
+  exportStatusTimer = null;
+  exportStatus.textContent = "";
+  exportStatus.classList.remove("is-error");
+}
+
+function normalizeExportBlock(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/\u00a0/g, " ")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function collapseExportLine(value) {
+  return normalizeExportBlock(value).replace(/\n+/g, " ").trim();
 }
 
 function renderExplanation(body, selectedSources, retrievedCandidates, options = {}) {

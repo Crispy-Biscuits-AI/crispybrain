@@ -272,6 +272,28 @@ The `Ask a question` pane keeps query submission separate while still using the 
 If the inbox is temporarily empty, the UI shows a no-projects message, disables query submission safely, and keeps project creation available.
 The answer panel now places the direct answer above `Why this answer`, while sources and trace behavior remain unchanged.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
+The answer control row also includes `Export MD (Full)` and `Export MD (Social)`, which copy a markdown share snippet from the currently rendered UI state without downloading a file or changing the query flow.
+
+Example full export:
+
+```md
+# 🧠 CrispyBrain Q&A
+
+## ❓ Question
+Who is Darth Vader?
+
+## ✅ Answer
+Darth Vader is Anakin Skywalker, a central character in Star Wars.
+
+## 🧩 Why This Answer
+- This answer is based on limited evidence from 1 project memory source. Some details may be incomplete.
+
+## 📚 Sources
+- star-wars-notes.md (chunk 01) — "Anakin Skywalker became Darth Vader."
+
+---
+Shared via **CrispyBrain (local-first AI memory system)**
+```
 
 ## Transparency In `v0.9.9`
 
