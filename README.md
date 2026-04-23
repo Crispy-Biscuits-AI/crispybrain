@@ -212,8 +212,9 @@ scripts/workflows/import-exported-into-docker.sh
 
 7. Use:
 
-- `Project management`: it groups the project selector, `Delete Project`, new project slug input, and `Create Project` control in one context card
-- `Ask a question`: it keeps the query input and `Run query` button in a separate action card that runs against the currently selected project
+- `Query context`: it makes the selected project explicit before you run retrieval
+- `Ask a question`: it keeps the query input and `Run query` button in the primary center card and reinforces the active project/context
+- `Project management`: it keeps `Delete Project`, new project slug input, and `Create Project` controls in a smaller companion card
 - question: `How am I planning to build CrispyBrain?`
 
 Project creation and validation now follow the repo inbox as the source of truth:
@@ -227,7 +228,7 @@ Success currently looks like:
 
 - the page loads on `localhost:8787`
 - the theme selector is available
-- the top controls render as separate `Project management` and `Ask a question` cards without changing the surrounding layout tone
+- the top controls render as a three-pane row on desktop: `Query context`, `Ask a question`, and `Project management`
 - `GET /api/projects` returns the current repo inbox folders without a `404`
 - `POST /api/projects` creates a valid inbox project and returns the created slug plus the refreshed selector payload
 - the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
@@ -236,7 +237,7 @@ Success currently looks like:
 - when the inbox is empty, the UI shows a safe empty state and keeps the create flow available
 - deleting a project removes its `inbox/<project-slug>/` folder and drops it from the selector immediately
 - running a query still uses the currently selected project and surfaces that project slug in trace output
-- the response includes an answer, sources, and traceable retrieval state
+- the response shows the answer content above `Why this answer`, followed by sources and traceable retrieval state
 - the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
 
 The wrapper script now injects the repo inbox into `crispybrain-demo-ui`, so the Compose-managed `localhost:8787` runtime can serve the same project management API directly from the repo-owned inbox path.
@@ -314,7 +315,8 @@ Recency matters as a tie-breaker, not as a global override.
 
 The current browser surface keeps the existing theme system and footer while presenting retrieval more transparently:
 
-- Answer panel: the primary response area for grounded memory answers
+- Top control row: a responsive three-pane layout for query context, the primary query action, and project management
+- Answer panel: the primary response area for grounded memory answers, with the direct answer shown above `Why this answer`
 - Sources panel: an open-by-default side panel that lists retrieved memory with previews and scores when available
 - Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, token-usage, and behavior signals with graceful placeholders when fields are missing
 - Transparency-first design: source usage, status, and latency stay visible without forcing operators into a separate inspection screen

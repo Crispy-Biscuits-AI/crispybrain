@@ -41,23 +41,80 @@
       </header>
 
       <div class="control-stack">
+        <section class="panel context-card" aria-labelledby="query-context-title">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">Query target</p>
+              <h2 id="query-context-title">Query context</h2>
+            </div>
+          </div>
+
+          <div class="context-controls">
+            <label class="query-field query-field-compact" for="project-slug">
+              <span>Project in use</span>
+              <select id="project-slug" name="project_slug" aria-label="Choose project">
+                <option value="" selected>Loading projects…</option>
+              </select>
+            </label>
+
+            <div class="context-active-shell">
+              <span class="context-active-label">Active context</span>
+              <strong id="active-project-pill" class="context-active-value">Loading projects…</strong>
+            </div>
+
+            <p class="context-note subtle">Queries run against the selected inbox project.</p>
+          </div>
+        </section>
+
+        <form id="memory-form" class="query-card query-card-primary">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">Primary action</p>
+              <h2>Ask a question</h2>
+            </div>
+
+            <div class="query-context-shell" aria-live="polite">
+              <span class="query-context-label">Querying</span>
+              <strong id="query-context-badge" class="query-context-value">Loading projects…</strong>
+            </div>
+          </div>
+
+          <input id="session-id" name="session_id" type="hidden" value="">
+
+          <p id="query-context-note" class="query-context-note subtle">
+            Pick a project to aim retrieval before you run the query.
+          </p>
+
+          <div class="query-input-row">
+            <label class="query-field" for="question">
+              <span>Query</span>
+              <input
+                id="question"
+                name="question"
+                type="text"
+                placeholder="Query your stored memory…"
+                autocomplete="off"
+                required
+              >
+            </label>
+
+            <div class="query-actions">
+              <button id="submit-button" type="submit">Run query</button>
+            </div>
+          </div>
+        </form>
+
         <section class="panel project-card" aria-labelledby="project-management-title">
           <div class="card-heading">
             <div>
-              <p class="eyebrow">Project context</p>
+              <p class="eyebrow">Project tools</p>
               <h2 id="project-management-title">Project management</h2>
             </div>
           </div>
 
           <div class="project-controls">
-            <div class="project-selection-row">
-              <label class="query-field query-field-compact" for="project-slug">
-                <span>Project</span>
-                <select id="project-slug" name="project_slug" aria-label="Choose project">
-                  <option value="" selected>Loading projects…</option>
-                </select>
-              </label>
-
+            <div class="project-toolbar">
+              <p id="project-count" class="project-count subtle">0 projects</p>
               <button id="delete-project-button" type="button">Delete Project</button>
             </div>
 
@@ -78,35 +135,6 @@
             <p id="project-feedback" class="project-feedback subtle" aria-live="polite" hidden></p>
           </div>
         </section>
-
-        <form id="memory-form" class="query-card query-card-primary">
-          <div class="card-heading">
-            <div>
-              <p class="eyebrow">Primary action</p>
-              <h2>Ask a question</h2>
-            </div>
-          </div>
-
-          <input id="session-id" name="session_id" type="hidden" value="">
-
-          <div class="query-input-row">
-            <label class="query-field" for="question">
-              <span>Query</span>
-              <input
-                id="question"
-                name="question"
-                type="text"
-                placeholder="Query your stored memory…"
-                autocomplete="off"
-                required
-              >
-            </label>
-
-            <div class="query-actions">
-              <button id="submit-button" type="submit">Run query</button>
-            </div>
-          </div>
-        </form>
       </div>
 
       <section class="results-layout sources-open" id="results-layout">
@@ -146,7 +174,12 @@
             </button>
           </div>
 
-          <section class="explanation-shell" aria-live="polite">
+          <section class="answer-body-shell" aria-live="polite">
+            <p class="answer-body-label">Answer</p>
+            <pre id="answer-output" class="answer-output">Query memory to see an answer here.</pre>
+          </section>
+
+          <section class="explanation-shell">
             <div class="explanation-topline">
               <div class="explanation-copy">
                 <h3>Why this answer</h3>
@@ -167,8 +200,6 @@
             </p>
             <p id="explanation-uncertainty" class="explanation-uncertainty" hidden></p>
           </section>
-
-          <pre id="answer-output" class="answer-output">Query memory to see an answer here.</pre>
         </article>
 
         <aside class="panel sources-panel" id="sources-panel" aria-hidden="false">

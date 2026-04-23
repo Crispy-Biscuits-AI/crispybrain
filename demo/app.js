@@ -9,6 +9,10 @@ const createProjectButton = document.getElementById("create-project-button");
 const submitButton = document.getElementById("submit-button");
 const deleteProjectButton = document.getElementById("delete-project-button");
 const projectFeedback = document.getElementById("project-feedback");
+const projectCount = document.getElementById("project-count");
+const activeProjectPill = document.getElementById("active-project-pill");
+const queryContextBadge = document.getElementById("query-context-badge");
+const queryContextNote = document.getElementById("query-context-note");
 const statusPill = document.getElementById("status-pill");
 const themeSelect = document.getElementById("theme-select");
 const themeBadge = document.getElementById("theme-badge");
@@ -53,6 +57,7 @@ let traceOpen = true;
 let queryBusy = false;
 let projectActionBusy = false;
 let projectsLoading = false;
+let projectListUnavailable = false;
 let projectActionMode = "";
 let availableProjects = [];
 
@@ -60,6 +65,7 @@ themeManager.mountThemeControls(themeSelect, themeBadge);
 setSourcesOpen(true);
 setTraceOpen(true);
 resetPanels();
+updateProjectContext();
 loadProjectOptions();
 
 for (const button of sourceToggleButtons) {
@@ -76,6 +82,7 @@ for (const button of traceToggleButtons) {
 
 projectSlugSelect.addEventListener("change", () => {
   clearProjectFeedback();
+  updateProjectContext();
   syncProjectControls();
 });
 
@@ -273,6 +280,8 @@ async function createProject() {
 
 async function loadProjectOptions(preferredProjectSlug = "") {
   projectsLoading = true;
+  projectListUnavailable = false;
+  updateProjectContext();
   syncProjectControls();
 
   try {
@@ -293,6 +302,7 @@ async function loadProjectOptions(preferredProjectSlug = "") {
     renderProjectLoadFailure(error);
   } finally {
     projectsLoading = false;
+    updateProjectContext();
     syncProjectControls();
   }
 }
@@ -306,6 +316,7 @@ function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug
       : (projects.includes(defaultProjectSlug) ? defaultProjectSlug : (projects[0] || "")));
 
   availableProjects = [...projects];
+  projectListUnavailable = false;
   projectSlugSelect.innerHTML = "";
 
   if (projects.length === 0) {
@@ -314,6 +325,7 @@ function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug
     option.textContent = "No inbox projects found";
     option.selected = true;
     projectSlugSelect.appendChild(option);
+    updateProjectContext();
     renderNoProjectsState();
     return;
   }
@@ -329,10 +341,13 @@ function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug
   if (answerState.textContent === "No projects available" || answerState.textContent === "Project list unavailable") {
     resetPanels();
   }
+
+  updateProjectContext();
 }
 
 function renderProjectLoadFailure(error) {
   availableProjects = [];
+  projectListUnavailable = true;
   projectSlugSelect.innerHTML = "";
 
   const option = document.createElement("option");
@@ -341,12 +356,14 @@ function renderProjectLoadFailure(error) {
   option.selected = true;
   projectSlugSelect.appendChild(option);
 
+  updateProjectContext();
   answerState.textContent = "Project list unavailable";
   answerOutput.textContent = "CrispyBrain could not load inbox projects from /api/projects.";
   console.error("Failed to load inbox projects for CrispyBrain demo:", error);
 }
 
 function renderNoProjectsState(message = "No inbox projects are available.") {
+  updateProjectContext();
   answerState.textContent = "No projects available";
   answerOutput.textContent = `${message} Create a project above to enable retrieval from inbox/.`;
 }
@@ -404,6 +421,48 @@ function setProjectFeedback(message, isError = false) {
 
 function clearProjectFeedback() {
   setProjectFeedback("");
+}
+
+function updateProjectContext() {
+  const selectedProject = projectSlugSelect.value.trim();
+
+  if (projectsLoading) {
+    projectCount.textContent = "Loading projects…";
+    activeProjectPill.textContent = "Loading projects…";
+    queryContextBadge.textContent = "Loading projects…";
+    queryContextNote.textContent = "Loading available inbox projects for retrieval.";
+    return;
+  }
+
+  if (projectListUnavailable) {
+    projectCount.textContent = "Projects unavailable";
+    activeProjectPill.textContent = "Projects unavailable";
+    queryContextBadge.textContent = "Reload projects";
+    queryContextNote.textContent = "CrispyBrain could not load inbox projects from /api/projects.";
+    return;
+  }
+
+  projectCount.textContent = availableProjects.length === 0
+    ? "No projects yet"
+    : `${availableProjects.length} ${availableProjects.length === 1 ? "project" : "projects"}`;
+
+  if (availableProjects.length === 0) {
+    activeProjectPill.textContent = "Create a project";
+    queryContextBadge.textContent = "No active project";
+    queryContextNote.textContent = "Create a project to enable retrieval from inbox/.";
+    return;
+  }
+
+  if (!selectedProject) {
+    activeProjectPill.textContent = "Select a project";
+    queryContextBadge.textContent = "Select a project";
+    queryContextNote.textContent = "Choose which inbox project CrispyBrain should query.";
+    return;
+  }
+
+  activeProjectPill.textContent = selectedProject;
+  queryContextBadge.textContent = selectedProject;
+  queryContextNote.textContent = `This query will run against "${selectedProject}".`;
 }
 
 function resetPanels() {
