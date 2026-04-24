@@ -64,6 +64,7 @@ let projectsLoading = false;
 let projectListUnavailable = false;
 let projectActionMode = "";
 let availableProjects = [];
+let availableProjectOptions = [];
 let exportStatusTimer = null;
 
 themeManager.mountThemeControls(themeSelect, themeBadge);
@@ -137,13 +138,14 @@ createProjectButton.addEventListener("click", () => {
 
 deleteProjectButton.addEventListener("click", async () => {
   const projectSlug = deleteProjectSelect.value.trim();
+  const projectDisplayName = getProjectDisplayName(projectSlug);
   if (!projectSlug) {
     renderNoProjectsState();
     return;
   }
 
   clearProjectFeedback();
-  const confirmed = window.confirm(`Delete project "${projectSlug}" and remove its inbox folder?`);
+  const confirmed = window.confirm(`Delete project "${projectDisplayName}" and remove its inbox folder?`);
   if (!confirmed) {
     return;
   }
@@ -167,16 +169,16 @@ deleteProjectButton.addEventListener("click", async () => {
       return;
     }
 
-    renderProjectOptions(body.projects, body.default_project_slug);
+    renderProjectOptions(normalizeProjectOptions(body), body.default_project_slug);
     resetPanels();
 
     if (availableProjects.length === 0) {
-      renderNoProjectsState(`Deleted project "${projectSlug}". No inbox projects remain.`);
+      renderNoProjectsState(`Deleted project "${projectDisplayName}". No inbox projects remain.`);
       return;
     }
 
     answerState.textContent = "Project deleted";
-    answerOutput.textContent = `Deleted project "${projectSlug}". Switched to "${projectSlugSelect.value.trim()}".`;
+    answerOutput.textContent = `Deleted project "${projectDisplayName}". Switched to "${getSelectedProjectDisplayName()}".`;
     syncProjectControls();
   } catch (error) {
     renderError({
@@ -255,9 +257,9 @@ form.addEventListener("submit", async (event) => {
 });
 
 async function createProject() {
-  const desiredProjectSlug = createProjectInput.value.trim();
-  if (!desiredProjectSlug) {
-    setProjectFeedback("Enter a project slug before creating a project.", true);
+  const desiredProjectName = createProjectInput.value.trim();
+  if (!desiredProjectName) {
+    setProjectFeedback("Enter a project name before creating a project.", true);
     return;
   }
 
@@ -273,7 +275,7 @@ async function createProject() {
       },
       cache: "no-store",
       body: JSON.stringify({
-        project_slug: desiredProjectSlug,
+        project_name: desiredProjectName,
       }),
     });
     const body = await response.json();
@@ -296,7 +298,7 @@ async function createProject() {
     clearProjectFeedback();
     resetPanels();
     answerState.textContent = "Project created";
-    answerOutput.textContent = `Created project "${body.created_project_slug}" and selected it for retrieval.`;
+    answerOutput.textContent = `Created project "${body.created_project_display_name || getSelectedProjectDisplayName()}" and selected it for retrieval.`;
     syncProjectControls();
     questionInput.focus();
   } catch (error) {
@@ -330,7 +332,7 @@ async function loadProjectOptions(preferredProjectSlug = "") {
       throw new Error("Project list request did not return a valid payload.");
     }
 
-    renderProjectOptions(body.projects, body.default_project_slug, preferredProjectSlug);
+    renderProjectOptions(normalizeProjectOptions(body), body.default_project_slug, preferredProjectSlug);
   } catch (error) {
     renderProjectLoadFailure(error);
   } finally {
@@ -340,26 +342,68 @@ async function loadProjectOptions(preferredProjectSlug = "") {
   }
 }
 
+function normalizeProjectOptions(bodyOrProjects) {
+  const rawProjects = Array.isArray(bodyOrProjects)
+    ? bodyOrProjects
+    : (Array.isArray(bodyOrProjects?.project_options)
+      ? bodyOrProjects.project_options
+      : bodyOrProjects?.projects);
+
+  if (!Array.isArray(rawProjects)) {
+    return [];
+  }
+
+  return rawProjects
+    .map((project) => {
+      if (typeof project === "string") {
+        return {
+          project_slug: project,
+          display_name: project,
+        };
+      }
+
+      if (!project || typeof project !== "object" || typeof project.project_slug !== "string") {
+        return null;
+      }
+
+      const projectSlug = project.project_slug.trim();
+      if (!projectSlug) {
+        return null;
+      }
+
+      return {
+        project_slug: projectSlug,
+        display_name: typeof project.display_name === "string" && project.display_name.trim()
+          ? project.display_name.trim()
+          : projectSlug,
+      };
+    })
+    .filter(Boolean);
+}
+
 function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug = "") {
+  const projectOptions = normalizeProjectOptions(projects);
+  const projectSlugs = projectOptions.map((project) => project.project_slug);
   const currentValue = projectSlugSelect.value.trim();
   const currentDeleteValue = deleteProjectSelect.value.trim();
-  const selectedValue = projects.includes(preferredProjectSlug)
+  const selectedValue = projectSlugs.includes(preferredProjectSlug)
     ? preferredProjectSlug
-    : (projects.includes(currentValue)
+    : (projectSlugs.includes(currentValue)
       ? currentValue
-      : (projects.includes(defaultProjectSlug) ? defaultProjectSlug : (projects[0] || "")));
-  const selectedDeleteValue = projects.includes(currentDeleteValue)
+      : (projectSlugs.includes(defaultProjectSlug) ? defaultProjectSlug : (projectSlugs[0] || "")));
+  const selectedDeleteValue = projectSlugs.includes(currentDeleteValue)
     ? currentDeleteValue
-    : (projects.includes(preferredProjectSlug)
+    : (projectSlugs.includes(preferredProjectSlug)
       ? preferredProjectSlug
       : selectedValue);
 
-  availableProjects = [...projects];
+  availableProjectOptions = [...projectOptions];
+  availableProjects = [...projectSlugs];
   projectListUnavailable = false;
   projectSlugSelect.innerHTML = "";
   deleteProjectSelect.innerHTML = "";
 
-  if (projects.length === 0) {
+  if (projectOptions.length === 0) {
     const option = document.createElement("option");
     option.value = "";
     option.textContent = "No inbox projects found";
@@ -377,17 +421,17 @@ function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug
     return;
   }
 
-  for (const project of projects) {
+  for (const project of projectOptions) {
     const option = document.createElement("option");
-    option.value = project;
-    option.textContent = project;
-    option.selected = project === selectedValue;
+    option.value = project.project_slug;
+    option.textContent = project.display_name;
+    option.selected = project.project_slug === selectedValue;
     projectSlugSelect.appendChild(option);
 
     const deleteOption = document.createElement("option");
-    deleteOption.value = project;
-    deleteOption.textContent = project;
-    deleteOption.selected = project === selectedDeleteValue;
+    deleteOption.value = project.project_slug;
+    deleteOption.textContent = project.display_name;
+    deleteOption.selected = project.project_slug === selectedDeleteValue;
     deleteProjectSelect.appendChild(deleteOption);
   }
 
@@ -400,6 +444,7 @@ function renderProjectOptions(projects, defaultProjectSlug, preferredProjectSlug
 
 function renderProjectLoadFailure(error) {
   availableProjects = [];
+  availableProjectOptions = [];
   projectListUnavailable = true;
   projectSlugSelect.innerHTML = "";
   deleteProjectSelect.innerHTML = "";
@@ -497,6 +542,7 @@ function clearProjectFeedback() {
 
 function updateProjectContext() {
   const selectedProject = projectSlugSelect.value.trim();
+  const selectedProjectDisplayName = getSelectedProjectDisplayName();
 
   if (projectsLoading) {
     projectCount.textContent = "Loading projects…";
@@ -532,9 +578,18 @@ function updateProjectContext() {
     return;
   }
 
-  activeProjectPill.textContent = selectedProject;
-  queryContextBadge.textContent = selectedProject;
-  queryContextNote.textContent = `This query will run against "${selectedProject}".`;
+  activeProjectPill.textContent = selectedProjectDisplayName;
+  queryContextBadge.textContent = selectedProjectDisplayName;
+  queryContextNote.textContent = `This query will run against "${selectedProjectDisplayName}".`;
+}
+
+function getProjectDisplayName(projectSlug) {
+  const project = availableProjectOptions.find((option) => option.project_slug === projectSlug);
+  return project?.display_name || projectSlug;
+}
+
+function getSelectedProjectDisplayName() {
+  return getProjectDisplayName(projectSlugSelect.value.trim());
 }
 
 function resetPanels() {

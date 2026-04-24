@@ -219,29 +219,28 @@ The demo server now treats the repo inbox as the source of truth for projects in
 - the repo-local fallback script
 - the Compose-managed `crispybrain-demo-ui` service when started through `scripts/set-version-env.sh`
 
-- `GET /api/projects` returns the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
-- `POST /api/projects` creates `inbox/<project-slug>/` when the slug is valid and available
+- `GET /api/projects` returns the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/` plus display-name selector metadata
+- `POST /api/projects` accepts a display name such as `Star Wars`, creates a safe `inbox/<project-slug>/` folder, and stores the exact display name for the selector
 - `DELETE /api/projects/<project-slug>` removes that inbox folder when the slug is valid and present
 - the UI selector reloads from that API instead of using hardcoded project names
-- creating a project from the UI reloads the selector and auto-selects the created slug
+- creating a project from the UI reloads the selector and auto-selects the created display name
 - deleting a project from the UI removes it from both the filesystem and the selector immediately
 - when no inbox projects exist, the UI renders a safe empty state, disables query submission, and keeps the create flow available
 
 Create validation rules:
 
-- slugs are trimmed before validation
-- slugs must start with a letter or number
-- the remaining characters may only be letters, numbers, dots, underscores, and hyphens
+- display names are trimmed before validation
+- display names may contain uppercase letters, lowercase letters, numbers, spaces, hyphens, and underscores
 - empty and whitespace-only input returns `400`
-- duplicate slugs return `409`
-- invalid or escaping/path-traversal input returns `400`
+- duplicate display names after trim/case folding return `409`
+- slash/backslash, control-character, invalid-character, or path-traversal input returns `400`
 - validation failures do not partially create `inbox/<project-slug>/`
 
 Response shapes:
 
-- `GET /api/projects` returns `{ "projects": [...], "default_project_slug": "..." }`
-- successful `POST /api/projects` returns the same selector payload plus `ok`, `created_project_slug`, and `selected_project_slug`
-- successful `DELETE /api/projects/<project-slug>` returns the same selector payload plus `ok` and `deleted_project_slug`
+- `GET /api/projects` returns `{ "projects": [...], "project_options": [...], "default_project_slug": "..." }`
+- successful `POST /api/projects` returns the same selector payload plus `ok`, `created_project_slug`, `created_project_display_name`, and `selected_project_slug`
+- successful `DELETE /api/projects/<project-slug>` returns the same selector payload plus `ok`, `deleted_project_slug`, and `deleted_project_display_name`
 - validation failures return `ok = false` and an `error` object with a stable `code` and user-facing `message`
 
 ## Recommended Query
@@ -262,12 +261,12 @@ The top control area now renders as one larger parent pane with three visible su
 
 - `Query context`: the visible project selector and active queried context
 - `Ask a question`: a larger multiline query entry area and `Run query` in the primary center pane
-- `Project management`: a delete-target pulldown plus `Delete Project`, new project slug input, and `Create Project`
+- `Project management`: a delete-target pulldown plus `Delete Project`, new project name input, and `Create Project`
 
-The visible project selector in the `Query context` pane now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`.
+The visible project selector in the `Query context` pane now reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/` and shows stored display names when available.
 If `alpha` exists, the selector chooses it by default on load.
-The `Create Project` control makes a new inbox folder directly from the UI and then selects it automatically.
-The `Delete Project` control removes the explicitly selected delete target after confirmation and then refreshes the selector state immediately.
+The `Create Project` control makes a new safe inbox folder from the UI display name and then selects it automatically.
+The `Delete Project` control shows the exact display name for the explicitly selected delete target, removes the safe inbox folder after confirmation, and then refreshes the selector state immediately.
 The `Ask a question` pane keeps query submission separate while still using the currently selected project context and repeating that context near the query input.
 If the inbox is temporarily empty, the UI shows a no-projects message, disables query submission safely, and keeps project creation available.
 The answer panel now places the direct answer above `Why this answer`, while sources and trace behavior remain unchanged.
@@ -381,7 +380,7 @@ curl -sS http://localhost:8787/api/projects | jq .
 
 curl -sS \
   -H "Content-Type: application/json" \
-  -d '{"project_slug":"demo-docs-smoke"}' \
+  -d '{"project_name":"Demo Docs Smoke"}' \
   http://localhost:8787/api/projects | jq .
 
 curl -sS \
@@ -448,9 +447,9 @@ curl -sS http://localhost:8787 | sed -n '1,20p'
 
 - empty question: the UI and proxy return `INVALID_QUESTION`
 - blank API slug: the demo proxy defaults it to `alpha`
-- empty or whitespace-only project creation: `POST /api/projects` returns `EMPTY_PROJECT_SLUG`
+- empty or whitespace-only project creation: `POST /api/projects` returns `EMPTY_PROJECT_NAME`
 - duplicate project creation: `POST /api/projects` returns `PROJECT_ALREADY_EXISTS`
-- invalid project creation: `POST /api/projects` returns `INVALID_PROJECT_SLUG`
+- invalid project creation: `POST /api/projects` returns `INVALID_PROJECT_NAME`
 - n8n unavailable: the proxy returns `N8N_UNAVAILABLE`
 - weak retrieval: the upstream assistant can return `grounding.status = weak` with a cautionary note
 - no strong retrieval: the upstream assistant can return `grounding.status = none` and no evidence rows

@@ -28,6 +28,11 @@ function extractFunction(name) {
 }
 
 const functionNames = [
+  "normalizeProjectOptions",
+  "renderProjectOptions",
+  "getProjectDisplayName",
+  "getSelectedProjectDisplayName",
+  "updateProjectContext",
   "deriveAnswerPresentation",
   "splitCaveatSentences",
   "splitSentences",
@@ -52,11 +57,77 @@ const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(
   `${functionNames.map(extractFunction).join("\n\n")}
+  this.normalizeProjectOptions = normalizeProjectOptions;
+  this.renderProjectOptions = renderProjectOptions;
+  this.getProjectDisplayName = getProjectDisplayName;
   this.deriveAnswerPresentation = deriveAnswerPresentation;
   this.buildUncertaintyText = buildUncertaintyText;`,
   sandbox,
   { filename: appPath },
 );
+
+function makeSelect() {
+  const select = {
+    children: [],
+    value: "",
+    appendChild(option) {
+      this.children.push(option);
+      if (option.selected) this.value = option.value;
+    },
+  };
+
+  Object.defineProperty(select, "innerHTML", {
+    get() {
+      return "";
+    },
+    set() {
+      this.children = [];
+      this.value = "";
+    },
+  });
+
+  return select;
+}
+
+sandbox.document = {
+  createElement(tagName) {
+    assert.equal(tagName, "option");
+    return {
+      value: "",
+      textContent: "",
+      selected: false,
+    };
+  },
+};
+sandbox.projectSlugSelect = makeSelect();
+sandbox.deleteProjectSelect = makeSelect();
+sandbox.availableProjects = [];
+sandbox.availableProjectOptions = [];
+sandbox.projectListUnavailable = false;
+sandbox.projectsLoading = false;
+sandbox.answerState = { textContent: "Ready for a query" };
+sandbox.projectCount = { textContent: "" };
+sandbox.activeProjectPill = { textContent: "" };
+sandbox.queryContextBadge = { textContent: "" };
+sandbox.queryContextNote = { textContent: "" };
+sandbox.resetPanels = () => {};
+sandbox.renderNoProjectsState = () => {};
+sandbox.updateProjectContext = sandbox.updateProjectContext;
+
+const selectorOptions = sandbox.normalizeProjectOptions({
+  projects: ["star-wars-2", "alpha"],
+  project_options: [
+    { project_slug: "star-wars-2", display_name: "Star Wars" },
+    { project_slug: "alpha", display_name: "alpha" },
+  ],
+});
+sandbox.renderProjectOptions(selectorOptions, "alpha", "star-wars-2");
+assert.equal(sandbox.projectSlugSelect.value, "star-wars-2");
+assert.equal(sandbox.projectSlugSelect.children[0].value, "star-wars-2");
+assert.equal(sandbox.projectSlugSelect.children[0].textContent, "Star Wars");
+assert.equal(sandbox.deleteProjectSelect.children[0].textContent, "Star Wars");
+assert.equal(sandbox.getProjectDisplayName("star-wars-2"), "Star Wars");
+assert.equal(sandbox.activeProjectPill.textContent, "Star Wars");
 
 const starWarsSources = [
   {

@@ -35,9 +35,12 @@ APP_VERSION_PLACEHOLDER = "__CRISPYBRAIN_APP_VERSION__"
 UNKNOWN_VERSION = "unknown-version"
 FOOTER_VERSION_PATTERN = re.compile(r'(<span class="footer-version">)(.*?)(</span>)', re.DOTALL)
 PROJECT_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
-PROJECT_SLUG_VALIDATION_MESSAGE = (
-    "Project slugs must start with a letter or number and may only contain letters, numbers, dots, underscores, and hyphens."
+PROJECT_NAME_METADATA_FILE = ".crispybrain-projects.json"
+PROJECT_NAME_CONTROL_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
+PROJECT_DISPLAY_NAME_VALIDATION_MESSAGE = (
+    "Project names may contain letters, numbers, spaces, hyphens, and underscores, but not slashes, path traversal, or control characters."
 )
+PROJECT_SLUG_VALIDATION_MESSAGE = "Project references must use a safe inbox project slug."
 
 
 def run_git_command(*args: str) -> str | None:
@@ -121,6 +124,58 @@ def list_inbox_projects() -> list[str]:
     )
 
 
+def load_project_metadata() -> dict[str, Any]:
+    metadata_path = INBOX_DIR / PROJECT_NAME_METADATA_FILE
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"projects": {}}
+
+    if not isinstance(metadata, dict) or not isinstance(metadata.get("projects"), dict):
+        return {"projects": {}}
+
+    return metadata
+
+
+def save_project_metadata(metadata: dict[str, Any]) -> None:
+    INBOX_DIR.mkdir(parents=True, exist_ok=True)
+    metadata_path = INBOX_DIR / PROJECT_NAME_METADATA_FILE
+    projects_metadata = metadata.get("projects")
+    if not isinstance(projects_metadata, dict) or not projects_metadata:
+        try:
+            metadata_path.unlink()
+        except FileNotFoundError:
+            pass
+        return
+
+    metadata_path.write_text(
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def get_project_display_name(project_slug: str, metadata: dict[str, Any] | None = None) -> str:
+    metadata = metadata or load_project_metadata()
+    project_metadata = metadata.get("projects", {}).get(project_slug)
+    if isinstance(project_metadata, dict):
+        display_name = project_metadata.get("display_name")
+        if isinstance(display_name, str) and display_name.strip():
+            return display_name.strip()
+
+    return project_slug
+
+
+def build_project_options(project_slugs: list[str]) -> list[dict[str, str]]:
+    metadata = load_project_metadata()
+    return [
+        {
+            "project_slug": project_slug,
+            "display_name": get_project_display_name(project_slug, metadata),
+        }
+        for project_slug in project_slugs
+    ]
+
+
 def resolve_default_project_slug(project_slugs: list[str]) -> str:
     if "alpha" in project_slugs:
         return "alpha"
@@ -133,8 +188,59 @@ def build_projects_payload() -> dict[str, Any]:
     project_slugs = list_inbox_projects()
     return {
         "projects": project_slugs,
+        "project_options": build_project_options(project_slugs),
         "default_project_slug": resolve_default_project_slug(project_slugs),
     }
+
+
+def validate_project_display_name(project_name: str) -> tuple[str | None, str | None]:
+    normalized_name = project_name.strip()
+    if not normalized_name:
+        return None, "EMPTY_PROJECT_NAME"
+    if PROJECT_NAME_CONTROL_PATTERN.search(normalized_name):
+        return None, "INVALID_PROJECT_NAME"
+    if "/" in normalized_name or "\\" in normalized_name:
+        return None, "INVALID_PROJECT_NAME"
+    if ".." in normalized_name.split():
+        return None, "INVALID_PROJECT_NAME"
+    if ".." in normalized_name:
+        return None, "INVALID_PROJECT_NAME"
+    if not re.fullmatch(r"[A-Za-z0-9 _-]+", normalized_name):
+        return None, "INVALID_PROJECT_NAME"
+
+    return normalized_name, None
+
+
+def normalize_project_display_name_for_comparison(project_name: str) -> str:
+    return re.sub(r"\s+", " ", project_name.strip()).casefold()
+
+
+def project_display_name_exists(project_name: str) -> bool:
+    desired_name = normalize_project_display_name_for_comparison(project_name)
+    metadata = load_project_metadata()
+    return any(
+        normalize_project_display_name_for_comparison(get_project_display_name(project_slug, metadata)) == desired_name
+        for project_slug in list_inbox_projects()
+    )
+
+
+def slugify_project_display_name(project_name: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "-", project_name.strip()).strip("-_").lower()
+    slug = re.sub(r"-{2,}", "-", slug)
+    return slug or "project"
+
+
+def build_available_project_slug(project_name: str) -> str:
+    base_slug = slugify_project_display_name(project_name)
+    project_slugs = set(list_inbox_projects())
+    if base_slug not in project_slugs:
+        return base_slug
+
+    suffix = 2
+    while f"{base_slug}-{suffix}" in project_slugs:
+        suffix += 1
+
+    return f"{base_slug}-{suffix}"
 
 
 def resolve_project_path(project_slug: str) -> Path | None:
@@ -237,12 +343,20 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
             )
             return
 
+        deleted_project_display_name = get_project_display_name(project_slug)
         shutil.rmtree(project_path)
+        metadata = load_project_metadata()
+        projects_metadata = metadata.get("projects")
+        if isinstance(projects_metadata, dict) and project_slug in projects_metadata:
+            projects_metadata.pop(project_slug, None)
+            save_project_metadata(metadata)
+
         response_payload = build_projects_payload()
         response_payload.update(
             {
                 "ok": True,
                 "deleted_project_slug": project_slug,
+                "deleted_project_display_name": deleted_project_display_name,
             }
         )
         self._write_json(HTTPStatus.OK, response_payload)
@@ -389,49 +503,75 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
         self._write_json(status, upstream_payload)
 
     def _handle_create_project(self, payload: dict[str, Any]) -> None:
-        project_slug = payload.get("project_slug")
-        if not isinstance(project_slug, str):
+        project_name = payload.get("project_name", payload.get("project_slug"))
+        if not isinstance(project_name, str):
             self._write_json(
                 HTTPStatus.BAD_REQUEST,
                 {
                     "ok": False,
                     "error": {
-                        "code": "INVALID_PROJECT_SLUG",
-                        "message": "project_slug must be a string.",
+                        "code": "INVALID_PROJECT_NAME",
+                        "message": "project_name must be a string.",
                     },
                 },
             )
             return
 
-        normalized_slug = project_slug.strip()
-        if not normalized_slug:
+        display_name, validation_error = validate_project_display_name(project_name)
+        if validation_error == "EMPTY_PROJECT_NAME":
             self._write_json(
                 HTTPStatus.BAD_REQUEST,
                 {
                     "ok": False,
                     "error": {
-                        "code": "EMPTY_PROJECT_SLUG",
-                        "message": "Enter a project slug before creating a project.",
+                        "code": "EMPTY_PROJECT_NAME",
+                        "message": "Enter a project name before creating a project.",
                     },
                 },
             )
             return
-
-        project_path = resolve_project_path(normalized_slug)
-        if project_path is None:
+        if validation_error or display_name is None:
             self._write_json(
                 HTTPStatus.BAD_REQUEST,
                 {
                     "ok": False,
                     "error": {
-                        "code": "INVALID_PROJECT_SLUG",
-                        "message": PROJECT_SLUG_VALIDATION_MESSAGE,
+                        "code": "INVALID_PROJECT_NAME",
+                        "message": PROJECT_DISPLAY_NAME_VALIDATION_MESSAGE,
                     },
                 },
             )
             return
 
         INBOX_DIR.mkdir(parents=True, exist_ok=True)
+        if project_display_name_exists(display_name):
+            self._write_json(
+                HTTPStatus.CONFLICT,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "PROJECT_ALREADY_EXISTS",
+                        "message": "An inbox project with that name already exists.",
+                    },
+                },
+            )
+            return
+
+        normalized_slug = build_available_project_slug(display_name)
+        project_path = resolve_project_path(normalized_slug)
+        if project_path is None:
+            self._write_json(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "PROJECT_CREATE_FAILED",
+                        "message": "CrispyBrain could not create a safe project reference for that name.",
+                    },
+                },
+            )
+            return
+
         if project_path.exists():
             self._write_json(
                 HTTPStatus.CONFLICT,
@@ -473,12 +613,20 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
             )
             return
 
+        metadata = load_project_metadata()
+        projects_metadata = metadata.setdefault("projects", {})
+        if isinstance(projects_metadata, dict):
+            projects_metadata[normalized_slug] = {"display_name": display_name}
+            save_project_metadata(metadata)
+
         response_payload = build_projects_payload()
         response_payload.update(
             {
                 "ok": True,
                 "created_project_slug": normalized_slug,
+                "created_project_display_name": display_name,
                 "selected_project_slug": normalized_slug,
+                "selected_project_display_name": display_name,
             }
         )
         self._write_json(HTTPStatus.CREATED, response_payload)

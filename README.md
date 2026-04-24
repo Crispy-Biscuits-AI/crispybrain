@@ -28,7 +28,7 @@ CrispyBrain currently provides:
 - Real token usage from live model execution when available
 - Explicit unavailable usage states instead of estimates or stale values
 - Deterministic evaluation system (tests match live behavior)
-- Inbox-backed project create/list/delete flow with validation, auto-selection, and empty-state UX on both the repo-local and wrapper-started demo UI
+- Inbox-backed project create/list/delete flow with display names, safe internal slugs, validation, auto-selection, and empty-state UX on both the repo-local and wrapper-started demo UI
 - Markdown Q&A export controls with Full and Social clipboard formats from the rendered demo answer state
 - Clean demo answer presentation that keeps direct answers separate from weak-grounding caveats and preserves proper-name capitalization from visible memory sources
 - Reliable version injection for Docker runtime
@@ -216,14 +216,14 @@ scripts/workflows/import-exported-into-docker.sh
 
 - `Query context`: it makes the selected project explicit before you run retrieval
 - `Ask a question`: it keeps a larger multiline query entry area and `Run query` button in the primary center sub-pane while reinforcing the active project/context
-- `Project management`: it keeps a dedicated delete-target pulldown plus the `Delete Project`, new project slug input, and `Create Project` controls in the right sub-pane
+- `Project management`: it keeps a dedicated delete-target pulldown plus the `Delete Project`, new project name input, and `Create Project` controls in the right sub-pane
 - question: `How am I planning to build CrispyBrain?`
 
-Project creation and validation now follow the repo inbox as the source of truth:
+Project creation and validation now follow the repo inbox as the source of truth while separating user-facing display names from safe internal slugs:
 
-- `POST /api/projects` creates a new `inbox/<project-slug>/` folder when the slug is valid and available
-- slugs are trimmed, must start with a letter or number, and may only contain letters, numbers, dots, underscores, and hyphens
-- empty, whitespace-only, duplicate, and escaping/path-traversal inputs are rejected before anything is created
+- `POST /api/projects` accepts a display name such as `Star Wars`, creates a safe `inbox/<project-slug>/` folder, and stores the exact display name for selectors and delete UI
+- display names are trimmed and may contain uppercase letters, lowercase letters, numbers, spaces, hyphens, and underscores
+- empty, whitespace-only, duplicate display names after trim/case folding, slash/backslash, control-character, and path-traversal inputs are rejected before anything is created
 - when no inbox projects exist, the UI keeps `Create Project` available, disables query submission safely, and auto-selects the first newly created project
 
 Success currently looks like:
@@ -232,9 +232,9 @@ Success currently looks like:
 - the theme selector is available
 - the top controls render as one parent pane containing three sub-panes on desktop: `Query context`, `Ask a question`, and `Project management`
 - `GET /api/projects` returns the current repo inbox folders without a `404`
-- `POST /api/projects` creates a valid inbox project and returns the created slug plus the refreshed selector payload
-- the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/`
-- creating a project from the UI reloads the selector and auto-selects the new project
+- `POST /api/projects` creates a valid inbox project and returns the created slug, display name, and refreshed selector payload
+- the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/` while showing stored display names when available
+- creating a project from the UI reloads the selector and auto-selects the new project by display name
 - invalid or duplicate create attempts return clear `4xx` validation responses without partial folder creation
 - when the inbox is empty, the UI shows a safe empty state and keeps the create flow available
 - deleting a project removes the explicitly selected delete target from its pulldown and from the inbox-backed selector state immediately
