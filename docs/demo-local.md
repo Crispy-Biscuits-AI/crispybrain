@@ -351,6 +351,8 @@ When support is weak or absent, the workflow stays explicit instead of implying 
 - `grounding.status = weak` renders `Limited confidence`
 - `grounding.status = none` renders `No evidence`
 - weak support still renders a visible uncertainty note, but it now stays in `Why this answer` so the `Answer` pane can show only the direct grounded answer when one exists
+- unsupported detail prompts keep the direct answer pane concise, for example `Project memory does not mention Darth Vader's cape being pink.`, while retrieval-limit and partial-context wording stays in `Why this answer`
+- display-only answer cleanup preserves canonical proper-name capitalization from the question and visible source snippets, so normalized matching text does not leak into the rendered answer
 
 ## Curl Smoke Tests
 

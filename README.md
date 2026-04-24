@@ -30,6 +30,7 @@ CrispyBrain currently provides:
 - Deterministic evaluation system (tests match live behavior)
 - Inbox-backed project create/list/delete flow with validation, auto-selection, and empty-state UX on both the repo-local and wrapper-started demo UI
 - Markdown Q&A export controls with Full and Social clipboard formats from the rendered demo answer state
+- Clean demo answer presentation that keeps direct answers separate from weak-grounding caveats and preserves proper-name capitalization from visible memory sources
 - Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 

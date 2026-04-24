@@ -561,7 +561,7 @@ function resetPanels() {
 function renderSuccess(body, meta = {}) {
   const selectedSources = normalizeSources(body.selected_sources || body.sources);
   const retrievedCandidates = normalizeSources(body.retrieved_candidates);
-  const presentation = deriveAnswerPresentation(body);
+  const presentation = deriveAnswerPresentation(body, selectedSources);
   if (typeof meta.question === "string") {
     setRenderedQuestion(meta.question);
   }
@@ -579,7 +579,7 @@ function renderSuccess(body, meta = {}) {
 function renderError(error, body = {}, meta = {}) {
   const selectedSources = normalizeSources(body.selected_sources || body.sources);
   const retrievedCandidates = normalizeSources(body.retrieved_candidates);
-  const presentation = deriveAnswerPresentation(body);
+  const presentation = deriveAnswerPresentation(body, selectedSources);
   setRenderedQuestion(typeof meta.question === "string" ? meta.question : "");
   answerState.textContent = "Request could not be completed";
   answerOutput.textContent = presentation.answerText || body.answer || error.message || "The memory query failed.";
@@ -1090,7 +1090,7 @@ function buildAnswerState(body, sources) {
   return "Response ready";
 }
 
-function deriveAnswerPresentation(body) {
+function deriveAnswerPresentation(body, selectedSources = []) {
   const rawAnswer = cleanText(body.answer);
   if (!rawAnswer) {
     return {
@@ -1101,7 +1101,7 @@ function deriveAnswerPresentation(body) {
 
   if (body.answer_mode !== "direct") {
     return {
-      answerText: rawAnswer,
+      answerText: canonicalizeAnswerTerms(rawAnswer, body, selectedSources),
       caveatText: "",
     };
   }
@@ -1120,6 +1120,13 @@ function deriveAnswerPresentation(body) {
       }
     }
 
+    const sentenceSplit = splitCaveatSentences(paragraph);
+    if (sentenceSplit !== null) {
+      if (sentenceSplit.answerText) answerParagraphs.push(sentenceSplit.answerText);
+      if (sentenceSplit.caveatText) caveatParagraphs.push(sentenceSplit.caveatText);
+      continue;
+    }
+
     if (looksLikeAnswerCaveat(paragraph)) {
       caveatParagraphs.push(paragraph);
       continue;
@@ -1128,13 +1135,150 @@ function deriveAnswerPresentation(body) {
     answerParagraphs.push(paragraph);
   }
 
-  const answerText = answerParagraphs.join("\n\n").trim() || rawAnswer;
-  const caveatText = uniqueTexts(caveatParagraphs).join(" ").trim();
+  const fallbackAnswer = answerParagraphs.join("\n\n").trim()
+    || buildUnsupportedDetailAnswer(body)
+    || rawAnswer;
+  const answerText = canonicalizeAnswerTerms(
+    normalizeDirectAnswerText(fallbackAnswer),
+    body,
+    selectedSources,
+  );
+  const caveatText = canonicalizeAnswerTerms(
+    uniqueTexts(caveatParagraphs).join(" ").trim(),
+    body,
+    selectedSources,
+  );
 
   return {
     answerText,
     caveatText,
   };
+}
+
+function splitCaveatSentences(paragraph) {
+  const sentences = splitSentences(paragraph);
+  if (sentences.length < 2 || !looksLikeAnswerCaveat(sentences[0])) {
+    return null;
+  }
+
+  const answerSentences = [];
+  const caveatSentences = [];
+  let answerStarted = false;
+
+  for (const sentence of sentences) {
+    if (!answerStarted && looksLikeAnswerCaveat(sentence)) {
+      caveatSentences.push(sentence);
+      continue;
+    }
+
+    answerStarted = true;
+    answerSentences.push(sentence);
+  }
+
+  return {
+    answerText: answerSentences.join(" ").trim(),
+    caveatText: caveatSentences.join(" ").trim(),
+  };
+}
+
+function splitSentences(text) {
+  return cleanText(text)
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+function normalizeDirectAnswerText(text) {
+  return cleanText(text)
+    .replace(
+      /^there is no mention of (.+?) in (?:the )?(?:retrieved memory context|available project memory|project memory)\.?$/i,
+      "Project memory does not mention $1.",
+    )
+    .replace(
+      /^no mention of (.+?) appears in (?:the )?(?:retrieved memory context|available project memory|project memory)\.?$/i,
+      "Project memory does not mention $1.",
+    )
+    .trim();
+}
+
+function buildUnsupportedDetailAnswer(body) {
+  const question = cleanText(body.query) || cleanText(body.question);
+  const claim = describeUnsupportedQuestionClaim(question);
+  if (!claim) return "";
+  return `Project memory does not mention ${claim}.`;
+}
+
+function describeUnsupportedQuestionClaim(question) {
+  const normalized = cleanText(question)
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[?]+$/g, "")
+    .trim();
+  const match = normalized.match(/^(?:is|are|was|were)\s+(.+)$/i);
+  if (!match) return "";
+
+  const words = match[1].trim().split(/\s+/).filter(Boolean);
+  if (words.length < 3) return `that ${match[1].trim()}`;
+
+  const predicate = words.pop();
+  return `${words.join(" ")} being ${predicate}`;
+}
+
+function canonicalizeAnswerTerms(text, body = {}, selectedSources = []) {
+  const sourceTexts = collectCanonicalSourceTexts(body, selectedSources);
+  const canonicalTerms = extractCanonicalTerms(sourceTexts);
+  let result = cleanText(text);
+
+  for (const term of canonicalTerms) {
+    result = replaceCanonicalTerm(result, term);
+  }
+
+  return result;
+}
+
+function collectCanonicalSourceTexts(body, selectedSources) {
+  const texts = [
+    cleanText(body.query),
+    cleanText(body.question),
+    cleanText(body.answer),
+  ];
+
+  for (const source of selectedSources) {
+    const record = asObject(source);
+    texts.push(
+      cleanText(record.title),
+      cleanText(record.filename),
+      cleanText(record.snippet),
+      cleanText(record.content),
+      cleanText(record.preview),
+    );
+  }
+
+  return texts.filter(Boolean);
+}
+
+function extractCanonicalTerms(texts) {
+  const terms = [];
+  const seen = new Set();
+  const candidatePattern = /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g;
+  const ignored = new Set(["Project Memory", "Crispy Brain"]);
+
+  for (const text of texts) {
+    for (const match of text.matchAll(candidatePattern)) {
+      const term = match[0].trim();
+      const key = term.toLowerCase();
+      if (ignored.has(term) || seen.has(key)) continue;
+      seen.add(key);
+      terms.push(term);
+    }
+  }
+
+  return terms.sort((a, b) => b.length - a.length);
+}
+
+function replaceCanonicalTerm(text, term) {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp("\\b" + escaped.replace(/\s+/g, "\\s+") + "\\b", "gi");
+  return text.replace(pattern, term);
 }
 
 function splitAnswerParagraphs(answerText) {
@@ -1171,7 +1315,9 @@ function looksLikeAnswerCaveat(text) {
     /^available project memory is limited\b/,
     /^based on available project memory\b/,
     /^project memory is limited\b/,
+    /^project memory provides only partial information\b/,
     /^the evidence is limited\b/,
+    /^from project memory\b/,
     /^however, (?:the )?available information is limited\b/,
     /^grounding is weak\b/,
     /^early development is only partially documented\b/,

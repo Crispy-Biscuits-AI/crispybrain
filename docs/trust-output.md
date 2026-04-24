@@ -244,6 +244,7 @@ The presentation layer now mirrors that trust state without hiding the workflow'
 
 - `grounded`: the answer pane shows the direct grounded answer, while the rationale layer explains the supporting evidence
 - `weak`: the answer pane still shows the direct grounded answer when one exists, while deterministic caveats and `grounding.note` move into `Why this answer`
+- unsupported detail prompts still get a direct non-verification answer in the answer pane, while partial-context and retrieval-limit wording remains in `Why this answer`
 - `none`: the assistant keeps the existing insufficient-memory fallback in the answer pane and does not synthesize an answer
 
 This keeps weak support visible in the structured response and in the rationale layer without burying the direct answer sentence.
