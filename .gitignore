@@ -23,6 +23,7 @@ inbox/
 # Local data
 n8n-data/
 postgres-data/
+demo-recordings/
 
 # Legacy local working folders from earlier experiments
 openbrain/inbox/
