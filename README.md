@@ -31,6 +31,7 @@ CrispyBrain currently provides:
 - Inbox-backed project create/list/delete flow with display names, safe internal slugs, validation, auto-selection, and empty-state UX on both the repo-local and wrapper-started demo UI
 - Markdown Q&A export controls with Full and Social clipboard formats from the rendered demo answer state
 - Clean demo answer presentation that keeps direct answers separate from weak-grounding caveats and preserves proper-name capitalization from visible memory sources
+- Curated article memory drops can use the `Curated Articles` display project with safe inbox slug `curated-articles`
 - Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
@@ -225,6 +226,9 @@ Project creation and validation now follow the repo inbox as the source of truth
 - display names are trimmed and may contain uppercase letters, lowercase letters, numbers, spaces, hyphens, and underscores
 - empty, whitespace-only, duplicate display names after trim/case folding, slash/backslash, control-character, and path-traversal inputs are rejected before anything is created
 - when no inbox projects exist, the UI keeps `Create Project` available, disables query submission safely, and auto-selects the first newly created project
+
+For Agentic AI Curator exports, use display project `Curated Articles`.
+The existing safe internal slug behavior maps that project to `inbox/curated-articles/`, which is the slug to use when querying the assistant directly.
 
 Success currently looks like:
 

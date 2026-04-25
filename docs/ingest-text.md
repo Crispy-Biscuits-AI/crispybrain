@@ -39,6 +39,19 @@ Example:
 mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 ```
 
+For article memories exported by Agentic AI Curator, use the display project `Curated Articles`.
+CrispyBrain's safe inbox slug for that display name is:
+
+```text
+curated-articles
+```
+
+The corresponding folder is:
+
+```bash
+mkdir -p /Users/elric/repos/crispybrain/inbox/curated-articles
+```
+
 Step 3 — Verify the runtime mount
 
 - In a live file-drop setup, the same file should also be visible to n8n under `/home/node/.n8n-files/crispybrain/inbox/<project-slug>/`.
@@ -52,7 +65,7 @@ Step 4 — Wait briefly
 Step 5 — Ask a question in the UI
 
 - Open `http://localhost:8787`
-- Use project slug `alpha`
+- Use the relevant project. For Agentic AI Curator exports, select `Curated Articles` in the UI or use project slug `curated-articles` when calling the assistant webhook directly.
 - Ask a question that matches the text you just added
 
 ## Example
@@ -108,3 +121,4 @@ This keeps the trust layer intact for normal inbox content while making the cura
 - In the current verified lab runtime, the active watcher polls `/home/node/.n8n-files/crispybrain/inbox`, which is mounted from `/Users/elric/repos/crispybrain/inbox`.
 - The watcher is intentionally file-drop only here; it does not add PDF parsing or other document ingestion behavior.
 - The default demo setup is strongest with project slug `alpha` unless you have configured another project path.
+- Agentic AI Curator article exports use the existing file-drop path and do not require a CrispyBrain workflow change.
