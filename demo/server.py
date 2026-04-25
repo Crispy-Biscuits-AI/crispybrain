@@ -12,6 +12,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -37,6 +38,7 @@ FOOTER_VERSION_PATTERN = re.compile(r'(<span class="footer-version">)(.*?)(</spa
 PROJECT_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 PROJECT_NAME_METADATA_FILE = ".crispybrain-projects.json"
 PROJECT_NAME_CONTROL_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
+INBOX_IMPORT_FILENAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._ -]{0,127}")
 PROJECT_DISPLAY_NAME_VALIDATION_MESSAGE = (
     "Project names may contain letters, numbers, spaces, hyphens, and underscores, but not slashes, path traversal, or control characters."
 )
@@ -260,6 +262,41 @@ def resolve_project_path(project_slug: str) -> Path | None:
     return candidate
 
 
+def validate_inbox_import_filename(filename: Any) -> tuple[str | None, str | None]:
+    if not isinstance(filename, str):
+        return None, "filename must be a string"
+
+    if not filename:
+        return None, "filename must not be empty"
+
+    if filename != filename.strip():
+        return None, "filename must not contain leading or trailing whitespace"
+
+    if not filename:
+        return None, "filename must not be empty"
+
+    candidate_path = Path(filename)
+    if candidate_path.is_absolute():
+        return None, "absolute paths are not allowed"
+
+    if "/" in filename or "\\" in filename:
+        return None, "subdirectories and path separators are not allowed"
+
+    if filename in {".", ".."} or ".." in filename.split("."):
+        return None, "path traversal is not allowed"
+
+    if filename.startswith("."):
+        return None, "hidden filenames are not allowed"
+
+    if filename.endswith(".") or filename.endswith(" "):
+        return None, "filename must not end with a dot or space"
+
+    if not INBOX_IMPORT_FILENAME_PATTERN.fullmatch(filename):
+        return None, "filename may contain only letters, numbers, spaces, dots, hyphens, and underscores"
+
+    return filename, None
+
+
 def render_index_html() -> str:
     footer_version = html.escape(resolve_footer_version())
     rendered = (DEMO_DIR / "index.html").read_text(encoding="utf-8")
@@ -363,7 +400,7 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         clean_path = urlparse(self.path).path
-        if clean_path not in {"/api/demo/ask", "/api/projects"}:
+        if clean_path not in {"/api/demo/ask", "/api/projects", "/api/inbox/import"}:
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
             return
 
@@ -373,6 +410,10 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
 
         if clean_path == "/api/projects":
             self._handle_create_project(payload)
+            return
+
+        if clean_path == "/api/inbox/import":
+            self._handle_inbox_import(payload)
             return
 
         question = payload.get("question")
@@ -630,6 +671,122 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
             }
         )
         self._write_json(HTTPStatus.CREATED, response_payload)
+
+    def _handle_inbox_import(self, payload: dict[str, Any]) -> None:
+        files = payload.get("files")
+        if not isinstance(files, list) or not files:
+            self._write_json(
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "success": False,
+                    "saved": [],
+                    "rejected": [{"reason": "files must be a non-empty array"}],
+                    "inbox_path": "inbox",
+                },
+            )
+            return
+
+        saved: list[dict[str, Any]] = []
+        rejected: list[dict[str, Any]] = []
+        inbox_root = INBOX_DIR.resolve()
+
+        for index, file_payload in enumerate(files):
+            if not isinstance(file_payload, dict):
+                rejected.append(
+                    {
+                        "index": index,
+                        "filename": None,
+                        "reason": "file entry must be an object",
+                    }
+                )
+                continue
+
+            original_filename = file_payload.get("filename")
+            filename, filename_error = validate_inbox_import_filename(original_filename)
+            if filename_error or filename is None:
+                rejected.append(
+                    {
+                        "index": index,
+                        "filename": original_filename,
+                        "reason": filename_error,
+                    }
+                )
+                continue
+
+            content = file_payload.get("content")
+            if not isinstance(content, str):
+                rejected.append(
+                    {
+                        "index": index,
+                        "filename": filename,
+                        "reason": "content must be a string",
+                    }
+                )
+                continue
+
+            target_path = (INBOX_DIR / filename).resolve()
+            try:
+                target_path.relative_to(inbox_root)
+            except ValueError:
+                rejected.append(
+                    {
+                        "index": index,
+                        "filename": filename,
+                        "reason": "resolved path escapes inbox",
+                    }
+                )
+                continue
+
+            encoded_content = content.encode("utf-8")
+            try:
+                INBOX_DIR.mkdir(parents=True, exist_ok=True)
+                with target_path.open("xb") as inbox_file:
+                    inbox_file.write(encoded_content)
+            except FileExistsError:
+                rejected.append(
+                    {
+                        "index": index,
+                        "filename": filename,
+                        "reason": "file already exists",
+                    }
+                )
+                continue
+            except OSError as exc:
+                rejected.append(
+                    {
+                        "index": index,
+                        "filename": filename,
+                        "reason": f"could not save file: {exc}",
+                    }
+                )
+                continue
+
+            timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            saved.append(
+                {
+                    "filename": filename,
+                    "path": f"inbox/{filename}",
+                    "bytes": len(encoded_content),
+                    "timestamp": timestamp,
+                }
+            )
+
+        response_payload = {
+            "success": not rejected,
+            "saved": saved,
+            "rejected": rejected,
+            "inbox_path": "inbox",
+        }
+        if saved and rejected:
+            status = HTTPStatus.MULTI_STATUS
+        elif saved:
+            status = HTTPStatus.CREATED
+        elif any(item.get("reason") == "file already exists" for item in rejected):
+            status = HTTPStatus.CONFLICT
+        else:
+            status = HTTPStatus.BAD_REQUEST
+
+        self._write_json(status, response_payload)
 
     def translate_path(self, path: str) -> str:
         clean_path = urlparse(path).path

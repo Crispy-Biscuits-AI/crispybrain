@@ -72,7 +72,10 @@ def request_json(method: str, url: str, payload: dict[str, object] | None = None
         with urllib.request.urlopen(request, timeout=5) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        return exc.code, json.loads(exc.read().decode("utf-8"))
+        try:
+            return exc.code, json.loads(exc.read().decode("utf-8"))
+        finally:
+            exc.close()
 
 
 class ProjectDisplayNameTests(unittest.TestCase):
@@ -167,6 +170,116 @@ class ProjectDisplayNameTests(unittest.TestCase):
                 status, body = request_json("POST", f"{self.base_url}/api/projects", {"project_name": project_name})
                 self.assertEqual(status, HTTPStatus.BAD_REQUEST)
                 self.assertIn(body["error"]["code"], {"EMPTY_PROJECT_NAME", "INVALID_PROJECT_NAME"})
+
+
+class InboxImportTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+
+        self.original_inbox_dir = demo_server.INBOX_DIR
+        demo_server.INBOX_DIR = Path(self.tempdir.name) / "inbox"
+
+        self.demo_httpd, self.base_url = start_server(demo_server.CrispyBrainDemoHandler)
+        self.addCleanup(self.demo_httpd.shutdown)
+        self.addCleanup(self.demo_httpd.server_close)
+
+    def tearDown(self) -> None:
+        demo_server.INBOX_DIR = self.original_inbox_dir
+
+    def test_successful_import_creates_inbox_directory(self) -> None:
+        self.assertFalse(demo_server.INBOX_DIR.exists())
+
+        status, body = request_json(
+            "POST",
+            f"{self.base_url}/api/inbox/import",
+            {
+                "files": [
+                    {
+                        "filename": "example.md",
+                        "content": "Hello from agentic-ai-curator\n",
+                        "source": "agentic-ai-curator",
+                    }
+                ]
+            },
+        )
+
+        self.assertEqual(status, HTTPStatus.CREATED)
+        self.assertEqual(body["success"], True)
+        self.assertEqual(body["rejected"], [])
+        self.assertEqual(body["inbox_path"], "inbox")
+        self.assertEqual(body["saved"][0]["filename"], "example.md")
+        self.assertEqual(body["saved"][0]["path"], "inbox/example.md")
+        self.assertEqual(body["saved"][0]["bytes"], len("Hello from agentic-ai-curator\n".encode("utf-8")))
+        self.assertIsInstance(body["saved"][0]["timestamp"], str)
+        self.assertEqual((demo_server.INBOX_DIR / "example.md").read_text(encoding="utf-8"), "Hello from agentic-ai-curator\n")
+
+    def test_path_traversal_is_rejected_without_write(self) -> None:
+        status, body = request_json(
+            "POST",
+            f"{self.base_url}/api/inbox/import",
+            {"files": [{"filename": "../escape.md", "content": "nope"}]},
+        )
+
+        self.assertEqual(status, HTTPStatus.BAD_REQUEST)
+        self.assertEqual(body["success"], False)
+        self.assertEqual(body["saved"], [])
+        self.assertIn("path", body["rejected"][0]["reason"])
+        self.assertFalse((Path(self.tempdir.name) / "escape.md").exists())
+
+    def test_absolute_path_is_rejected_without_write(self) -> None:
+        escape_path = Path(self.tempdir.name) / "absolute.md"
+        status, body = request_json(
+            "POST",
+            f"{self.base_url}/api/inbox/import",
+            {"files": [{"filename": str(escape_path), "content": "nope"}]},
+        )
+
+        self.assertEqual(status, HTTPStatus.BAD_REQUEST)
+        self.assertEqual(body["success"], False)
+        self.assertEqual(body["saved"], [])
+        self.assertIn("absolute paths", body["rejected"][0]["reason"])
+        self.assertFalse(escape_path.exists())
+
+    def test_duplicate_filename_is_rejected_without_overwrite(self) -> None:
+        first_status, first_body = request_json(
+            "POST",
+            f"{self.base_url}/api/inbox/import",
+            {"files": [{"filename": "duplicate.md", "content": "first"}]},
+        )
+        self.assertEqual(first_status, HTTPStatus.CREATED)
+        self.assertEqual(first_body["success"], True)
+
+        status, body = request_json(
+            "POST",
+            f"{self.base_url}/api/inbox/import",
+            {"files": [{"filename": "duplicate.md", "content": "second"}]},
+        )
+
+        self.assertEqual(status, HTTPStatus.CONFLICT)
+        self.assertEqual(body["success"], False)
+        self.assertEqual(body["saved"], [])
+        self.assertEqual(body["rejected"][0]["reason"], "file already exists")
+        self.assertEqual((demo_server.INBOX_DIR / "duplicate.md").read_text(encoding="utf-8"), "first")
+
+    def test_empty_and_suspicious_filenames_are_rejected(self) -> None:
+        status, body = request_json(
+            "POST",
+            f"{self.base_url}/api/inbox/import",
+            {
+                "files": [
+                    {"filename": "", "content": "empty"},
+                    {"filename": "bad:name.md", "content": "suspicious"},
+                    {"filename": ".hidden.md", "content": "hidden"},
+                ]
+            },
+        )
+
+        self.assertEqual(status, HTTPStatus.BAD_REQUEST)
+        self.assertEqual(body["success"], False)
+        self.assertEqual(body["saved"], [])
+        self.assertEqual(len(body["rejected"]), 3)
+        self.assertFalse(demo_server.INBOX_DIR.exists())
 
 
 if __name__ == "__main__":

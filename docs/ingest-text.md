@@ -39,6 +39,35 @@ Example:
 mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 ```
 
+For local file exports that should land at the repo inbox root, the demo server exposes a JSON import endpoint:
+
+```bash
+curl -sS -X POST http://localhost:8787/api/inbox/import \
+  -H 'Content-Type: application/json' \
+  --data '{"files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
+```
+
+Sample response:
+
+```json
+{
+  "success": true,
+  "saved": [
+    {
+      "filename": "example.md",
+      "path": "inbox/example.md",
+      "bytes": 19,
+      "timestamp": "2026-04-25T09:05:31.085349Z"
+    }
+  ],
+  "rejected": [],
+  "inbox_path": "inbox"
+}
+```
+
+That endpoint writes accepted files under `/Users/elric/repos/crispybrain/inbox/` and creates the `inbox/` directory if it is missing.
+It accepts only safe single filenames, rejects absolute paths and path traversal, and rejects duplicate filenames with `409` instead of overwriting.
+
 For article memories exported by Agentic AI Curator, use the display project `Curated Articles`.
 CrispyBrain's safe inbox slug for that display name is:
 

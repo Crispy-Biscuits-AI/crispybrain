@@ -243,6 +243,63 @@ Response shapes:
 - successful `DELETE /api/projects/<project-slug>` returns the same selector payload plus `ok`, `deleted_project_slug`, and `deleted_project_display_name`
 - validation failures return `ok = false` and an `error` object with a stable `code` and user-facing `message`
 
+## Inbox Import API
+
+The local demo server accepts exported file content for the repo inbox:
+
+- endpoint: `POST /api/inbox/import`
+- content type: `application/json`
+- destination directory: `/Users/elric/repos/crispybrain/inbox/`
+- response path base: `inbox`
+
+Sample request:
+
+```bash
+curl -sS -X POST http://localhost:8787/api/inbox/import \
+  -H 'Content-Type: application/json' \
+  --data '{"files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
+```
+
+Sample successful response:
+
+```json
+{
+  "success": true,
+  "saved": [
+    {
+      "filename": "example.md",
+      "path": "inbox/example.md",
+      "bytes": 19,
+      "timestamp": "2026-04-25T09:05:31.085349Z"
+    }
+  ],
+  "rejected": [],
+  "inbox_path": "inbox"
+}
+```
+
+The sample request saves `/Users/elric/repos/crispybrain/inbox/example.md`.
+The server creates `inbox/` if it is missing.
+Filenames must be single safe relative filenames. Absolute paths, subdirectories, path traversal, empty names, hidden names, names with leading/trailing whitespace, and names with characters outside letters, numbers, spaces, dots, hyphens, and underscores are rejected.
+Duplicate filenames are rejected with `409` and are not overwritten.
+
+Sample duplicate response:
+
+```json
+{
+  "success": false,
+  "saved": [],
+  "rejected": [
+    {
+      "index": 0,
+      "filename": "example.md",
+      "reason": "file already exists"
+    }
+  ],
+  "inbox_path": "inbox"
+}
+```
+
 ## Recommended Query
 
 Use:
