@@ -1,5 +1,7 @@
 # CrispyBrain v0.8
 
+Status: historical release note. The current docs version is `v1.0.0-14-g59bd5dc`.
+
 `v0.8` is the trust and evaluation release.
 
 It keeps the existing local demo and workflow shape intact while making retrieval support easier for operators to inspect and easier to validate repeatedly.

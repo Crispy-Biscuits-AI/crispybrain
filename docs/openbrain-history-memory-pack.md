@@ -1,5 +1,9 @@
 # OpenBrain History Memory Pack
 
+Current version: `v1.0.0-14-g59bd5dc`
+
+Status: curated historical corpus note. OpenBrain references are intentional history/compatibility references.
+
 ## Purpose
 
 This document audits the historical memory pack created for self-query ingest. The pack is a curated historical corpus derived from repo-visible evidence, not a perfect transcript of every conversation, experiment, or decision that happened outside the repository.

@@ -1,5 +1,7 @@
 # CrispyBrain v0.7
 
+Status: historical release note. The current docs version is `v1.0.0-14-g59bd5dc`.
+
 `v0.7` is a stability and observability hardening pass.
 
 `v0.7.1` is a small follow-on patch that resolves the retrieval-policy ambiguity from `v0.7` without widening the repo shape.

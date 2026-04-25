@@ -1,5 +1,9 @@
 # Retrieval
 
+Current version: `v1.0.0-14-g59bd5dc`
+
+Status: this document describes current retrieval behavior, while the `v0.9.x` labels below identify the historical commits that introduced or calibrated that behavior. They are not the current release stamp.
+
 ## v0.9.5 calibration
 
 `v0.9.5` keeps the existing `assistant` retrieval path and the `v0.9.1` calibration layer on top of `v0.9`:

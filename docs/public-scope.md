@@ -1,5 +1,7 @@
 # Public Scope
 
+Current version: `v1.0.0-14-g59bd5dc`
+
 ## What This Repo Is
 
 This repository is the public home of CrispyBrain: a self-hosted project memory assistant built around n8n workflows, Postgres, and Ollama.
@@ -12,7 +14,8 @@ The public core of CrispyBrain in this repo is:
 - the checked-in SQL migration in `sql/`
 - operator and setup documentation in `docs/`
 - helper scripts in `scripts/` for maintainers running a compatible local environment
-- the local static chat UI in `docs/crispybrain-v0.4-chat.html`
+- the current local demo in `demo/`
+- the historical static chat UI in `docs/crispybrain-v0.4-chat.html`
 
 ## Optional
 

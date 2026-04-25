@@ -1,5 +1,7 @@
 # CrispyBrain v0.5
 
+Status: historical release note. The current docs version is `v1.0.0-14-g59bd5dc`.
+
 ## Goal
 
 `v0.5` is a system-first hardening release.

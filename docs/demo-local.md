@@ -1,5 +1,9 @@
 # Local UI
 
+Current version: `v1.0.0-14-g59bd5dc`
+
+Status: this document describes the current `http://localhost:8787` browser demo and local API surface. Sections that mention `v0.9.x` describe when behavior was introduced, not the current version stamp.
+
 This is the first intentional local UI surface for CrispyBrain inside the AI Lab.
 
 The primary supported runtime is the Compose-managed lab service `crispybrain-demo-ui` from the sibling `crispy-ai-lab` repo.
@@ -273,7 +277,7 @@ If the inbox is temporarily empty, the UI shows a no-projects message, disables 
 The answer panel now places the direct answer above `Why this answer`, while sources and trace behavior remain unchanged.
 That query currently retrieves `alpha` memory rows reliably in the lab and exercises the explanation, sources, and trace panes even when grounding stays weak.
 
-## Transparency In `v0.9.9`
+## Transparency And Usage
 
 The local UI now centers the answer while making sources and trace signals easier to inspect.
 The current demo build keeps the explanation layer above the raw trace without removing the existing panes or changing the layout grid.

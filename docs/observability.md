@@ -1,5 +1,9 @@
 # CrispyBrain Observability Model
 
+Current version: `v1.0.0-14-g59bd5dc`
+
+Status: current observability contract with historical `v0.x` introduction notes.
+
 ## Purpose
 
 `v0.5` adds a repo-native observability contract to the current workflow exports without pretending there is a centralized log platform.

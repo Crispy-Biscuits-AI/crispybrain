@@ -1,83 +1,68 @@
 # Operator Quickstart
 
-Use this if you want the fastest realistic path to a working CrispyBrain instance with the current trust, trace, and live-token-usage surface.
+Current version: `v1.0.0-14-g59bd5dc`
 
-## 1. Prepare The Runtime
+Use this for the fastest realistic path to a local CrispyBrain instance. It assumes the sibling `crispy-ai-lab` reference runtime is available.
 
-You need:
+## 1. Runtime Requirements
 
-- `n8n`
-- Postgres with `pgvector`
-- Ollama running on the host and reachable from n8n at `http://host.docker.internal:11434`
+- n8n workflow runtime
+- Postgres with pgvector
+- Ollama on the host at `http://host.docker.internal:11434`
+- repo checkout at `/Users/elric/repos/crispybrain`
+- reference runtime checkout at `/Users/elric/repos/crispy-ai-lab`
+
+Checked facts during this docs refresh:
+
+- documented/supported n8n target: `2.16.1`
+- inspected local n8n container: `2.17.7`
+- Ollama CLI: `0.18.0`
+- Postgres container: `16.13`
+- pgvector extension: `0.8.2`
+- architecture: `aarch64`
 
 Required Ollama models:
 
 - `llama3`
 - `nomic-embed-text`
 
-## 2. Prepare The Database
-
-This repo includes `sql/crispybrain-v0_4-upgrade.sql`, which creates the session-turn table used by the assistant workflow.
-
-The workflow set also expects these existing tables to already be present:
-
-- `memories`
-- `projects`
-
-## 3. Create The n8n Credential
-
-Create a Postgres credential in n8n named:
-
-```text
-Postgres account
-```
-
-The checked-in workflow exports expect that exact credential name.
-
-## 4. Import The Repo-Owned Workflows
-
-The minimum public path for local operator validation is:
-
-- `workflows/assistant.json`
-- `workflows/crispybrain-demo.json`
-- `workflows/ingest.json`
-
-Optional if your local runtime really uses a watch handoff:
-
-- `workflows/auto-ingest-watch.json`
-
-Recommended import path:
+## 2. Start The Reference Runtime
 
 ```bash
-cd ../crispy-ai-lab
+cd /Users/elric/repos/crispy-ai-lab
+../crispybrain/scripts/set-version-env.sh up -d postgres n8n crispybrain-demo-ui
+```
+
+Use the wrapper so `CRISPYBRAIN_APP_VERSION` is injected into the demo UI and the repo inbox mount is available to the UI service.
+
+## 3. Import Workflows
+
+```bash
+cd /Users/elric/repos/crispy-ai-lab
 WORKFLOW_DIR=../crispybrain/workflows \
 CONFIRM_IMPORT=I_UNDERSTAND \
 scripts/workflows/import-exported-into-docker.sh
 ```
 
-## 5. Create The Repo-Owned Inbox Folder
+Minimum current workflow path:
 
-The canonical CrispyBrain ingest path is:
+- `assistant`
+- `ingest`
+- `crispybrain-demo`
+
+Optional if the file-drop watcher is part of your local run:
+
+- `auto-ingest-watch`
+
+## 4. Configure n8n
+
+Create a Postgres credential named exactly:
 
 ```text
-/Users/elric/repos/crispybrain/inbox/<project-slug>/
+Postgres account
 ```
 
-For the default project:
-
-```bash
-mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
-```
-
-Put plain `.txt` notes in that folder if your local watch path is wired to the repo-owned inbox.
-
-Current verified local runtime:
-
-- the active `auto-ingest-watch` workflow in n8n polls `/home/node/.n8n-files/crispybrain/inbox`
-- the current n8n bind mount points there from `/Users/elric/repos/crispybrain/inbox`
-- a real file drop into `/Users/elric/repos/crispybrain/inbox/alpha/` is visible at that container path and can flow into canonical `/webhook/ingest`
-
-## 6. Activate The Webhook Workflows
+The checked-in workflow exports expect that credential name.
 
 Activate:
 
@@ -85,139 +70,84 @@ Activate:
 - `ingest`
 - `crispybrain-demo`
 
-Optional:
-
-- `auto-ingest-watch`
-
-Recommended n8n organization:
-
-- place the canonical workflows under `Personal -> CrispyBrain`
-
-Folder placement is organizational only. The live runtime is determined by:
-
-- the workflow `active` toggle
-- the webhook path or trigger the caller actually uses
-
-The canonical watcher is `auto-ingest-watch`, and its downstream handoff is `POST /webhook/ingest`.
-
-For a duplicate-family audit, verify the current runtime list directly in n8n:
-
-```sql
-SELECT w.name, w.active, COALESCE(f.name, '') AS folder_name
-FROM workflow_entity w
-LEFT JOIN folder f ON f.id = w."parentFolderId"
-WHERE w.name IN (
-  'assistant',
-  'crispybrain-assistant',
-  'ingest',
-  'crispybrain-ingest',
-  'auto-ingest-watch',
-  'crispybrain-auto-ingest-watch',
-  'crispybrain-demo'
-)
-ORDER BY w.name;
-```
-
-Verify the webhooks are available at:
+Activate `auto-ingest-watch` only when the n8n container can see:
 
 ```text
-http://localhost:5678/webhook/assistant
-http://localhost:5678/webhook/ingest
-http://localhost:5678/webhook/crispybrain-demo
+/home/node/.n8n-files/crispybrain/inbox
 ```
 
-Retired legacy endpoints after the hard cutover:
+The reference lab maps that path from:
 
-- `http://localhost:5678/webhook/crispybrain-assistant`
-- `http://localhost:5678/webhook/crispybrain-ingest`
+```text
+/Users/elric/repos/crispybrain/inbox
+```
 
-Any remaining client still using those retired endpoints must be updated to the canonical public webhooks above.
-
-If you want to verify the current file-drop truth directly, check both sides of the mount:
+## 5. Create An Inbox Project
 
 ```bash
-ls -la /Users/elric/repos/crispybrain/inbox/alpha
-docker exec crispy-ai-lab-n8n-1 ls -la /home/node/.n8n-files/crispybrain/inbox/alpha
+mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 ```
 
-In a live repo-path file-drop setup, the same dropped file must be visible in both places before `auto-ingest-watch` can trigger.
+Plain text file drops should use:
 
-## 7. Smoke Test The Assistant Path
+```text
+/Users/elric/repos/crispybrain/inbox/<project-slug>/
+```
+
+Agentic AI Curator article exports use the project key `Curated Articles`.
+
+## 6. Open The Demo
+
+```text
+http://localhost:8787
+```
+
+Expected demo surface:
+
+- project selector backed by immediate folders under `inbox/`
+- project create/delete controls
+- query form
+- answer panel
+- sources panel
+- trace and usage panel
+- Markdown export controls for the rendered answer state
+
+## 7. Direct Assistant Smoke Test
 
 ```bash
 curl -sS \
   -H "Content-Type: application/json" \
   -d '{"message":"How am I planning to build CrispyBrain?","project_slug":"alpha"}' \
-  http://localhost:5678/webhook/assistant | jq '{ok,usage,grounding,retrieval,top_source:(.sources[0] // null),trace}'
+  http://localhost:5678/webhook/assistant | jq '{ok,answer,usage,grounding,retrieval,trace}'
 ```
 
 Inspect:
 
+- `ok`
 - `usage.available`
-- `usage.input_tokens` / `usage.output_tokens` when the answer path reported them
-- `usage.reason` when the token fields are unavailable
-- `trace.input_tokens` / `trace.output_tokens` / `trace.total_tokens` when usage is available
-- `trace.usage_reason` when usage is unavailable
+- token fields when usage is available
+- `usage.reason` when usage is unavailable
 - `grounding.status`
-- `grounding.note`
-- `grounding.supporting_source_count`
 - `retrieval.memory_count`
-- the first source row if one exists
+- `trace`
 
-Token usage reflects real model execution when available. When unavailable, CrispyBrain explicitly reports that state instead of estimating.
+CrispyBrain does not estimate token counts. Missing upstream counts remain explicit unavailable states.
 
-## 8. Verify The Token Usage Contract
+## 8. Safe Validation
 
-Use the repo-tracked token checks:
+Docs-only validation commands:
+
+```bash
+git status --short
+git describe --tags --always --dirty
+rg -n "pre[-]v1|[T]ODO|[F]IXME|placeholder|crispybrain[-]assistant|crispybrain[-]ingest" README.md docs
+```
+
+Runtime validation commands, if the local stack is already running:
 
 ```bash
 node scripts/test-crispybrain-token-contract.js
 ./scripts/test-crispybrain-v0_9_9_tokens.sh
 ```
 
-Expect:
-
-- generated prompts to return `usage.available = true`
-- different prompts to produce different token counts in the supported path
-- insufficient/no-answer cases to return `usage.available = false` with `null` token fields
-- unavailable usage to stay explicit through `usage.reason` instead of falling back to estimated values
-
-## 9. Run The `v0.8` Evaluation Pack
-
-Use the repo-tracked harness:
-
-```bash
-./scripts/test-crispybrain-v0_8.sh
-```
-
-The harness runs exactly 8 evaluation cases covering:
-
-- semantic match
-- exact phrase match
-- ambiguity / weak query
-- no-strong-match query
-- near-neighbor / distractor query
-- multi-memory style query
-- grounding visibility check
-- regression-style query
-
-The terminal output prints, for each case:
-
-- case id
-- query
-- expected behavior
-- pass/fail
-- compact diagnostic JSON
-
-## 10. What `v0.8` Adds For Operators
-
-The current workflows now surface:
-
-- a top-level `grounding` block in assistant and demo responses
-- explicit `weak` and `none` grounding states when support is limited
-- real usage metadata when Ollama returns generation counts, plus explicit unavailable states when it does not
-- source evidence fields already available in the workflow output, including memory ids, trust bands, review state, similarity, and chunk indexes when present
-
-`v0.8` does not invent confidence scores or hidden quality labels beyond the observable fields already present in the repo-owned path.
-
-This quickstart does not change protected runtime files such as Docker Compose, so automatic watch-based ingest still depends on your external runtime being wired to the repo-owned inbox path above.
+Historical harnesses such as `./scripts/test-crispybrain-v0_8.sh` and `./scripts/test-crispybrain-v0_9_5.sh` remain useful for regression coverage, but their names are historical and are not the current version stamp.
