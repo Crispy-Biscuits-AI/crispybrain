@@ -39,12 +39,13 @@ Example:
 mkdir -p /Users/elric/repos/crispybrain/inbox/alpha
 ```
 
-For local file exports that should land at the repo inbox root, the demo server exposes a JSON import endpoint:
+For local file exports, the demo server exposes a JSON import endpoint.
+Without `project_slug`, files land at the repo inbox root; with `project_slug`, files land in that inbox project folder.
 
 ```bash
 curl -sS -X POST http://localhost:8787/api/inbox/import \
   -H 'Content-Type: application/json' \
-  --data '{"files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
+  --data '{"project_slug":"Curated Articles","files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
 ```
 
 Sample response:
@@ -55,30 +56,24 @@ Sample response:
   "saved": [
     {
       "filename": "example.md",
-      "path": "inbox/example.md",
+      "path": "inbox/Curated Articles/example.md",
       "bytes": 19,
       "timestamp": "2026-04-25T09:05:31.085349Z"
     }
   ],
   "rejected": [],
-  "inbox_path": "inbox"
+  "inbox_path": "inbox/Curated Articles"
 }
 ```
 
-That endpoint writes accepted files under `/Users/elric/repos/crispybrain/inbox/` and creates the `inbox/` directory if it is missing.
+That endpoint writes accepted files under `/Users/elric/repos/crispybrain/inbox/` or `/Users/elric/repos/crispybrain/inbox/<project-slug>/` and creates the required directories if they are missing.
 It accepts only safe single filenames, rejects absolute paths and path traversal, and rejects duplicate filenames with `409` instead of overwriting.
 
-For article memories exported by Agentic AI Curator, use the display project `Curated Articles`.
-CrispyBrain's safe inbox slug for that display name is:
-
-```text
-curated-articles
-```
-
+For article memories exported by Agentic AI Curator, use project key `Curated Articles` exactly.
 The corresponding folder is:
 
 ```bash
-mkdir -p /Users/elric/repos/crispybrain/inbox/curated-articles
+mkdir -p "/Users/elric/repos/crispybrain/inbox/Curated Articles"
 ```
 
 Step 3 — Verify the runtime mount
@@ -94,7 +89,7 @@ Step 4 — Wait briefly
 Step 5 — Ask a question in the UI
 
 - Open `http://localhost:8787`
-- Use the relevant project. For Agentic AI Curator exports, select `Curated Articles` in the UI or use project slug `curated-articles` when calling the assistant webhook directly.
+- Use the relevant project. For Agentic AI Curator exports, select `Curated Articles` in the UI or pass `Curated Articles` as `project_slug` when calling the assistant webhook directly.
 - Ask a question that matches the text you just added
 
 ## Example

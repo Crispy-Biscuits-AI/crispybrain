@@ -249,15 +249,16 @@ The local demo server accepts exported file content for the repo inbox:
 
 - endpoint: `POST /api/inbox/import`
 - content type: `application/json`
-- destination directory: `/Users/elric/repos/crispybrain/inbox/`
-- response path base: `inbox`
+- destination directory without `project_slug`: `/Users/elric/repos/crispybrain/inbox/`
+- destination directory with `project_slug`: `/Users/elric/repos/crispybrain/inbox/<project-slug>/`
+- response path base: `inbox` or `inbox/<project-slug>`
 
 Sample request:
 
 ```bash
 curl -sS -X POST http://localhost:8787/api/inbox/import \
   -H 'Content-Type: application/json' \
-  --data '{"files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
+  --data '{"project_slug":"Curated Articles","files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
 ```
 
 Sample successful response:
@@ -268,18 +269,18 @@ Sample successful response:
   "saved": [
     {
       "filename": "example.md",
-      "path": "inbox/example.md",
+      "path": "inbox/Curated Articles/example.md",
       "bytes": 19,
       "timestamp": "2026-04-25T09:05:31.085349Z"
     }
   ],
   "rejected": [],
-  "inbox_path": "inbox"
+  "inbox_path": "inbox/Curated Articles"
 }
 ```
 
-The sample request saves `/Users/elric/repos/crispybrain/inbox/example.md`.
-The server creates `inbox/` if it is missing.
+The sample request saves `/Users/elric/repos/crispybrain/inbox/Curated Articles/example.md`.
+The server creates `inbox/` and the selected project folder if either is missing.
 Filenames must be single safe relative filenames. Absolute paths, subdirectories, path traversal, empty names, hidden names, names with leading/trailing whitespace, and names with characters outside letters, numbers, spaces, dots, hyphens, and underscores are rejected.
 Duplicate filenames are rejected with `409` and are not overwritten.
 
@@ -296,7 +297,7 @@ Sample duplicate response:
       "reason": "file already exists"
     }
   ],
-  "inbox_path": "inbox"
+  "inbox_path": "inbox/Curated Articles"
 }
 ```
 

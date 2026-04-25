@@ -32,7 +32,7 @@ CrispyBrain currently provides:
 - Local inbox import endpoint for agentic-ai-curator exports with safe filename validation and duplicate rejection
 - Markdown Q&A export controls with Full and Social clipboard formats from the rendered demo answer state
 - Clean demo answer presentation that keeps direct answers separate from weak-grounding caveats and preserves proper-name capitalization from visible memory sources
-- Curated article memory drops can use the `Curated Articles` display project with safe inbox slug `curated-articles`
+- Curated article memory drops can use the exact `Curated Articles` project key through the local inbox import endpoint
 - Reliable version injection for Docker runtime
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
@@ -107,7 +107,7 @@ Today’s checked-in repo surface can:
 - let operators inspect memory quality by project
 - export suspect rows and snapshot health over time
 - update review state for stored memory rows through the memory inspector
-- accept local JSON file imports at `POST /api/inbox/import` and save them under `/Users/elric/repos/crispybrain/inbox/` without overwriting existing files
+- accept local JSON file imports at `POST /api/inbox/import` and save them under `/Users/elric/repos/crispybrain/inbox/` or a provided inbox project without overwriting existing files
 - run the repo-tracked `v0.9.5` independence-aware evaluation pack with compact diagnostics
 
 ## High-Level Architecture
@@ -126,7 +126,7 @@ browser
 The main runtime lives in the sibling `crispy-ai-lab` repo.
 This repo provides the checked-in workflow exports, docs, and public-facing product surface for that lab runtime.
 The canonical ingest inbox for CrispyBrain is now the repo-owned path `inbox/<project-slug>/`, which resolves locally to `/Users/elric/repos/crispybrain/inbox/<project-slug>/`.
-The local demo server also accepts exported file content at `POST /api/inbox/import` and writes each accepted file directly under `/Users/elric/repos/crispybrain/inbox/`.
+The local demo server also accepts exported file content at `POST /api/inbox/import` and can write accepted files under `/Users/elric/repos/crispybrain/inbox/<project-slug>/` when `project_slug` is provided.
 
 ## Repository Structure
 
@@ -230,18 +230,18 @@ Project creation and validation now follow the repo inbox as the source of truth
 - empty, whitespace-only, duplicate display names after trim/case folding, slash/backslash, control-character, and path-traversal inputs are rejected before anything is created
 - when no inbox projects exist, the UI keeps `Create Project` available, disables query submission safely, and auto-selects the first newly created project
 
-For Agentic AI Curator exports, use display project `Curated Articles`.
-The existing safe internal slug behavior maps that project to `inbox/curated-articles/`, which is the slug to use when querying the assistant directly.
+For Agentic AI Curator exports, use project key `Curated Articles` exactly.
+The local import endpoint accepts that key and stores files in `inbox/Curated Articles/`, which is also the value to select in the UI or pass as `project_slug` when querying the assistant directly.
 
 Local export imports can also call `POST /api/inbox/import` on the demo server:
 
 ```bash
 curl -sS -X POST http://localhost:8787/api/inbox/import \
   -H 'Content-Type: application/json' \
-  --data '{"files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
+  --data '{"project_slug":"Curated Articles","files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
 ```
 
-Accepted files are written directly under `/Users/elric/repos/crispybrain/inbox/`, so the sample above saves `inbox/example.md`.
+Accepted files are written under the selected inbox project, so the sample above saves `inbox/Curated Articles/example.md`.
 Filenames must be single safe relative filenames, and duplicate filenames return a JSON rejection instead of overwriting the existing file.
 
 ```json
@@ -250,13 +250,13 @@ Filenames must be single safe relative filenames, and duplicate filenames return
   "saved": [
     {
       "filename": "example.md",
-      "path": "inbox/example.md",
+      "path": "inbox/Curated Articles/example.md",
       "bytes": 19,
       "timestamp": "2026-04-25T09:05:31.085349Z"
     }
   ],
   "rejected": [],
-  "inbox_path": "inbox"
+  "inbox_path": "inbox/Curated Articles"
 }
 ```
 
@@ -267,7 +267,7 @@ Success currently looks like:
 - the top controls render as one parent pane containing three sub-panes on desktop: `Query context`, `Ask a question`, and `Project management`
 - `GET /api/projects` returns the current repo inbox folders without a `404`
 - `POST /api/projects` creates a valid inbox project and returns the created slug, display name, and refreshed selector payload
-- `POST /api/inbox/import` saves valid JSON file exports under `inbox/` and returns saved and rejected file lists
+- `POST /api/inbox/import` saves valid JSON file exports under `inbox/` or `inbox/<project-slug>/` and returns saved and rejected file lists
 - the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/` while showing stored display names when available
 - creating a project from the UI reloads the selector and auto-selects the new project by display name
 - invalid or duplicate create attempts return clear `4xx` validation responses without partial folder creation

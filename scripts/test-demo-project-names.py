@@ -134,6 +134,25 @@ class ProjectDisplayNameTests(unittest.TestCase):
         self.assertFalse((demo_server.INBOX_DIR / project_slug).exists())
         self.assertNotIn(project_slug, deleted["projects"])
 
+    def test_curated_articles_project_key_preserves_capitalization_and_spaces(self) -> None:
+        project_path = demo_server.INBOX_DIR / "Curated Articles"
+        project_path.mkdir()
+
+        status, projects = request_json("GET", f"{self.base_url}/api/projects")
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertIn("Curated Articles", projects["projects"])
+        option = next(option for option in projects["project_options"] if option["project_slug"] == "Curated Articles")
+        self.assertEqual(option["display_name"], "Curated Articles")
+
+        status, answer = request_json(
+            "POST",
+            f"{self.base_url}/api/demo/ask",
+            {"question": "What was imported?", "project_slug": "Curated Articles"},
+        )
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertEqual(answer["ok"], True)
+        self.assertEqual(RecordingUpstreamHandler.received_payloads[-1]["project_slug"], "Curated Articles")
+
     def test_duplicate_display_name_variants_are_rejected(self) -> None:
         first_status, first = request_json("POST", f"{self.base_url}/api/projects", {"project_name": "Star Wars"})
         self.assertEqual(first_status, HTTPStatus.CREATED)
@@ -213,6 +232,33 @@ class InboxImportTests(unittest.TestCase):
         self.assertEqual(body["saved"][0]["bytes"], len("Hello from agentic-ai-curator\n".encode("utf-8")))
         self.assertIsInstance(body["saved"][0]["timestamp"], str)
         self.assertEqual((demo_server.INBOX_DIR / "example.md").read_text(encoding="utf-8"), "Hello from agentic-ai-curator\n")
+
+    def test_project_import_creates_curated_articles_directory(self) -> None:
+        self.assertFalse(demo_server.INBOX_DIR.exists())
+
+        status, body = request_json(
+            "POST",
+            f"{self.base_url}/api/inbox/import",
+            {
+                "project_slug": "Curated Articles",
+                "files": [
+                    {
+                        "filename": "article.md",
+                        "content": "Curated article content\n",
+                        "source": "agentic-ai-curator",
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(status, HTTPStatus.CREATED)
+        self.assertEqual(body["success"], True)
+        self.assertEqual(body["inbox_path"], "inbox/Curated Articles")
+        self.assertEqual(body["saved"][0]["path"], "inbox/Curated Articles/article.md")
+        self.assertEqual(
+            (demo_server.INBOX_DIR / "Curated Articles" / "article.md").read_text(encoding="utf-8"),
+            "Curated article content\n",
+        )
 
     def test_path_traversal_is_rejected_without_write(self) -> None:
         status, body = request_json(

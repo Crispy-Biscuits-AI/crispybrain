@@ -35,14 +35,14 @@ APP_VERSION_ENV_VAR = "CRISPYBRAIN_APP_VERSION"
 APP_VERSION_PLACEHOLDER = "__CRISPYBRAIN_APP_VERSION__"
 UNKNOWN_VERSION = "unknown-version"
 FOOTER_VERSION_PATTERN = re.compile(r'(<span class="footer-version">)(.*?)(</span>)', re.DOTALL)
-PROJECT_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+PROJECT_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._ -]*$")
 PROJECT_NAME_METADATA_FILE = ".crispybrain-projects.json"
 PROJECT_NAME_CONTROL_PATTERN = re.compile(r"[\x00-\x1f\x7f]")
 INBOX_IMPORT_FILENAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._ -]{0,127}")
 PROJECT_DISPLAY_NAME_VALIDATION_MESSAGE = (
     "Project names may contain letters, numbers, spaces, hyphens, and underscores, but not slashes, path traversal, or control characters."
 )
-PROJECT_SLUG_VALIDATION_MESSAGE = "Project references must use a safe inbox project slug."
+PROJECT_SLUG_VALIDATION_MESSAGE = "Project references must use a safe inbox project slug or display project key."
 
 
 def run_git_command(*args: str) -> str | None:
@@ -248,6 +248,10 @@ def build_available_project_slug(project_name: str) -> str:
 def resolve_project_path(project_slug: str) -> Path | None:
     normalized_slug = project_slug.strip()
     if not PROJECT_SLUG_PATTERN.fullmatch(normalized_slug):
+        return None
+    if normalized_slug.endswith(".") or normalized_slug.endswith(" "):
+        return None
+    if ".." in normalized_slug.split(".") or ".." in normalized_slug:
         return None
 
     candidate = (INBOX_DIR / normalized_slug).resolve()
@@ -674,6 +678,42 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
 
     def _handle_inbox_import(self, payload: dict[str, Any]) -> None:
         files = payload.get("files")
+        project_slug = payload.get("project_slug")
+        if project_slug is not None and not isinstance(project_slug, str):
+            self._write_json(
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "success": False,
+                    "saved": [],
+                    "rejected": [{"reason": "project_slug must be a string when provided"}],
+                    "inbox_path": "inbox",
+                },
+            )
+            return
+
+        target_dir = INBOX_DIR
+        inbox_path = "inbox"
+        if isinstance(project_slug, str) and project_slug.strip():
+            project_path = resolve_project_path(project_slug)
+            if project_path is None:
+                self._write_json(
+                    HTTPStatus.BAD_REQUEST,
+                    {
+                        "success": False,
+                        "saved": [],
+                        "rejected": [
+                            {
+                                "project_slug": project_slug,
+                                "reason": PROJECT_SLUG_VALIDATION_MESSAGE,
+                            }
+                        ],
+                        "inbox_path": "inbox",
+                    },
+                )
+                return
+            target_dir = project_path
+            inbox_path = f"inbox/{project_path.name}"
+
         if not isinstance(files, list) or not files:
             self._write_json(
                 HTTPStatus.BAD_REQUEST,
@@ -681,14 +721,14 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
                     "success": False,
                     "saved": [],
                     "rejected": [{"reason": "files must be a non-empty array"}],
-                    "inbox_path": "inbox",
+                    "inbox_path": inbox_path,
                 },
             )
             return
 
         saved: list[dict[str, Any]] = []
         rejected: list[dict[str, Any]] = []
-        inbox_root = INBOX_DIR.resolve()
+        target_root = target_dir.resolve()
 
         for index, file_payload in enumerate(files):
             if not isinstance(file_payload, dict):
@@ -724,9 +764,9 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
                 )
                 continue
 
-            target_path = (INBOX_DIR / filename).resolve()
+            target_path = (target_dir / filename).resolve()
             try:
-                target_path.relative_to(inbox_root)
+                target_path.relative_to(target_root)
             except ValueError:
                 rejected.append(
                     {
@@ -739,7 +779,7 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
 
             encoded_content = content.encode("utf-8")
             try:
-                INBOX_DIR.mkdir(parents=True, exist_ok=True)
+                target_dir.mkdir(parents=True, exist_ok=True)
                 with target_path.open("xb") as inbox_file:
                     inbox_file.write(encoded_content)
             except FileExistsError:
@@ -765,7 +805,7 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
             saved.append(
                 {
                     "filename": filename,
-                    "path": f"inbox/{filename}",
+                    "path": f"{inbox_path}/{filename}",
                     "bytes": len(encoded_content),
                     "timestamp": timestamp,
                 }
@@ -775,7 +815,7 @@ class CrispyBrainDemoHandler(SimpleHTTPRequestHandler):
             "success": not rejected,
             "saved": saved,
             "rejected": rejected,
-            "inbox_path": "inbox",
+            "inbox_path": inbox_path,
         }
         if saved and rejected:
             status = HTTPStatus.MULTI_STATUS
