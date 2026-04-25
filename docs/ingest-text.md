@@ -1,5 +1,7 @@
 # Ingesting Text into CrispyBrain
 
+Current version: `v1.0.0-14-g59bd5dc`
+
 CrispyBrain can store plain text as memory and use it later when you ask a question.
 In the current local setup, the canonical path is to drop a `.txt` file into the CrispyBrain repo inbox and then query that project in the demo UI.
 

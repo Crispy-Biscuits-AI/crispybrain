@@ -1,5 +1,7 @@
 # CrispyBrain v0.5.2
 
+Status: historical release note. The current docs version is `v1.0.0-14-g59bd5dc`.
+
 ## Goal
 
 `v0.5.2` is an operator-visibility pass on top of the already verified `v0.5` and `v0.5.1` hardening work.

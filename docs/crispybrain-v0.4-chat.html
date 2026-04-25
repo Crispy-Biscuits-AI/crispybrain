@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CrispyBrain v0.8</title>
+  <title>CrispyBrain historical static fallback UI</title>
   <style>
     :root {
       --bg: #0c1217;
@@ -273,7 +273,7 @@
       <section class="brand">
         <img src="assets/crispybrain-biscuit.png" alt="CrispyBrain" width="220" style="margin-bottom: 10px;">
         <h1>CrispyBrain</h1>
-        <p>v0.8 trust and evaluation surface with clearer grounding notes, visible evidence, and weak-support handling.</p>
+        <p>Historical static fallback UI. Current docs version: v1.0.0-14-g59bd5dc.</p>
       </section>
 
       <section class="panel">
@@ -574,7 +574,7 @@
     themeInput.addEventListener('change', () => applyTheme(themeInput.value));
 
     loadState();
-    appendMessage('assistant', 'CrispyBrain v0.8 is ready. Start with a question, optionally scoped to a project_slug.', {
+    appendMessage('assistant', 'Historical CrispyBrain static fallback UI is ready. Start with a question, optionally scoped to a project_slug.', {
       meta: `session=${sessionIdInput.value}`
     });
   </script>

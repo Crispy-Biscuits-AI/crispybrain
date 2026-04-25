@@ -1,5 +1,7 @@
 # GitHub Metadata
 
+Current version: `v1.0.0-14-g59bd5dc`
+
 ## Candidate Repo Descriptions
 
 1. Self-hosted project memory assistant built with n8n, Postgres, and Ollama.

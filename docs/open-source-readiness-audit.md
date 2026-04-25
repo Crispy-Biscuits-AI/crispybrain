@@ -1,35 +1,36 @@
 # Open Source Readiness Audit
 
-## Ready Now
+Current version: `v1.0.0-14-g59bd5dc`
 
-- The repo contains real public-facing product assets: workflow exports, SQL, helper scripts, docs, and artwork.
-- The product story can be stated clearly as a self-hosted `n8n + Postgres + Ollama` memory assistant.
-- No obvious secrets are tracked in the inspected files.
-- `.DS_Store` is already ignored in `.gitignore`.
-- The runtime-sensitive naming debt is contained enough to document rather than block release.
+Status: refreshed as a current documentation note. Older statements about untracked files or a pre-release pass were removed because they were stale.
 
-## Fixed In This Pass
+## Ready Public Surface
 
-- Added a real MIT `LICENSE`.
-- Rewrote `README.md` to describe CrispyBrain as the product rather than an internal fork narrative.
-- Replaced public-facing absolute local file links with repo-relative links in tracked docs.
-- Added onboarding, scope, contribution, and release docs needed for a public audience.
-- Added `.env.example` and updated `.gitignore` so it can be committed safely.
-- Removed shellcheck source comments that hardcoded a local machine path in tracked scripts.
-- Removed obvious root-level `.DS_Store` clutter if present.
+- Real workflow exports live in `workflows/`.
+- The demo UI and proxy server live in `demo/`.
+- Setup, ingest, workflow sync, trust, retrieval, and compatibility docs live in `docs/`.
+- The repo has an MIT `LICENSE`.
+- `.env.example` documents required environment names without exposing live secrets.
 
-## Still Needs Manual Review
+## Still Not Turnkey
 
-- `docs/crispybrain-v0.4-chat.html` is already modified in the working tree and should get a quick visual/public copy review before release.
-- `docs/assets/` is untracked and should be reviewed to decide whether it belongs in the public repo.
-- `scripts/verify-crispybrain-health.sh` is untracked and should be reviewed before publishing.
-- `workflows/crispybrain-build-context.json` is untracked and may represent newer workflow logic than the tracked `workflows/build-context.json`.
-- The helper scripts assume a local runtime shape and should be tested once in a clean outsider-style setup before tagging a release.
+- n8n credentials are configured manually after import.
+- The workflow exports expect the n8n credential name `Postgres account`.
+- Ollama must already be reachable from n8n at `http://host.docker.internal:11434`.
+- The checked-in SQL does not fully bootstrap every table used by all workflow paths from a blank database.
+- Some behavior depends on the sibling `crispy-ai-lab` reference runtime wiring.
 
-## Acceptable Known Limitations
+## Public Boundary
 
-- The checked-in SQL only creates the `openbrain_chat_turns` table; the workflows also assume existing `memories` and `projects` tables.
-- The workflows call Ollama at `http://host.docker.internal:11434`, so host access must be available from n8n.
-- The exported workflows expect an n8n credential named `Postgres account`.
-- Some runtime-sensitive legacy names remain for compatibility and are documented in [legacy-naming-debt.md](legacy-naming-debt.md).
-- This repo is a technical early release, not yet a polished turnkey installer.
+Do not publish:
+
+- private runtime exports
+- `.env` values
+- customer data
+- local credential material
+- archived runtime backups
+- production workflow exports not already intended for this repo
+
+## Current Readiness
+
+The repo is suitable as a technical public product repo for operators comfortable with n8n, Postgres, Ollama, Docker, and manual workflow import. It should not be described as a polished hosted service or one-command installer.

@@ -1,65 +1,67 @@
 # Minimal Setup
 
-## Goal
+Current version: `v1.0.0-14-g59bd5dc`
 
-A minimum working CrispyBrain setup means:
+This is the smallest runtime shape that matches the checked-in workflow exports. It is not a one-command installer.
 
-- the `assistant` webhook accepts a request
-- the assistant retrieves from `memories`
-- Ollama generates the response
-- the conversation turn is stored in the session-turn table
+## Minimum Runtime
 
-## Required Runtime
+- n8n to run exported workflows from `workflows/`
+- Postgres with pgvector for memory, project, embedding, and session data
+- Ollama reachable from n8n at `http://host.docker.internal:11434`
+- an n8n Postgres credential named `Postgres account`
 
-### n8n
-
-The product logic is stored as exported n8n workflows in `workflows/`.
-
-### Postgres With pgvector
-
-The workflows depend on Postgres for:
-
-- stored memory rows in `memories`
-- project metadata in `projects`
-- assistant session history in `openbrain_chat_turns`
-
-This repo includes `sql/crispybrain-v0_4-upgrade.sql` for the session-turn table only. It does not fully provision the `memories` or `projects` schema from scratch.
-
-### Ollama
-
-The checked-in workflows call Ollama directly at:
-
-```text
-http://host.docker.internal:11434
-```
-
-Required models:
+Required Ollama models:
 
 - `llama3`
 - `nomic-embed-text`
 
-## Required n8n Credential
+## Database Assumptions
 
-Create a Postgres credential named `Postgres account`.
+The current workflows use:
 
-Several workflow exports currently embed that credential name directly, so changing it requires editing and re-exporting the workflows.
+- `memories`
+- `projects`
+- `openbrain_chat_turns`
 
-## Import Notes
+This repo includes `sql/crispybrain-v0_4-upgrade.sql` for the session-turn table. It does not fully bootstrap every table needed by all workflow paths from scratch.
 
-- Import order is not strict, but importing the stable workflow set together is the least confusing path.
-- The `assistant` workflow is the main entrypoint.
-- Older `insert-embedding-fixed*.json` files are historical workflow variants, not the recommended starting point.
+## Workflow Assumptions
 
-## Host-Side Assumptions
+Recommended current entrypoints:
 
-- n8n can reach host Ollama through `host.docker.internal`
-- Postgres accepts connections from n8n
-- the `memories` table already contains relevant memory rows if you expect meaningful answers immediately
+- `assistant`
+- `ingest`
+- `crispybrain-demo`
+- optional `auto-ingest-watch`
+
+Older `insert-embedding-fixed*.json` and other variant exports are retained as historical or helper workflow snapshots. They are not the starting point for a minimal operator setup.
+
+## Reference Environment
+
+The maintainer reference runtime is the sibling `crispy-ai-lab` repo. Use it when you want the documented Docker path:
+
+```bash
+cd /Users/elric/repos/crispy-ai-lab
+../crispybrain/scripts/set-version-env.sh up -d postgres n8n crispybrain-demo-ui
+```
+
+Supported/documented target facts checked during this refresh:
+
+- n8n target in docs/minimal Compose: `2.16.1`
+- Ollama CLI: `0.18.0`
+- Postgres container: `16.13`
+- pgvector extension: `0.8.2`
+- architecture: `aarch64`
+
+The inspected local main Compose n8n container was `2.17.7`, so verify runtime behavior after any n8n upgrade.
 
 ## Optional Local UI
 
-`docs/crispybrain-v0.4-chat.html` is a simple local UI for testing the assistant webhook. It is optional and not required for the core runtime.
+The current browser demo is served at:
 
-## If You Need A Reference Environment
+```text
+http://localhost:8787
+```
 
-This repo stands on its own as the public product repo. If you want a broader local reference environment, `crispy-ai-lab` can be used separately, but it is optional.
+The older `docs/crispybrain-v0.4-chat.html` file remains in the repo as historical/fallback documentation. Prefer the `demo/` service for the current local UI.

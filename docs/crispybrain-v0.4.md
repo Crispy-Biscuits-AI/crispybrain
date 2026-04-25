@@ -1,5 +1,7 @@
 # CrispyBrain v0.4
 
+Status: historical release note. The current docs version is `v1.0.0-14-g59bd5dc`.
+
 This document is the technical note for the current public workflow set.
 
 ## What v0.4 Represents

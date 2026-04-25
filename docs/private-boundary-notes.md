@@ -1,5 +1,7 @@
 # Private Boundary Notes
 
+Current version: `v1.0.0-14-g59bd5dc`
+
 Keep the public CrispyBrain repo focused on the reusable product core.
 
 ## Keep Out Of This Repo

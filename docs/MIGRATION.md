@@ -1,5 +1,9 @@
 # Migration
 
+Current version: `v1.0.0-14-g59bd5dc`
+
+Status: compatibility reference. This document records historical OpenBrain-to-CrispyBrain naming changes and should be read alongside [legacy-naming-debt.md](legacy-naming-debt.md).
+
 ## Workflow Name Changes
 
 | Old imported name | New imported name |

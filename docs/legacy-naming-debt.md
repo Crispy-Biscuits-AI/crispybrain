@@ -1,5 +1,9 @@
 # Legacy Naming Debt
 
+Current version: `v1.0.0-14-g59bd5dc`
+
+Status: current compatibility warning. These names are intentionally documented debt, not stale strings to remove casually.
+
 This repo still carries some earlier internal naming for compatibility. That debt is documented here so it does not get mistaken for the public product identity.
 
 ## Runtime-Sensitive Debt

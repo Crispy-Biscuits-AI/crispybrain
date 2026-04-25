@@ -1,5 +1,9 @@
 # Trust Output
 
+Current version: `v1.0.0-14-g59bd5dc`
+
+Status: this document describes the current trust/grounding/trace surface. Version labels such as `v0.9.5` and `v0.9.9` are historical behavior-introduction notes, not the current docs version.
+
 ## v0.9.5 answer modes
 
 Assistant and browser responses now include `answer_mode`:

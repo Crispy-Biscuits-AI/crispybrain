@@ -5,235 +5,142 @@
 <h1 align="center">CrispyBrain</h1>
 
 <p align="center">
-  CrispyBrain is a local-first, self-hosted memory system that exposes what it knows, how it knows it, and where it conflicts — instead of pretending to produce a single correct answer.
+  Local-first project memory with inspectable retrieval, trust, and trace output.
 </p>
 
-`crispybrain` is the public product repo for CrispyBrain: an open-source memory, retrieval, and agent lab built around real workflow exports and a real local UI path.
+Current version: `v1.0.0-14-g59bd5dc`
 
-It is the place to understand the current browser surface, the workflow shape, and the local runtime path that ends at `http://localhost:8787` when run through the sibling `crispy-ai-lab` repo.
+`crispybrain` is the public product repo for CrispyBrain. It contains the demo UI, exported n8n workflows, SQL migration material, seed/evaluation data, helper scripts, and documentation for a self-hosted memory assistant built on n8n, Postgres with pgvector, and Ollama.
 
-The current release-prep focus is transparency instead of theater: the checked-in UI and workflow exports keep the answer, sources, grounding state, trace signals, and generation usage inspectable together.
+The current product path is intentionally small and inspectable: notes are ingested into project memory, the assistant retrieves relevant stored chunks, and answers include evidence, grounding, trace, and token-usage metadata when the upstream model reports it.
 
-## <img src="assets/biscuit-emoji.png" width="18" /> Latest Capabilities
-
-CrispyBrain currently provides:
+## Latest Capabilities
 
 <!-- AUTO-GENERATED:BEGIN Latest Capabilities -->
-- Evidence-aware retrieval (not just semantic similarity)
-- Conflict detection with explicit non-collapse behavior
-- Source quality weighting (not all notes count equally)
-- Independence-aware reasoning (distinguishes repeated vs independent evidence)
-- Correlation handling (duplicate-heavy signals are discounted)
-- Structured trust + trace output (inspectable reasoning and execution surface)
-- Real token usage from live model execution when available
-- Explicit unavailable usage states instead of estimates or stale values
-- Deterministic evaluation system (tests match live behavior)
-- Inbox-backed project create/list/delete flow with display names, safe internal slugs, validation, auto-selection, and empty-state UX on both the repo-local and wrapper-started demo UI
-- Local inbox import endpoint for agentic-ai-curator exports with safe filename validation and duplicate rejection
-- Markdown Q&A export controls with Full and Social clipboard formats from the rendered demo answer state
-- Clean demo answer presentation that keeps direct answers separate from weak-grounding caveats and preserves proper-name capitalization from visible memory sources
-- Curated article memory drops can use the exact `Curated Articles` project key through the local inbox import endpoint
-- Reliable version injection for Docker runtime
+- Evidence-aware retrieval with semantic candidates, lexical fallback, and conservative candidate trimming
+- Explicit conflict handling instead of forced answer collapse
+- Source quality, source independence, duplicate-aware support, and weighted support metadata where returned by the workflow path
+- Structured `usage`, `grounding`, `trust`, `retrieval`, and `trace` output in the assistant/demo response surface
+- Provider-reported token usage when Ollama returns counts; explicit unavailable states when counts are absent
+- Browser demo on `http://localhost:8787` with project selection, project create/delete, sources, trace, and Markdown answer export controls
+- Repo-backed inbox project folders under `inbox/<project-slug>/`
+- Local inbox import endpoint for safe JSON file drops, including the `Curated Articles` project key used by Agentic AI Curator exports
+- Version injection for the Docker-served demo UI through `scripts/set-version-env.sh`
 <!-- AUTO-GENERATED:END Latest Capabilities -->
 
-## <img src="assets/biscuit-emoji.png" width="18" /> What This Is Not
+## What It Is
 
-CrispyBrain is not:
-- a chatbot
-- a knowledge base
-- a system that “just remembers everything”
-
-It is a system that models evidence, conflict, and uncertainty explicitly.
-
-## <img src="assets/biscuit-emoji.png" width="18" /> Start Here
-
-- [Local UI](docs/demo-local.md)
-- [Ingest data](docs/ingest-text.md)
-- [Operator tools](docs/operator-quickstart.md)
-
-## Current Status
-
-This is a pre-v1.0 release-prep surface for technical operators who want a truthful local memory path they can inspect end to end.
-
-CrispyBrain is a working local-first memory and retrieval system with:
-
-- semantic + lexical retrieval
-- conflict detection (no forced answers)
-- support counts (raw + deduplicated)
-- weighted support (source quality)
-- independence-aware reasoning (correlation handling)
-- structured trust output (exposes evidence and uncertainty)
-- deterministic evaluation harness aligned with runtime behavior
-
-## Transparency Contract
-
-CrispyBrain keeps the current answer path inspectable across both webhook responses and the local UI:
-
-- answers, sources, grounding/trust, and trace signals travel together
-- token usage reflects real model execution when available. When unavailable, CrispyBrain explicitly reports that state instead of estimating.
-- the visible trace surface keeps execution stage, candidate/source context, answer mode, grounding status, and usage state visible together
-
-## <img src="assets/biscuit-emoji.png" width="18" /> Why CrispyBrain Exists
-
-CrispyBrain exists to make a local memory-backed assistant path visible and inspectable instead of magical.
-
-The repo is intentionally honest about the current slice:
-
-- a real browser UI
-- a real n8n orchestration path
-- grounded retrieval instead of mocked answers
-- operator-facing inspection tools for memory quality
-
-## <img src="assets/biscuit-emoji.png" width="18" /> What It Can Do Today
-
-Today’s checked-in repo surface can:
-
-- run a real local UI flow through `crispybrain-demo` and `assistant`
-- retrieve memory-backed answers instead of static placeholder text
-- answer exact note-name and strong anchor-style note lookups deterministically
-- handle generalized questions across one or more agreeing notes more reliably
-- surface conflicting stored notes explicitly instead of guessing
-- classify conflicts as `strong_conflict` or `possible_conflict`
-- show per-claim support counts plus most-supported and most-recent conflict hints
-- expose dominant/tie status, duplicate-aware support counts, weighted support, independence-adjusted support, dominant basis, heuristic conflict confidence, and a summary hint
-- attach deterministic source-quality labels to visible conflict sources
-- attach deterministic source-independence labels and evidence clusters to visible conflict sources
-- keep factual candidate lists cleaner when generic runtime/build-context notes are off-topic
-- expose trust and source metadata in responses
-- expose grounding status, supporting-source counts, and visible evidence fields in the browser path
-- expose normalized `usage` metadata in `assistant` and `crispybrain-demo` responses when Ollama reports generation counts
-- keep `usage` explicit as unavailable with `null` token fields when answer generation is skipped or upstream usage is missing
-- keep token usage, grounding, and retrieval/trace signals inspectable together in the same response path
-- let operators inspect memory quality by project
-- export suspect rows and snapshot health over time
-- update review state for stored memory rows through the memory inspector
-- accept local JSON file imports at `POST /api/inbox/import` and save them under `/Users/elric/repos/crispybrain/inbox/` or a provided inbox project without overwriting existing files
-- run the repo-tracked `v0.9.5` independence-aware evaluation pack with compact diagnostics
-
-## High-Level Architecture
-
-The current public path is intentionally small but real:
+CrispyBrain is a technical local-first memory system, not a hosted SaaS and not a generic chatbot. Its useful surface is the concrete workflow path:
 
 ```text
-browser
--> localhost:8787
--> /api/demo/ask
--> n8n crispybrain-demo
--> assistant
--> retrieval + grounded answer
+browser or API caller
+-> localhost:8787 or /webhook/assistant
+-> n8n workflow exports
+-> Postgres memory rows with pgvector embeddings
+-> Ollama generation and embedding calls
+-> answer plus sources, grounding, trust, usage, and trace metadata
 ```
 
-The main runtime lives in the sibling `crispy-ai-lab` repo.
-This repo provides the checked-in workflow exports, docs, and public-facing product surface for that lab runtime.
-The canonical ingest inbox for CrispyBrain is now the repo-owned path `inbox/<project-slug>/`, which resolves locally to `/Users/elric/repos/crispybrain/inbox/<project-slug>/`.
-The local demo server also accepts exported file content at `POST /api/inbox/import` and can write accepted files under `/Users/elric/repos/crispybrain/inbox/<project-slug>/` when `project_slug` is provided.
+The sibling `crispy-ai-lab` repo is the reference Docker runtime used by the maintainer. This repo is the product/documentation/workflow source. The docs describe that relationship where setup steps cross the repo boundary.
 
-## Repository Structure
+## Current Architecture
 
-- `demo/`: the current browser UI and local proxy server
-- `workflows/`: exported n8n workflow JSON, including `assistant` and `crispybrain-demo`
-- `sql/`: checked-in SQL needed by the current assistant path
-- `scripts/`: maintainer and local helper scripts
-- `docs/`: setup, UI, scope, and technical notes
-- `assets/`: public artwork used by the UI and docs
+- `demo/`: browser UI and local proxy server for the `8787` demo path
+- `workflows/`: exported n8n workflow JSON snapshots
+- `sql/`: SQL migration material owned by this repo
+- `scripts/`: maintainer/operator helpers and validation harnesses
+- `seed-data/`: evaluation seeds and metrics snapshots
+- `inbox/`: repo-local file-drop memory projects
+- `docs/`: operator, setup, sync, trust, retrieval, release, and historical notes
+- `assets/`: artwork used by docs and UI
 
-## Canonical n8n Runtime
+Canonical workflow entrypoints documented for the current product path:
 
-The canonical CrispyBrain entrypoint set is:
+- `assistant`
+- `ingest`
+- `crispybrain-demo`
+- optional `auto-ingest-watch`
 
-- required: `assistant`
-- required: `ingest`
-- required: `crispybrain-demo`
-- optional: `auto-ingest-watch`
-
-Current retired duplicate in the audited local n8n runtime:
-
-- `crispybrain-auto-ingest-watch`, now inactive in `Personal -> CrispyBrain Archive`
-- `crispybrain-assistant`, now inactive in `Personal -> CrispyBrain Archive`
-- `crispybrain-ingest`, now inactive in `Personal -> CrispyBrain Archive`
-
-If you organize them into folders in n8n, the recommended home is `Personal -> CrispyBrain`.
-
-Folder placement is organizational only. What is actually live is determined by the workflow `active` state and the webhook or trigger path that your caller hits.
-
-Canonical public webhooks after the hard cutover are:
+Canonical public webhooks:
 
 - `POST /webhook/assistant`
 - `POST /webhook/ingest`
 - `POST /webhook/crispybrain-demo`
 
-Any remaining client still calling `POST /webhook/crispybrain-assistant` or `POST /webhook/crispybrain-ingest` must be updated.
+Legacy `crispybrain-*` and `openbrain-*` names still appear in historical docs, table names, and migration notes. They are documented compatibility debt, not a reason to rename runtime objects casually.
 
-The canonical watcher workflow is now `auto-ingest-watch`, and it is wired to call `POST /webhook/ingest`.
+## Verified Runtime Facts
 
-The current verified local lab runtime now mounts the repo inbox directly:
+These facts were checked during this docs refresh without changing runtime state:
 
-- host source: `/Users/elric/repos/crispybrain/inbox`
-- container target: `/home/node/.n8n-files/crispybrain/inbox`
-- `auto-ingest-watch` polls that canonical inbox and hands new `.txt` files to `POST /webhook/ingest`
-- a real file drop into `/Users/elric/repos/crispybrain/inbox/alpha/` was ingested and retrieved through `POST /webhook/assistant`
+- requested docs version stamp: `v1.0.0-14-g59bd5dc`
+- current checkout at refresh time: `v1.0.0-20-g9a92fbc`
+- `git describe --tags --always 59bd5dc`: `v1.0.0-14-g59bd5dc`
+- n8n supported/documented target: `2.16.1`
+- currently inspected local n8n container: `2.17.7`
+- Ollama CLI: `0.18.0`
+- Postgres container: `16.13`
+- pgvector extension: `0.8.2`
+- Docker engine: `29.4.0`
+- Docker Compose plugin: `5.1.2`
+- Docker Desktop on this Mac: `4.70.0`
+- documented/tested Docker Desktop target in the reference lab docs: macOS `4.69.0`
+- architecture: `aarch64`
 
-Today’s verified UI path is:
+The version mismatch is intentional documentation honesty: the requested public docs stamp points at commit `59bd5dc`, while this branch contains later commits. See [CHANGELOG.md](CHANGELOG.md) for the source-of-truth notes.
 
-- `crispybrain-demo` -> `assistant`
+## Setup Entry Points
 
-## Getting Started
+Start with the docs that match your task:
 
-The most believable local path uses this repo and `crispy-ai-lab` together.
+- [Current State](docs/current-state.md): current architecture, supported facts, and validation commands
+- [Operator Quickstart](docs/operator-quickstart.md): fastest realistic local path
+- [Minimal Setup](docs/setup-minimal.md): smallest runtime shape and assumptions
+- [Local Demo](docs/demo-local.md): browser demo and `8787` API behavior
+- [Ingesting Text](docs/ingest-text.md): file-drop and JSON import paths
+- [Workflow Sync](docs/workflow-sync.md): keeping exported workflows aligned with n8n
+- [Retrieval](docs/retrieval.md): retrieval behavior and limitations
+- [Trust Output](docs/trust-output.md): trust, support, conflict, and trace fields
 
-1. Clone both repos as sibling directories.
+Historical release notes remain under `docs/crispybrain-v*.md`. They describe when behavior was introduced and should not be read as the current version stamp.
+
+## Quick Local Path
+
+The most complete documented path uses this repo beside `crispy-ai-lab`:
 
 ```bash
-git clone <crispybrain-repo-url> crispybrain
-git clone <crispy-ai-lab-repo-url> crispy-ai-lab
-```
-
-2. Configure and start the lab runtime.
-
-```bash
-cd crispy-ai-lab
-cp .env.example .env
+cd /Users/elric/repos/crispy-ai-lab
 ../crispybrain/scripts/set-version-env.sh up -d postgres n8n crispybrain-demo-ui
-```
 
-If you change files under `demo/` or `assets/`, rebuild the UI service so `localhost:8787` serves the new baked image contents:
-
-```bash
-../crispybrain/scripts/set-version-env.sh up -d --build crispybrain-demo-ui
-```
-
-3. Import the current workflow set from this repo into the running n8n container.
-
-```bash
 WORKFLOW_DIR=../crispybrain/workflows \
 CONFIRM_IMPORT=I_UNDERSTAND \
 scripts/workflows/import-exported-into-docker.sh
 ```
 
-4. In n8n, create a Postgres credential named `Postgres account`, then activate `assistant`, `ingest`, and `crispybrain-demo`. Activate `auto-ingest-watch` only if your local runtime is actually wired to use it.
+Then create the n8n Postgres credential named `Postgres account`, activate `assistant`, `ingest`, and `crispybrain-demo`, and open:
 
-5. Create the repo-owned inbox folder you want to ingest from, for example `mkdir -p /Users/elric/repos/crispybrain/inbox/alpha`, and place plain text notes under that project folder.
+```text
+http://localhost:8787
+```
 
-6. Open the local UI at `http://localhost:8787`.
+For direct API smoke testing:
 
-7. Use:
+```bash
+curl -sS \
+  -H "Content-Type: application/json" \
+  -d '{"message":"How am I planning to build CrispyBrain?","project_slug":"alpha"}' \
+  http://localhost:5678/webhook/assistant | jq '{ok,answer,usage,grounding,trace}'
+```
 
-- `Query context`: it makes the selected project explicit before you run retrieval
-- `Ask a question`: it keeps a larger multiline query entry area and `Run query` button in the primary center sub-pane while reinforcing the active project/context
-- `Project management`: it keeps a dedicated delete-target pulldown plus the `Delete Project`, new project name input, and `Create Project` controls in the right sub-pane
-- question: `How am I planning to build CrispyBrain?`
+## Inbox And Projects
 
-Project creation and validation now follow the repo inbox as the source of truth while separating user-facing display names from safe internal slugs:
+The canonical repo-owned inbox shape is:
 
-- `POST /api/projects` accepts a display name such as `Star Wars`, creates a safe `inbox/<project-slug>/` folder, and stores the exact display name for selectors and delete UI
-- display names are trimmed and may contain uppercase letters, lowercase letters, numbers, spaces, hyphens, and underscores
-- empty, whitespace-only, duplicate display names after trim/case folding, slash/backslash, control-character, and path-traversal inputs are rejected before anything is created
-- when no inbox projects exist, the UI keeps `Create Project` available, disables query submission safely, and auto-selects the first newly created project
+```text
+/Users/elric/repos/crispybrain/inbox/<project-slug>/
+```
 
-For Agentic AI Curator exports, use project key `Curated Articles` exactly.
-The local import endpoint accepts that key and stores files in `inbox/Curated Articles/`, which is also the value to select in the UI or pass as `project_slug` when querying the assistant directly.
-
-Local export imports can also call `POST /api/inbox/import` on the demo server:
+The demo server can also accept safe local JSON file imports:
 
 ```bash
 curl -sS -X POST http://localhost:8787/api/inbox/import \
@@ -241,186 +148,45 @@ curl -sS -X POST http://localhost:8787/api/inbox/import \
   --data '{"project_slug":"Curated Articles","files":[{"filename":"example.md","content":"Exported note text\n","source":"agentic-ai-curator"}]}'
 ```
 
-Accepted files are written under the selected inbox project, so the sample above saves `inbox/Curated Articles/example.md`.
-Filenames must be single safe relative filenames, and duplicate filenames return a JSON rejection instead of overwriting the existing file.
+Accepted files are written under the chosen inbox project. Duplicate filenames and unsafe paths are rejected instead of overwriting existing files.
 
-```json
-{
-  "success": true,
-  "saved": [
-    {
-      "filename": "example.md",
-      "path": "inbox/Curated Articles/example.md",
-      "bytes": 19,
-      "timestamp": "2026-04-25T09:05:31.085349Z"
-    }
-  ],
-  "rejected": [],
-  "inbox_path": "inbox/Curated Articles"
-}
-```
+## Documentation Freshness
 
-Success currently looks like:
-
-- the page loads on `localhost:8787`
-- the theme selector is available
-- the top controls render as one parent pane containing three sub-panes on desktop: `Query context`, `Ask a question`, and `Project management`
-- `GET /api/projects` returns the current repo inbox folders without a `404`
-- `POST /api/projects` creates a valid inbox project and returns the created slug, display name, and refreshed selector payload
-- `POST /api/inbox/import` saves valid JSON file exports under `inbox/` or `inbox/<project-slug>/` and returns saved and rejected file lists
-- the project selector reflects the current immediate subfolders under `/Users/elric/repos/crispybrain/inbox/` while showing stored display names when available
-- creating a project from the UI reloads the selector and auto-selects the new project by display name
-- invalid or duplicate create attempts return clear `4xx` validation responses without partial folder creation
-- when the inbox is empty, the UI shows a safe empty state and keeps the create flow available
-- deleting a project removes the explicitly selected delete target from its pulldown and from the inbox-backed selector state immediately
-- running a query still uses the currently selected project and surfaces that project slug in trace output
-- the response keeps the direct answer content in the `Answer` pane while caveats and grounding limits stay in `Why this answer`, followed by sources and traceable retrieval state
-- the trace panel shows execution, retrieval, and token-usage state without depending on every backend field being present
-
-The wrapper script now injects the repo inbox into `crispybrain-demo-ui`, so the Compose-managed `localhost:8787` runtime can serve the same project management API directly from the repo-owned inbox path.
-
-For local debugging outside Docker, you can still run the repo-local demo server from this repo:
+Use these checks before trusting or publishing docs:
 
 ```bash
-cd /Users/elric/repos/crispybrain
-python3 scripts/run_demo_server.py
+git status --short
+git describe --tags --always --dirty
+rg -n "pre[-]v1|v0\\.9\\.5|v0\\.9\\.9|[T]ODO|[F]IXME|placeholder|crispybrain[-]assistant|crispybrain[-]ingest" README.md docs
+rg -n "OPENAI[_]API[_]KEY|API[_]KEY|[T]OKEN|[S]ECRET|[P]ASSWORD|PRIVATE[_]KEY" README.md docs CHANGELOG.md
 ```
 
-## Version Handling
+For runtime drift, compare the docs against:
 
-The demo server now resolves its visible app version in this order:
-
-1. `CRISPYBRAIN_APP_VERSION` when the environment variable is present
-2. `git describe --tags --always`
-3. `git rev-parse --short HEAD`
-4. `unknown-version (docker)` when the container has neither an injected version nor git metadata
-
-Docker images in this repo do not include `.git`, so the Compose-managed UI should be started through [`scripts/set-version-env.sh`](/Users/elric/repos/crispybrain/scripts/set-version-env.sh). That wrapper resolves the host-side git version, exports `CRISPYBRAIN_APP_VERSION`, injects the repo inbox mount override for `crispybrain-demo-ui`, and then runs `docker compose ...` so the containerized footer and project API both use the same repo-backed state as the local fallback server.
-
-## UI, Workflow, Ingestion, and Operator Entry Points
-
-Use these docs as the next stop depending on what you want to do:
-
-- [Local UI](docs/demo-local.md): run the `8787` UI path and verify the UI/workflow flow
-- [Operator Quickstart](docs/operator-quickstart.md): get the fastest realistic operator setup
-- [Ingesting Text](docs/ingest-text.md): drop plain text into the current ingest path safely
-- [Workflow Sync](docs/workflow-sync.md): keep checked-in workflow exports aligned with n8n
-- [CrispyBrain v0.8](docs/crispybrain-v0_8.md): trust and evaluation release notes, grounding behavior, and the 8-case harness
-- [Retrieval Notes](docs/retrieval.md): the v0.9.5 short-note, lexical fallback, candidate-trimming, and correlation-aware trust-layer behavior
-- [Trust Output](docs/trust-output.md): `answer_mode`, source quality, source independence, weighted support, dominant basis, and candidate/source interpretation
-- [CrispyBrain v0.7](docs/crispybrain-v0_7.md): anchor-aware deterministic retrieval, harness coverage, and validation notes
-- [CrispyBrain v0.6](docs/crispybrain-v0_6.md): release summary, runtime validation notes, and known limitations
-
-## <img src="assets/biscuit-emoji.png" width="18" /> Memory Quality and Trust
-
-`v0.6` introduced the first real quality-and-control layer in the public repo.
-`v0.7.1` keeps that layer in place and makes retrieval policy explicit.
-`v0.8` adds clearer operator-visible grounding and a repeatable evaluation pack.
-`v0.9.5` keeps the same workflow shape while adding source independence, evidence clustering, source-quality weighting, and correlation-aware support hints without weakening strict conflict handling.
-
-That includes:
-
-- project memory health visibility
-- source quality indicators in assistant and browser responses
-- source independence and evidence-cluster metadata on visible conflict sources
-- operator control through the upgraded memory inspector
-- suspect review/export workflows
-- file-based metrics snapshots over time
-
-The main `v0.6` lesson is worth keeping explicit:
-
-- retrieval ranking and metadata correctness are separate concerns
-
-`v0.7.1` narrows that ambiguity instead of pretending it disappeared:
-
-- strong lexical anchors switch retrieval into a conservative anchor mode
-- anchor mode prefers stronger title/token matches, then reviewed rows, then `created_at DESC`, then `id DESC`
-- non-anchor questions stay on the semantic path
-- semantic retrieval remains project-first and similarity-driven, with deterministic review/recency/id ordering when candidates remain eligible
-- the response now exposes a `grounding` block with status, note, reasons, supporting-source count, reviewed-source count, and the strongest observed similarity when available
-- weak or missing support is surfaced explicitly as `grounding.status = weak` or `grounding.status = none`
-- `v0.9.5` keeps `answer_mode`, `retrieved_candidates`, `selected_sources`, explicit `conflict_flag` output, and visible `sources` / `trust` / `grounding` blocks
-- `v0.9.5` adds conservative candidate trimming, `conflict_severity`, `entity_focus`, `filtered_candidate_count`, weighted support, independence-aware support, dominant basis routing, and structured conflict hints
-- generalized queries can preserve multiple agreeing notes instead of collapsing too early
-- factual anchor and identifier queries can fall back to a simple lexical pass when semantic support is sparse
-- conflict responses can expose raw, deduped, weighted, independent, and independence-adjusted support counts without choosing a winner
-- the current operator evaluation pack is `./scripts/test-crispybrain-v0_9_5.sh`
-
-Recency matters as a tie-breaker, not as a global override.
-
-## UI Overview
-
-The current browser surface keeps the existing theme system and footer while presenting retrieval more transparently:
-
-- Top control pane: a responsive parent card containing three sub-panes for query context, the primary query action, and project management
-- Answer panel: the primary response area for grounded memory answers, with the direct answer shown above `Why this answer` and caveats moved into the rationale layer when the workflow returns both
-- Sources panel: an open-by-default side panel that lists retrieved memory with previews and scores when available
-- Trace panel: an open-by-default bottom drawer that exposes live execution, retrieval, token-usage, and behavior signals with graceful placeholders when fields are missing
-- Transparency-first design: source usage, status, and latency stay visible without forcing operators into a separate inspection screen
-
-The UI currently supports:
-
-- `light`
-- `dark`
-- `crispy`
-
-`crispy` is the default theme.
-
-The selected theme is stored client-side so it survives reloads and container restarts.
-
-Because CrispyBrain is being built in public, the UI also includes intentionally subtle support/contact/community links in the footer, including BlueSky, Reddit, and the MIT License, while the footer version label is injected from the current repo checkout instead of staying hardcoded.
-They remain low-prominence so the retrieval surface stays primary.
-
-The answer controls also include additive `Export MD (Full)` and `Export MD (Social)` actions.
-They copy markdown generated from the currently rendered question, answer, explanation, sources, and trace surface without changing the answer flow, backend behavior, or existing controls.
+- `workflows/*.json`
+- `demo/server.py`
+- `scripts/set-version-env.sh`
+- the sibling `crispy-ai-lab` Compose files if you are using that reference runtime
 
 ## Current Limitations
 
-This repo is public-ready, not fully turnkey.
-
-Current manual/runtime assumptions:
-
-- you still need to copy `.env.example` to `.env` in `crispy-ai-lab`
-- Ollama must already be running on the host
-- workflows must be imported into n8n
-- credentials must be created in n8n manually
-- the current workflow set still assumes a credential named `Postgres account`
-- the current UI dataset is strongest for project slug `alpha`
-
-Current product limitations remain explicit:
-
-- there is no full operator UI yet
-- anchor detection is intentionally conservative and only activates on strong lexical evidence
-- broad semantic questions still rely on the current similarity-led retrieval path rather than a global newest-wins rule
-- visible evidence is limited to fields the current workflows already return, such as source labels, memory ids, chunk indexes, similarity, and trust/review metadata
-- token counts are provider-reported only; CrispyBrain does not estimate or invent token usage when the upstream answer path does not return it
-
-Compatibility caveats that remain true on purpose:
-
-- some underlying table names and stored source titles may still contain earlier `openbrain-*` names
-- that legacy naming is documented and should not be casually renamed in this hardening pass
-
-## Near-Term Roadmap
-
-The next conservative steps after `v0.9` are:
-
-- lightweight operator UI
-- broader anchor heuristics only if they stay inspectable and testable
-- stronger feedback loops into ingestion
-
-Those are the most obvious follow-ons to the current validated repo state, not promises of a larger platform rewrite.
+- The repo is not a one-command turnkey installer.
+- n8n credentials are still configured manually after workflow import.
+- The exported workflows expect a credential named `Postgres account`.
+- Ollama must already be running and reachable from n8n at `http://host.docker.internal:11434`.
+- Some current behavior depends on the reference `crispy-ai-lab` runtime wiring.
+- Historical `openbrain_*` names remain in compatibility-sensitive places.
+- Token counts are provider-reported only; CrispyBrain does not estimate missing usage.
 
 ## More Docs
 
-- [OpenBrain History Memory Pack](docs/openbrain-history-memory-pack.md): auditable historical corpus for self-query ingest, derived from repo-visible evidence only
-- [Observability Model](docs/observability.md)
-- [Minimal Setup](docs/setup-minimal.md)
-- [Public Scope](docs/public-scope.md)
-- [Private Boundary Notes](docs/private-boundary-notes.md)
-- [Legacy Naming Debt](docs/legacy-naming-debt.md)
-- [CrispyBrain v0.5](docs/crispybrain-v0_5.md)
+- [CHANGELOG.md](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
+- [Legacy Naming Debt](docs/legacy-naming-debt.md)
+- [History](docs/HISTORY.md)
+- [Migration](docs/MIGRATION.md)
+- [Public Scope](docs/public-scope.md)
 
 <!-- CRITICAL: DO NOT REMOVE OR MODIFY THIS ATTRIBUTION SECTION -->
 

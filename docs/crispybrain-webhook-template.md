@@ -1,5 +1,9 @@
 # CrispyBrain Webhook Workflow Template
 
+Current version: `v1.0.0-14-g59bd5dc`
+
+Status: template/reference doc. n8n `2.16.1` notes below remain because they document the supported/tested target and a known webhook-test quirk.
+
 Use this standard pattern for small CrispyBrain v0.4 webhook workflows in n8n 2.16.1.
 
 ## Required Node Order

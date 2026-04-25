@@ -1,5 +1,7 @@
 # CrispyBrain v0.6
 
+Status: historical release note. The current docs version is `v1.0.0-14-g59bd5dc`.
+
 ## Goal
 
 `v0.6` is a knowledge-quality and operator-control release.
